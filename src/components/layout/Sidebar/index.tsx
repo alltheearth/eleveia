@@ -10,6 +10,7 @@ import {
   FileText,
   BarChart3,
   Settings,
+  Ticket,
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -21,6 +22,7 @@ const Sidebar = () => {
     { icon: UserPlus, label: 'Contatos', path: '/contatos' },
     { icon: Calendar, label: 'Eventos', path: '/eventos' },
     { icon: BookOpen, label: 'FAQs', path: '/faqs' },
+    { icon: Ticket, label: 'Tickets', path: '/tickets'},
     { icon: FileText, label: 'Documentos', path: '/documentos' },
     { icon: BarChart3, label: 'Relatórios', path: '/relatorios' },
     { icon: Settings, label: 'Configurações', path: '/configuracoes' },

@@ -9,6 +9,7 @@ import Leads from '../components/Leads';
 import Contatos from '../components/Contacts';
 import Eventos from '../components/Calendar';
 import FAQs from '../components/FAQs';
+import Tickets from '../components/Tickets';
 // import Documentos from '../components/Documentos';
 // import Relatorios from '../pages/Relatorios';
 // import Configuracoes from '../pages/Configuracoes';
@@ -28,6 +29,7 @@ const AppRoutes = () => {
           <Route path="/contatos" element={<Contatos />} />
           <Route path="/eventos" element={<Eventos />} />
           <Route path="/faqs" element={<FAQs />} />
+          <Route path='/tickets' element={<Tickets />} />
           {/* <Route path="/documentos" element={<Documentos />} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/configuracoes" element={<Configuracoes />} />*/}
