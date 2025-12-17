@@ -1,6 +1,5 @@
-// src/services/authService.ts - COM DEBUG DETALHADO
-
-import axios, { type AxiosInstance} from 'axios';
+// src/services/authService.ts - CORRIGIDO E SIMPLIFICADO
+import axios, { type AxiosInstance } from 'axios';
 
 interface LoginCredentials {
   username: string;
@@ -16,15 +15,27 @@ interface RegisterCredentials {
   last_name?: string;
 }
 
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_superuser: boolean;
+  is_staff: boolean;
+  perfil?: {
+    id: number;
+    escola: number;
+    escola_nome: string;
+    tipo: string;
+    tipo_display: string;
+    ativo: boolean;
+  };
+}
+
 interface AuthResponse {
   token: string;
-  user: {
-    id: number;
-    username: string;
-    email: string;
-    first_name?: string;
-    last_name?: string;
-  };
+  user: User;
   message: string;
 }
 
@@ -54,12 +65,7 @@ class AuthService {
         if (token) {
           config.headers.Authorization = `Token ${token}`;
         }
-        console.log('📤 Request:', {
-          url: config.url,
-          method: config.method,
-          headers: config.headers,
-          data: config.data,
-        });
+        console.log('📤 Request:', config.method?.toUpperCase(), config.url);
         return config;
       },
       (error) => {
@@ -71,17 +77,14 @@ class AuthService {
     // Interceptor para respostas
     this.api.interceptors.response.use(
       (response) => {
-        console.log('📥 Response Success:', {
-          status: response.status,
-          data: response.data,
-        });
+        console.log('📥 Response Success:', response.status, response.config.url);
         return response;
       },
       (error) => {
         console.error('❌ Response Error:', {
           status: error.response?.status,
           data: error.response?.data,
-          message: error.message,
+          url: error.config?.url,
         });
         return Promise.reject(error);
       }
@@ -90,26 +93,18 @@ class AuthService {
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      console.log('🔐 Iniciando login com:', { username: credentials.username });
+      console.log('🔐 Login - enviando para:', `${this.API_URL}/auth/login/`);
+      console.log('📨 Credenciais:', { username: credentials.username });
 
-      // Validar dados localmente
-      if (!credentials.username || !credentials.password) {
-        throw new Error('Username e password são obrigatórios');
-      }
+      const response = await this.api.post<AuthResponse>('/auth/login/', credentials);
 
-      const loginData = {
-        username: credentials.username,
-        password: credentials.password,
-      };
+      console.log('✅ Login bem-sucedido:', {
+        token: response.data.token.substring(0, 20) + '...',
+        user: response.data.user.username,
+      });
 
-      console.log('📨 Enviando para /auth/login/:', loginData);
-
-      const response = await this.api.post<AuthResponse>('/auth/login/', loginData);
-
-      console.log('✅ Login successful:', response.data);
-
-      const { token } = response.data;
-      this.setToken(token);
+      // Salvar token
+      this.setToken(response.data.token);
 
       return response.data;
     } catch (error) {
@@ -120,44 +115,14 @@ class AuthService {
 
   async register(userData: RegisterCredentials): Promise<AuthResponse> {
     try {
-      console.log('📝 Iniciando registro com:', userData);
+      console.log('📝 Register - enviando para:', `${this.API_URL}/auth/registro/`);
 
-      // Validar dados
-      if (
-        !userData.username ||
-        !userData.email ||
-        !userData.password ||
-        !userData.password2
-      ) {
-        throw new Error(
-          'Username, email, password e password2 são obrigatórios'
-        );
-      }
+      const response = await this.api.post<AuthResponse>('/auth/registro/', userData);
 
-      if (userData.password !== userData.password2) {
-        throw new Error('As senhas não coincidem');
-      }
+      console.log('✅ Register bem-sucedido:', response.data.user.username);
 
-      const registerData = {
-        username: userData.username,
-        email: userData.email,
-        password: userData.password,
-        password2: userData.password2,
-        first_name: userData.first_name || '',
-        last_name: userData.last_name || '',
-      };
-
-      console.log('📨 Enviando para /auth/registro/:', registerData);
-
-      const response = await this.api.post<AuthResponse>(
-        '/auth/registro/',
-        registerData
-      );
-
-      console.log('✅ Register successful:', response.data);
-
-      const { token } = response.data;
-      this.setToken(token);
+      // Salvar token
+      this.setToken(response.data.token);
 
       return response.data;
     } catch (error) {
@@ -168,13 +133,24 @@ class AuthService {
 
   async logout(): Promise<void> {
     try {
-      console.log('🚪 Iniciando logout');
+      console.log('🚪 Logout...');
       await this.api.post('/auth/logout/');
-      console.log('✅ Logout successful');
     } catch (error) {
       console.error('⚠️ Erro ao fazer logout:', error);
     } finally {
       this.removeToken();
+    }
+  }
+
+  async getProfile(): Promise<User> {
+    try {
+      console.log('👤 Buscando perfil...');
+      const response = await this.api.get<User>('/auth/perfil/');
+      console.log('✅ Perfil carregado:', response.data.username);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Erro ao buscar perfil:', error);
+      throw this.handleError(error);
     }
   }
 
@@ -183,14 +159,12 @@ class AuthService {
   }
 
   isAuthenticated(): boolean {
-    const auth = !!this.getToken();
-    console.log('🔍 isAuthenticated:', auth);
-    return auth;
+    return !!this.getToken();
   }
 
   private setToken(token: string): void {
     localStorage.setItem(this.TOKEN_KEY, token);
-    console.log('💾 Token salvo:', token.substring(0, 20) + '...');
+    console.log('💾 Token salvo');
   }
 
   private removeToken(): void {
@@ -205,7 +179,6 @@ class AuthService {
 
       let message = 'Erro desconhecido';
 
-      // Tentar extrair mensagem de diferentes formatos
       if (typeof data === 'string') {
         message = data;
       } else if (data?.message) {
@@ -217,7 +190,6 @@ class AuthService {
       } else if (data?.non_field_errors?.[0]) {
         message = data.non_field_errors[0];
       } else if (typeof data === 'object') {
-        // Tentar extrair primeira mensagem de erro do objeto
         const firstKey = Object.keys(data)[0];
         if (Array.isArray(data[firstKey])) {
           message = data[firstKey][0];
@@ -226,12 +198,6 @@ class AuthService {
         }
       }
 
-      console.error('🔴 API Error:', {
-        status,
-        message,
-        fullData: data,
-      });
-
       return {
         message,
         status,
@@ -239,12 +205,8 @@ class AuthService {
       };
     }
 
-    const errorMessage =
-      error instanceof Error ? error.message : 'Erro desconhecido';
-    console.error('🔴 Unknown Error:', errorMessage);
-
     return {
-      message: errorMessage,
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
       status: 500,
     };
   }
@@ -255,5 +217,6 @@ export type {
   AuthResponse,
   LoginCredentials,
   RegisterCredentials,
+  User,
   ApiError,
 };

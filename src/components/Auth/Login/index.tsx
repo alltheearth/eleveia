@@ -1,17 +1,20 @@
-import { useState } from 'react';
+// src/components/Auth/Login/index.tsx - CORRIGIDO
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, User, ArrowRight, CheckCircle } from 'lucide-react';
-import { loginUser, registerUser } from '../../../Feature/AuthSlice';
-import { setActiveModule } from '../../../Feature/ModuleActiveSlice';
+import { loginUser, registerUser } from '../../../store/slices/authSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../store';
 
 export default function Login() {
   const dispatch = useDispatch<AppDispatch>();
-  const { loading, error } = useSelector((state: RootState) => state.auth);
+  const navigate = useNavigate();
+  const { loading, error, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
   const [telaAtual, setTelaAtual] = useState<'login' | 'registro'>('login');
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarSenhaConfirm, setMostrarSenhaConfirm] = useState(false);
+  
   const [login, setLogin] = useState({
     username: '',
     password: '',
@@ -29,6 +32,14 @@ export default function Login() {
 
   const [erroLocal, setErroLocal] = useState('');
 
+  // ✅ REDIRECIONAR quando autenticado
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('✅ Usuário autenticado, redirecionando...');
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
+
   const handleLogin = async () => {
     setErroLocal('');
 
@@ -38,6 +49,8 @@ export default function Login() {
     }
 
     try {
+      console.log('🔐 Tentando login...');
+      
       const result = await dispatch(
         loginUser({
           username: login.username,
@@ -45,17 +58,20 @@ export default function Login() {
         })
       ).unwrap();
 
-      console.log('Login bem-sucedido:', result);
-      dispatch(setActiveModule('dashboard'));
+      console.log('✅ Login bem-sucedido:', result);
+      // O redirecionamento acontecerá pelo useEffect acima
+      
     } catch (err: any) {
-      setErroLocal(err.message || 'Erro ao fazer login');
+      console.error('❌ Erro no login:', err);
+      setErroLocal(err || 'Erro ao fazer login');
     }
   };
 
   const handleRegistro = async () => {
     setErroLocal('');
 
-    if (!registro.first_name || !registro.last_name || !registro.username || !registro.email || !registro.password) {
+    if (!registro.first_name || !registro.last_name || !registro.username || 
+        !registro.email || !registro.password) {
       setErroLocal('Preencha todos os campos obrigatórios');
       return;
     }
@@ -71,6 +87,8 @@ export default function Login() {
     }
 
     try {
+      console.log('📝 Tentando registro...');
+      
       await dispatch(
         registerUser({
           first_name: registro.first_name,
@@ -82,9 +100,12 @@ export default function Login() {
         })
       ).unwrap();
 
-      dispatch(setActiveModule('dashboard'));
+      console.log('✅ Registro bem-sucedido');
+      // O redirecionamento acontecerá pelo useEffect acima
+      
     } catch (err: any) {
-      setErroLocal(err.message || 'Erro ao registrar');
+      console.error('❌ Erro no registro:', err);
+      setErroLocal(err || 'Erro ao registrar');
     }
   };
 
@@ -146,6 +167,7 @@ export default function Login() {
                       placeholder="seu_usuario"
                       value={login.username}
                       onChange={(e) => setLogin({ ...login, username: e.target.value })}
+                      onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
                       disabled={loading}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 disabled:opacity-50"
                     />
@@ -161,6 +183,7 @@ export default function Login() {
                       placeholder="Sua senha"
                       value={login.password}
                       onChange={(e) => setLogin({ ...login, password: e.target.value })}
+                      onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
                       disabled={loading}
                       className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 disabled:opacity-50"
                     />
@@ -307,9 +330,9 @@ export default function Login() {
                   placeholder="Confirme sua senha"
                   value={registro.password2}
                   onChange={(e) => setRegistro({ ...registro, password2: e.target.value })}
+                  onFocus={() => setMostrarSenhaConfirm(true)}
                   disabled={loading}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
-                  onClick={ ()=> setMostrarSenhaConfirm(true)}
                 />
               </div>
 
@@ -350,16 +373,3 @@ export default function Login() {
     </div>
   );
 }
-
-//  {/* Header */}
-//         <header className="bg-white shadow-sm p-6 flex justify-between items-center border-b border-gray-200">
-//           <div>
-//             <h1 className="text-2xl font-bold text-gray-900">Informações da Escola</h1>
-//             <p className="text-sm text-gray-600">
-//               {formData.nomeEscola || 'Gerencie todos os dados da sua instituição'}
-//             </p>
-//           </div>
-//           <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-//             AD
-//           </div>
-//         </header>

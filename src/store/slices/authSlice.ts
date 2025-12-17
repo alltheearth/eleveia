@@ -1,17 +1,37 @@
+// src/store/slices/authSlice.ts - CORRIGIDO
 import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
-import authService, { type LoginCredentials, type  RegisterData, type  User } from '../../api/services/authService';
-import { getStoredUser, removeAuthToken } from '../../api/client';
+import { authService, type LoginCredentials, type RegisterCredentials } from '../../services/authService';
+
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_superuser: boolean;
+  is_staff: boolean;
+  perfil?: {
+    id: number;
+    escola: number;
+    escola_nome: string;
+    tipo: string;
+    tipo_display: string;
+    ativo: boolean;
+  };
+}
 
 interface AuthState {
   user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
 }
 
 const initialState: AuthState = {
-  user: getStoredUser(),
-  isAuthenticated: !!getStoredUser(),
+  user: null,
+  token: localStorage.getItem('eleve_token'),
+  isAuthenticated: !!localStorage.getItem('eleve_token'),
   isLoading: false,
   error: null,
 };
@@ -20,34 +40,33 @@ const initialState: AuthState = {
 // ASYNC THUNKS
 // ==========================================
 
-export const login = createAsyncThunk(
+export const loginUser = createAsyncThunk(
   'auth/login',
   async (credentials: LoginCredentials, { rejectWithValue }) => {
     try {
+      console.log('🔐 Iniciando login no Redux...');
       const response = await authService.login(credentials);
-      return response.user;
+      console.log('✅ Login bem-sucedido no Redux:', response);
+      return response;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.error || 'Erro ao fazer login');
+      console.error('❌ Erro no login Redux:', error);
+      return rejectWithValue(error.message || 'Erro ao fazer login');
     }
   }
 );
 
-export const register = createAsyncThunk(
+export const registerUser = createAsyncThunk(
   'auth/register',
-  async (data: RegisterData, { rejectWithValue }) => {
+  async (credentials: RegisterCredentials, { rejectWithValue }) => {
     try {
-      const response = await authService.register(data);
-      return response.user;
+      console.log('📝 Iniciando registro no Redux...');
+      const response = await authService.register(credentials);
+      console.log('✅ Registro bem-sucedido no Redux:', response);
+      return response;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.error || 'Erro ao registrar');
+      console.error('❌ Erro no registro Redux:', error);
+      return rejectWithValue(error.message || 'Erro ao registrar');
     }
-  }
-);
-
-export const logout = createAsyncThunk(
-  'auth/logout',
-  async () => {
-    await authService.logout();
   }
 );
 
@@ -55,10 +74,22 @@ export const getProfile = createAsyncThunk(
   'auth/getProfile',
   async (_, { rejectWithValue }) => {
     try {
-      return await authService.getProfile();
+      console.log('👤 Buscando perfil...');
+      const user = await authService.getProfile();
+      console.log('✅ Perfil carregado:', user);
+      return user;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.error || 'Erro ao buscar perfil');
+      console.error('❌ Erro ao buscar perfil:', error);
+      return rejectWithValue(error.message || 'Erro ao buscar perfil');
     }
+  }
+);
+
+export const logout = createAsyncThunk(
+  'auth/logout',
+  async () => {
+    console.log('🚪 Fazendo logout...');
+    await authService.logout();
   }
 );
 
@@ -75,51 +106,54 @@ const authSlice = createSlice({
     },
     logoutLocal: (state) => {
       state.user = null;
+      state.token = null;
       state.isAuthenticated = false;
-      removeAuthToken();
+      localStorage.removeItem('eleve_token');
     },
   },
   extraReducers: (builder) => {
     // Login
     builder
-      .addCase(login.pending, (state) => {
+      .addCase(loginUser.pending, (state) => {
+        console.log('⏳ Login pending...');
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(login.fulfilled, (state, action: PayloadAction<User>) => {
+      .addCase(loginUser.fulfilled, (state, action) => {
+        console.log('✅ Login fulfilled:', action.payload);
         state.isLoading = false;
-        state.user = action.payload;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
         state.isAuthenticated = true;
         state.error = null;
       })
-      .addCase(login.rejected, (state, action) => {
+      .addCase(loginUser.rejected, (state, action) => {
+        console.error('❌ Login rejected:', action.payload);
         state.isLoading = false;
         state.error = action.payload as string;
+        state.isAuthenticated = false;
       });
 
     // Register
     builder
-      .addCase(register.pending, (state) => {
+      .addCase(registerUser.pending, (state) => {
+        console.log('⏳ Register pending...');
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(register.fulfilled, (state, action: PayloadAction<User>) => {
+      .addCase(registerUser.fulfilled, (state, action) => {
+        console.log('✅ Register fulfilled:', action.payload);
         state.isLoading = false;
-        state.user = action.payload;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
         state.isAuthenticated = true;
         state.error = null;
       })
-      .addCase(register.rejected, (state, action) => {
+      .addCase(registerUser.rejected, (state, action) => {
+        console.error('❌ Register rejected:', action.payload);
         state.isLoading = false;
         state.error = action.payload as string;
-      });
-
-    // Logout
-    builder
-      .addCase(logout.fulfilled, (state) => {
-        state.user = null;
         state.isAuthenticated = false;
-        state.error = null;
       });
 
     // Get Profile
@@ -135,7 +169,19 @@ const authSlice = createSlice({
       .addCase(getProfile.rejected, (state) => {
         state.isLoading = false;
         state.user = null;
+        state.token = null;
         state.isAuthenticated = false;
+        localStorage.removeItem('eleve_token');
+      });
+
+    // Logout
+    builder
+      .addCase(logout.fulfilled, (state) => {
+        console.log('✅ Logout fulfilled');
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
+        state.error = null;
       });
   },
 });
