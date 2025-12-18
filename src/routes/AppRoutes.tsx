@@ -5,11 +5,11 @@ import MainLayout from '../components/layout/MainLayout';
 // Pages
 import Login from '../components/Auth/Login';
 import Dashboard from '../components/Dashboard';
-import Leads from '../components/Leads';
+import Leads from '../pages/Leads';
 import Contatos from '../components/Contacts';
 import Eventos from '../components/Calendar';
 import FAQs from '../components/FAQs';
-import Tickets from '../components/Tickets';
+import Tickets from '../pages/Tickets';
 // import Documentos from '../components/Documentos';
 // import Relatorios from '../pages/Relatorios';
 // import Configuracoes from '../pages/Configuracoes';

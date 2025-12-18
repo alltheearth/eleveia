@@ -1,6 +1,6 @@
-// ✅ CORRETO - src/hooks/useCurrentSchool.ts
+// src/hooks/useCurrentSchool.ts - ✅ CORRIGIDO
 import { useState, useEffect } from 'react';
-import { useGetSchoolsQuery, type School } from '../services'; // ✅ Importar do index
+import { useGetSchoolsQuery, type School } from '../services';
 
 interface UseCurrentSchoolReturn {
   currentSchool: School | null;

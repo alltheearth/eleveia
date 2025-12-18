@@ -1,8 +1,11 @@
-// src/services/api/baseApi.ts
+// ✅ CORRETO - src/services/api/baseApi.ts
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../../store';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
+// ✅ URL base CORRETA (inclui /api/v1)
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+
+console.log('🌐 API Base URL:', API_BASE_URL);
 
 /**
  * Configuração base do RTK Query para toda a aplicação
@@ -19,6 +22,7 @@ export const baseApi = createApi({
       
       if (token) {
         headers.set('Authorization', `Token ${token}`);
+        console.log('🔑 Token adicionado ao header');
       }
       
       headers.set('Content-Type', 'application/json');
@@ -26,8 +30,6 @@ export const baseApi = createApi({
       
       return headers;
     },
-    // Configurar timeout e credenciais
-    timeout: 30000,
   }),
   
   // Tags para invalidação de cache
@@ -49,6 +51,8 @@ export const baseApi = createApi({
 
 // Helper para extrair mensagens de erro
 export const extractErrorMessage = (error: any): string => {
+  console.error('🔴 Erro da API:', error);
+  
   if (error.data) {
     if (typeof error.data === 'string') return error.data;
     if (error.data.detail) return error.data.detail;
@@ -57,10 +61,26 @@ export const extractErrorMessage = (error: any): string => {
     
     // Erros de validação
     const firstKey = Object.keys(error.data)[0];
-    if (Array.isArray(error.data[firstKey])) {
+    if (firstKey && Array.isArray(error.data[firstKey])) {
       return error.data[firstKey][0];
     }
   }
   
-  return error.message || 'Erro desconhecido';
+  if (error.status === 404) {
+    return 'Endpoint não encontrado. Verifique se a API está rodando.';
+  }
+  
+  if (error.status === 401) {
+    return 'Não autorizado. Faça login novamente.';
+  }
+  
+  if (error.status === 403) {
+    return 'Acesso negado. Você não tem permissão.';
+  }
+  
+  if (error.status === 500) {
+    return 'Erro no servidor. Tente novamente mais tarde.';
+  }
+  
+  return error.message || error.error || 'Erro desconhecido';
 };

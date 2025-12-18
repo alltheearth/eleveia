@@ -1,21 +1,28 @@
+// ✅ CORRETO - src/App.tsx
 import { BrowserRouter } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import AppRoutes from './routes/AppRoutes';
-import { getProfile } from './store/slices/authSlice';
-import type { AppDispatch, RootState } from './store';
+import type { RootState } from './store';
+import { useGetProfileQuery } from './services'; // ✅ Importar do services
 
 function App() {
-  const dispatch = useDispatch<AppDispatch>();
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, token } = useSelector((state: RootState) => state.auth);
 
-  // Verificar autenticação ao carregar
+  // ✅ Buscar perfil automaticamente se estiver autenticado
+  const { refetch } = useGetProfileQuery(undefined, {
+    skip: !isAuthenticated, // Só busca se estiver autenticado
+  });
+
+  // ✅ Verificar autenticação ao carregar
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token && isAuthenticated) {
-      dispatch(getProfile());
+    const storedToken = localStorage.getItem('eleve_token');
+    
+    if (storedToken && isAuthenticated) {
+      console.log('✅ Token encontrado, buscando perfil...');
+      refetch();
     }
-  }, [dispatch]);
+  }, [isAuthenticated, refetch]);
 
   return (
     <BrowserRouter>

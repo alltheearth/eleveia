@@ -1,4 +1,4 @@
-// src/store/slices/authSlice.ts - ✅ CORRIGIDO
+// ✅ CORRETO - src/store/slices/authSlice.ts
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { authApi, type User } from '../../services';
 
@@ -17,7 +17,7 @@ const initialState: AuthState = {
 /**
  * ✅ Slice de autenticação
  * Gerencia apenas o estado de user e token
- * As chamadas de API são feitas via RTK Query
+ * As chamadas de API são feitas via RTK Query (authApi)
  */
 const authSlice = createSlice({
   name: 'auth',
@@ -48,7 +48,6 @@ const authSlice = createSlice({
         state.token = action.payload.token;
         state.isAuthenticated = true;
         
-        // Garantir que o token está no localStorage
         if (action.payload.token) {
           localStorage.setItem('eleve_token', action.payload.token);
         }
@@ -64,7 +63,6 @@ const authSlice = createSlice({
         state.token = action.payload.token;
         state.isAuthenticated = true;
         
-        // Garantir que o token está no localStorage
         if (action.payload.token) {
           localStorage.setItem('eleve_token', action.payload.token);
         }
@@ -110,8 +108,6 @@ const authSlice = createSlice({
       authApi.endpoints.login.matchRejected,
       (state, action) => {
         console.error('❌ Login rejected:', action);
-        // Não limpa o state em caso de erro de login
-        // (pode ser só senha errada)
       }
     );
 
@@ -120,11 +116,11 @@ const authSlice = createSlice({
       authApi.endpoints.register.matchRejected,
       (state, action) => {
         console.error('❌ Registro rejected:', action);
-        // Não limpa o state em caso de erro de registro
       }
     );
   },
 });
 
+// ✅ Exportar apenas as actions do slice (não queries)
 export const { logoutLocal, setUser } = authSlice.actions;
 export default authSlice.reducer;

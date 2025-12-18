@@ -1,4 +1,4 @@
-// src/store/index.ts
+// ✅ CORRETO - src/store/index.ts
 import { configureStore } from '@reduxjs/toolkit';
 import { baseApi } from '../services/api/baseApi';
 import authReducer from './slices/authSlice';
@@ -9,13 +9,14 @@ import authReducer from './slices/authSlice';
  */
 const store = configureStore({
   reducer: {
-    // API (RTK Query)
+    // ✅ RTK Query API
     [baseApi.reducerPath]: baseApi.reducer,
     
-    // Apenas estado de autenticação (user, token)
+    // ✅ Slice de autenticação (apenas state local)
     auth: authReducer,
   },
   
+  // ✅ Middleware do RTK Query
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(baseApi.middleware),
 });
