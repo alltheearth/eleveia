@@ -1,28 +1,33 @@
-// ✅ CORRETO - src/services/api/baseApi.ts
+// src/services/api/baseApi.ts - ✅ CORRIGIDO
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../../store';
 
-// ✅ URL base CORRETA (inclui /api/v1)
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
 
-console.log('🌐 API Base URL:', API_BASE_URL);
+console.log('🔧 API Base URL:', API_BASE_URL);
 
 /**
  * Configuração base do RTK Query para toda a aplicação
- * Todas as APIs devem injetar endpoints nesta base
  */
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
     baseUrl: API_BASE_URL,
     prepareHeaders: (headers, { getState }) => {
-      // Pegar token do estado ou localStorage
+      // ✅ Pegar token do estado Redux OU localStorage
       const state = getState() as RootState;
-      const token = state.auth.token || localStorage.getItem('eleve_token');
+      let token = state.auth.token;
+      
+      // ✅ Fallback para localStorage se não tiver no state
+      if (!token) {
+        token = localStorage.getItem('eleve_token');
+      }
       
       if (token) {
         headers.set('Authorization', `Token ${token}`);
-        console.log('🔑 Token adicionado ao header');
+        console.log('✅ Token adicionado ao header:', token.substring(0, 20) + '...');
+      } else {
+        console.warn('⚠️ Nenhum token encontrado');
       }
       
       headers.set('Content-Type', 'application/json');
@@ -30,6 +35,7 @@ export const baseApi = createApi({
       
       return headers;
     },
+    timeout: 30000,
   }),
   
   // Tags para invalidação de cache
@@ -45,13 +51,12 @@ export const baseApi = createApi({
     'Document'
   ],
   
-  // Endpoints serão injetados pelas APIs específicas
   endpoints: () => ({}),
 });
 
 // Helper para extrair mensagens de erro
 export const extractErrorMessage = (error: any): string => {
-  console.error('🔴 Erro da API:', error);
+  console.error('📋 Extraindo erro:', error);
   
   if (error.data) {
     if (typeof error.data === 'string') return error.data;
@@ -64,23 +69,16 @@ export const extractErrorMessage = (error: any): string => {
     if (firstKey && Array.isArray(error.data[firstKey])) {
       return error.data[firstKey][0];
     }
+    
+    // Se tiver non_field_errors
+    if (error.data.non_field_errors && Array.isArray(error.data.non_field_errors)) {
+      return error.data.non_field_errors[0];
+    }
   }
   
-  if (error.status === 404) {
-    return 'Endpoint não encontrado. Verifique se a API está rodando.';
+  if (error.error) {
+    return error.error;
   }
   
-  if (error.status === 401) {
-    return 'Não autorizado. Faça login novamente.';
-  }
-  
-  if (error.status === 403) {
-    return 'Acesso negado. Você não tem permissão.';
-  }
-  
-  if (error.status === 500) {
-    return 'Erro no servidor. Tente novamente mais tarde.';
-  }
-  
-  return error.message || error.error || 'Erro desconhecido';
+  return error.message || 'Erro desconhecido';
 };
