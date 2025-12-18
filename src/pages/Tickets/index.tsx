@@ -1,40 +1,62 @@
-// src/pages/Tickets/index.tsx
-import { useState } from 'react';
-import { Search, Plus, Download, Filter, X, Edit2, Trash2, Ticket as TicketIcon, AlertCircle } from 'lucide-react';
+// src/pages/Tickets/index.tsx - ✅ COMPLETO E FUNCIONAL
+import { useState, useEffect } from 'react';
+import { Search, Plus, Download, X, Edit2, Trash2, Ticket as TicketIcon, AlertCircle, User as UserIcon } from 'lucide-react';
 import StatCard from '../../components/layout/StatCard';
 import FilterBar from '../../components/layout/FilterBar';
 import DataTable from '../../components/layout/DataTable';
+import { useCurrentSchool } from '../../hooks/useCurrentSchool';
 import {
   useGetTicketsQuery,
   useCreateTicketMutation,
   useUpdateTicketMutation,
   useDeleteTicketMutation,
+  useChangeTicketStatusMutation,
+  useGetTicketStatsQuery,
+  useExportTicketsCSVMutation,
   extractErrorMessage,
-  type Ticket
+  type Ticket,
+  type TicketFilters
 } from '../../services';
 
 export default function Tickets() {
+  // ✅ Hook para escola atual
+  const { 
+    currentSchool, 
+    currentSchoolId,
+    isLoading: schoolsLoading 
+  } = useCurrentSchool();
+
   // Estados para filtros
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('todos');
-  const [prioridadeFilter, setPrioridadeFilter] = useState('todas');
+  const [statusFilter, setStatusFilter] = useState<string>('todos');
+  const [prioridadeFilter, setPrioridadeFilter] = useState<string>('todas');
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editandoTicket, setEditandoTicket] = useState<Ticket | null>(null);
   const [ticketParaDeletar, setTicketParaDeletar] = useState<number | null>(null);
   const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
 
-  // ✅ Buscar tickets da API
+  // ✅ Preparar filtros para API
+  const filters: TicketFilters = {
+    search: searchTerm || undefined,
+    status: statusFilter !== 'todos' ? statusFilter : undefined,
+    priority: prioridadeFilter !== 'todas' ? prioridadeFilter : undefined,
+  };
+
+  // ✅ RTK Query Hooks
   const { 
     data: ticketsData, 
-    isLoading, 
+    isLoading: ticketsLoading, 
     error: fetchError,
     refetch 
-  } = useGetTicketsQuery();
+  } = useGetTicketsQuery(filters);
 
-  // ✅ Mutations
+  const { data: stats } = useGetTicketStatsQuery();
+
   const [createTicket, { isLoading: isCreating }] = useCreateTicketMutation();
   const [updateTicket, { isLoading: isUpdating }] = useUpdateTicketMutation();
   const [deleteTicket, { isLoading: isDeleting }] = useDeleteTicketMutation();
+  const [changeStatus] = useChangeTicketStatusMutation();
+  const [exportCSV, { isLoading: isExporting }] = useExportTicketsCSVMutation();
 
   // Form data
   const [formData, setFormData] = useState({
@@ -42,30 +64,29 @@ export default function Tickets() {
     description: '',
     priority: 'medium' as Ticket['priority'],
     status: 'open' as Ticket['status'],
-    school: 1, // Será preenchido com escola do usuário
+    school: parseInt(currentSchoolId),
   });
+
+  // ✅ Atualizar escola quando mudar
+  useEffect(() => {
+    if (currentSchoolId && !editandoTicket) {
+      setFormData(prev => ({ 
+        ...prev, 
+        school: parseInt(currentSchoolId)
+      }));
+    }
+  }, [currentSchoolId, editandoTicket]);
+
+  // ✅ Limpar mensagens automaticamente
+  useEffect(() => {
+    if (mensagem) {
+      const timer = setTimeout(() => setMensagem(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [mensagem]);
 
   // ✅ Pegar tickets da API
   const tickets = ticketsData?.results || [];
-
-  // Filtrar tickets
-  const filteredTickets = tickets.filter(ticket => {
-    const matchSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       ticket.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchStatus = statusFilter === 'todos' || ticket.status === statusFilter;
-    const matchPrioridade = prioridadeFilter === 'todas' || ticket.priority === prioridadeFilter;
-    return matchSearch && matchStatus && matchPrioridade;
-  });
-
-  // ✅ Estatísticas calculadas dos tickets reais
-  const stats = {
-    total: tickets.length,
-    abertos: tickets.filter(t => t.status === 'open').length,
-    em_andamento: tickets.filter(t => t.status === 'in_progress').length,
-    pendentes: tickets.filter(t => t.status === 'pending').length,
-    resolvidos: tickets.filter(t => t.status === 'resolved').length,
-    fechados: tickets.filter(t => t.status === 'closed').length,
-  };
 
   // ============================================
   // HANDLERS
@@ -77,7 +98,7 @@ export default function Tickets() {
       description: '',
       priority: 'medium',
       status: 'open',
-      school: 1,
+      school: parseInt(currentSchoolId),
     });
     setEditandoTicket(null);
     setMostrarFormulario(false);
@@ -88,9 +109,18 @@ export default function Tickets() {
     setMostrarFormulario(true);
   };
 
+  const validarFormulario = (): string | null => {
+    if (!formData.title.trim()) return 'Título é obrigatório';
+    if (formData.title.trim().length < 5) return 'Título deve ter no mínimo 5 caracteres';
+    if (!formData.description.trim()) return 'Descrição é obrigatória';
+    if (formData.description.trim().length < 10) return 'Descrição deve ter no mínimo 10 caracteres';
+    return null;
+  };
+
   const handleCriarTicket = async () => {
-    if (!formData.title.trim() || !formData.description.trim()) {
-      setMensagem({ tipo: 'erro', texto: 'Preencha título e descrição' });
+    const erro = validarFormulario();
+    if (erro) {
+      setMensagem({ tipo: 'erro', texto: erro });
       return;
     }
 
@@ -120,8 +150,9 @@ export default function Tickets() {
   const handleAtualizarTicket = async () => {
     if (!editandoTicket) return;
 
-    if (!formData.title.trim() || !formData.description.trim()) {
-      setMensagem({ tipo: 'erro', texto: 'Preencha título e descrição' });
+    const erro = validarFormulario();
+    if (erro) {
+      setMensagem({ tipo: 'erro', texto: erro });
       return;
     }
 
@@ -156,29 +187,29 @@ export default function Tickets() {
     }
   };
 
-  const handleExportar = () => {
-    // Implementar exportação CSV
-    const csv = [
-      ['ID', 'Título', 'Descrição', 'Prioridade', 'Status', 'Criado em'].join(','),
-      ...tickets.map(t => [
-        t.id,
-        `"${t.title}"`,
-        `"${t.description}"`,
-        t.priority,
-        t.status,
-        t.created_at
-      ].join(','))
-    ].join('\n');
+  const handleMudarStatus = async (id: number, novoStatus: Ticket['status']) => {
+    try {
+      await changeStatus({ id, status: novoStatus }).unwrap();
+      setMensagem({ tipo: 'sucesso', texto: '✅ Status atualizado!' });
+      refetch();
+    } catch (err) {
+      setMensagem({ tipo: 'erro', texto: `❌ ${extractErrorMessage(err)}` });
+    }
+  };
 
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `tickets_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-    
-    setMensagem({ tipo: 'sucesso', texto: '✅ CSV exportado!' });
+  const handleExportar = async () => {
+    try {
+      const blob = await exportCSV(filters).unwrap();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tickets_${currentSchool?.nome_escola || 'escola'}_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      setMensagem({ tipo: 'sucesso', texto: '✅ CSV exportado!' });
+    } catch (err) {
+      setMensagem({ tipo: 'erro', texto: '❌ Erro ao exportar CSV' });
+    }
   };
 
   const handleLimparFiltros = () => {
@@ -245,12 +276,25 @@ export default function Tickets() {
   // LOADING & ERROR STATES
   // ============================================
 
-  if (isLoading) {
+  if (ticketsLoading || schoolsLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
           <TicketIcon className="mx-auto mb-4 h-12 w-12 animate-pulse text-blue-600" />
           <p className="text-gray-600 font-semibold">Carregando tickets...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Sem escola cadastrada
+  if (!currentSchool) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md mx-4">
+          <TicketIcon className="mx-auto mb-4 h-16 w-16 text-yellow-600" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Nenhuma escola cadastrada</h2>
+          <p className="text-gray-600">Entre em contato com o administrador.</p>
         </div>
       </div>
     );
@@ -283,50 +327,22 @@ export default function Tickets() {
         <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
           <div className="flex items-center gap-2 text-red-700">
             <AlertCircle size={20} />
-            <span className="font-semibold">Erro ao carregar tickets</span>
+            <span className="font-semibold">Erro: {extractErrorMessage(fetchError)}</span>
           </div>
         </div>
       )}
 
       {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-        <StatCard
-          label="Total de Tickets"
-          value={stats.total}
-          color="blue"
-          icon={<Filter size={24} />}
-        />
-        <StatCard
-          label="Abertos"
-          value={stats.abertos}
-          color="green"
-          description="Aguardando atendimento"
-        />
-        <StatCard
-          label="Em Andamento"
-          value={stats.em_andamento}
-          color="yellow"
-          description="Sendo processados"
-        />
-        <StatCard
-          label="Pendentes"
-          value={stats.pendentes}
-          color="orange"
-          description="Aguardando informações"
-        />
-        <StatCard
-          label="Resolvidos"
-          value={stats.resolvidos}
-          color="purple"
-          description="Finalizados"
-        />
-        <StatCard
-          label="Fechados"
-          value={stats.fechados}
-          color="gray"
-          description="Arquivados"
-        />
-      </div>
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <StatCard label="Total" value={stats.total} color="blue" icon={<TicketIcon size={24} />} />
+          <StatCard label="Abertos" value={stats.open} color="green" description="Aguardando" />
+          <StatCard label="Em Andamento" value={stats.in_progress} color="yellow" description="Processando" />
+          <StatCard label="Pendentes" value={stats.pending} color="orange" description="Aguardando info" />
+          <StatCard label="Resolvidos" value={stats.resolved} color="purple" description="Finalizados" />
+          <StatCard label="Fechados" value={stats.closed} color="gray" description="Arquivados" />
+        </div>
+      )}
 
       {/* Formulário */}
       {mostrarFormulario && (
@@ -342,7 +358,7 @@ export default function Tickets() {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-gray-700 font-semibold mb-2">Título *</label>
+              <label className="block text-gray-700 font-semibold mb-2">Título * (mín. 5 caracteres)</label>
               <input
                 type="text"
                 placeholder="Descreva o problema brevemente"
@@ -350,10 +366,11 @@ export default function Tickets() {
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
               />
+              <p className="text-sm text-gray-500 mt-1">{formData.title.length} caracteres</p>
             </div>
 
             <div>
-              <label className="block text-gray-700 font-semibold mb-2">Descrição *</label>
+              <label className="block text-gray-700 font-semibold mb-2">Descrição * (mín. 10 caracteres)</label>
               <textarea
                 placeholder="Descreva o problema em detalhes..."
                 value={formData.description}
@@ -361,6 +378,7 @@ export default function Tickets() {
                 rows={4}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
               />
+              <p className="text-sm text-gray-500 mt-1">{formData.description.length} caracteres</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -400,7 +418,7 @@ export default function Tickets() {
                   disabled={isUpdating}
                   className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50"
                 >
-                  {isUpdating ? 'Atualizando...' : 'Atualizar Ticket'}
+                  {isUpdating ? 'Atualizando...' : 'Atualizar'}
                 </button>
               ) : (
                 <button
@@ -466,6 +484,7 @@ export default function Tickets() {
             onClick: handleExportar,
             icon: <Download size={18} />,
             variant: 'success',
+            loading: isExporting,
           },
           {
             label: 'Novo Ticket',
@@ -502,7 +521,24 @@ export default function Tickets() {
           { 
             key: 'status', 
             label: 'Status',
-            render: (value) => getStatusBadge(value)
+            render: (value, row) => (
+              <select
+                value={value}
+                onChange={(e) => handleMudarStatus(row.id, e.target.value as Ticket['status'])}
+                className={`${value === 'open' ? 'bg-blue-100 text-blue-700' : 
+                           value === 'in_progress' ? 'bg-yellow-100 text-yellow-700' :
+                           value === 'pending' ? 'bg-orange-100 text-orange-700' :
+                           value === 'resolved' ? 'bg-green-100 text-green-700' :
+                           'bg-gray-100 text-gray-700'} 
+                           px-3 py-1 rounded-full font-semibold text-sm border-0 cursor-pointer focus:outline-none`}
+              >
+                <option value="open">📝 Aberto</option>
+                <option value="in_progress">⏳ Em Andamento</option>
+                <option value="pending">⏸️ Pendente</option>
+                <option value="resolved">✅ Resolvido</option>
+                <option value="closed">🔒 Fechado</option>
+              </select>
+            )
           },
           { 
             key: 'created_at', 
@@ -511,7 +547,7 @@ export default function Tickets() {
             render: (value) => <span className="text-sm">{formatarData(value)}</span>
           },
         ]}
-        data={filteredTickets}
+        data={tickets}
         keyExtractor={(ticket) => ticket.id.toString()}
         actions={[
           {
@@ -532,11 +568,11 @@ export default function Tickets() {
       />
 
       {/* Info de Resultados */}
-      {filteredTickets.length > 0 && (
+      {tickets.length > 0 && (
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
           <p className="text-gray-700 font-semibold">
-            Mostrando <span className="text-blue-600 font-bold">{filteredTickets.length}</span> de{' '}
-            <span className="text-blue-600 font-bold">{stats.total}</span> tickets
+            Mostrando <span className="text-blue-600 font-bold">{tickets.length}</span> de{' '}
+            <span className="text-blue-600 font-bold">{stats?.total || 0}</span> tickets
           </p>
         </div>
       )}

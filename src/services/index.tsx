@@ -85,8 +85,13 @@ export {
   useCreateTicketMutation,
   useUpdateTicketMutation,
   useDeleteTicketMutation,
+  useChangeTicketStatusMutation,
+  useAssignTicketMutation,
+  useGetTicketStatsQuery,
+  useGetRecentTicketsQuery,
+  useExportTicketsCSVMutation,
 } from './api/ticketsApi';
-export type { Ticket, TicketsResponse } from './api/ticketsApi';
+export type { Ticket, TicketsResponse, TicketFilters } from './api/ticketsApi';
 
 // Dashboard API
 export { dashboardApi } from './api/dashboardApi';
