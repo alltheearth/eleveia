@@ -1,11 +1,16 @@
+// src/components/Contacts/index.tsx - ✅ CORRIGIDO
 import { useState, useEffect, type ChangeEvent } from 'react';
 import { 
   useGetContactsQuery, 
+  useGetContactStatsQuery,
   useCreateContactMutation, 
   useUpdateContactMutation, 
   useDeleteContactMutation,
-  type Contact 
-} from '../../services/contactsApi';
+  useRegisterInteractionMutation,
+  extractErrorMessage,
+  type Contact,
+  type ContactFilters
+} from '../../services';
 import { useCurrentSchool } from '../../hooks/useCurrentSchool';
 import { Trash2, Edit2, Plus, Save, X, Users as UsersIcon, AlertCircle, Search, Phone, Mail, Calendar, Activity } from 'lucide-react';
 
@@ -13,12 +18,11 @@ interface ContactFormData {
   nome: string;
   email: string;
   telefone: string;
-  data_nascimento?: string;
+  data_nascimento: string;
   status: 'ativo' | 'inativo';
-  origem: string;
-  ultima_interacao?: string;
-  observacoes?: string;
-  tags?: string;
+  origem: 'whatsapp' | 'site' | 'telefone' | 'presencial' | 'email' | 'indicacao';
+  observacoes: string;
+  tags: string;
 }
 
 interface StatCardProps {
@@ -36,19 +40,34 @@ export default function Contacts() {
     isLoading: schoolsLoading 
   } = useCurrentSchool();
 
-  // RTK Query Hooks
-  const { data: contactsData, isLoading: contactsLoading, error: contactsError, refetch } = useGetContactsQuery();
+  // Estados para filtros
+  const [busca, setBusca] = useState('');
+  const [filtroStatus, setFiltroStatus] = useState<'todos' | 'ativo' | 'inativo'>('todos');
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [editandoContato, setEditandoContato] = useState<Contact | null>(null);
+  const [contatoParaDeletar, setContatoParaDeletar] = useState<number | null>(null);
+  const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
+
+  // ✅ Preparar filtros para API
+  const filters: ContactFilters = {
+    search: busca || undefined,
+    status: filtroStatus !== 'todos' ? filtroStatus : undefined,
+  };
+
+  // ✅ RTK Query Hooks
+  const { 
+    data: contactsData, 
+    isLoading: contactsLoading, 
+    error: contactsError, 
+    refetch 
+  } = useGetContactsQuery(filters);
+
+  const { data: stats } = useGetContactStatsQuery();
+
   const [createContact, { isLoading: isCreating }] = useCreateContactMutation();
   const [updateContact, { isLoading: isUpdating }] = useUpdateContactMutation();
   const [deleteContact, { isLoading: isDeleting }] = useDeleteContactMutation();
-
-  // Estados
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [editandoContato, setEditandoContato] = useState<Contact | null>(null);
-  const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
-  const [contatoParaDeletar, setContatoParaDeletar] = useState<number | null>(null);
-  const [busca, setBusca] = useState('');
-  const [filtroStatus, setFiltroStatus] = useState<'todos' | 'ativo' | 'inativo'>('todos');
+  const [registerInteraction] = useRegisterInteractionMutation();
 
   const [formData, setFormData] = useState<ContactFormData>({
     nome: '',
@@ -57,7 +76,6 @@ export default function Contacts() {
     data_nascimento: '',
     status: 'ativo',
     origem: 'whatsapp',
-    ultima_interacao: '',
     observacoes: '',
     tags: '',
   });
@@ -79,7 +97,6 @@ export default function Contacts() {
       data_nascimento: '',
       status: 'ativo',
       origem: 'whatsapp',
-      ultima_interacao: '',
       observacoes: '',
       tags: '',
     });
@@ -96,7 +113,6 @@ export default function Contacts() {
       data_nascimento: contato.data_nascimento || '',
       status: contato.status,
       origem: contato.origem,
-      ultima_interacao: contato.ultima_interacao || '',
       observacoes: contato.observacoes || '',
       tags: contato.tags || '',
     });
@@ -107,8 +123,6 @@ export default function Contacts() {
 
   // Validação
   const validarFormulario = (): string | null => {
-    if (!formData.nome.trim()) return 'Nome é obrigatório';
-    if (formData.nome.trim().length < 3) return 'Nome deve ter no mínimo 3 caracteres';
     if (!formData.telefone.trim()) return 'Telefone é obrigatório';
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       return 'Email inválido';
@@ -116,7 +130,7 @@ export default function Contacts() {
     return null;
   };
 
-  // CRIAR contato
+  // ✅ CRIAR contato
   const adicionarContato = async () => {
     const erro = validarFormulario();
     if (erro) {
@@ -136,12 +150,12 @@ export default function Contacts() {
     } catch (error: any) {
       setMensagem({ 
         tipo: 'erro', 
-        texto: `❌ Erro ao adicionar contato: ${error.data?.detail || error.message || 'Erro desconhecido'}` 
+        texto: `❌ ${extractErrorMessage(error)}` 
       });
     }
   };
 
-  // ATUALIZAR contato
+  // ✅ ATUALIZAR contato
   const atualizarContato = async () => {
     if (!editandoContato) return;
 
@@ -166,12 +180,12 @@ export default function Contacts() {
     } catch (error: any) {
       setMensagem({ 
         tipo: 'erro', 
-        texto: `❌ Erro ao atualizar contato: ${error.data?.detail || error.message || 'Erro desconhecido'}` 
+        texto: `❌ ${extractErrorMessage(error)}` 
       });
     }
   };
 
-  // DELETAR contato
+  // ✅ DELETAR contato
   const confirmarDelecao = (id: number) => {
     setContatoParaDeletar(id);
   };
@@ -187,38 +201,28 @@ export default function Contacts() {
     } catch (error: any) {
       setMensagem({ 
         tipo: 'erro', 
-        texto: `❌ Erro ao deletar contato: ${error.data?.detail || error.message || 'Erro desconhecido'}` 
+        texto: `❌ ${extractErrorMessage(error)}` 
       });
     }
   };
 
-  // Filtrar contatos
-  const contatosFiltrados = contactsData?.results
-    .filter(c => c.escola.toString() === currentSchoolId)
-    .filter(c => {
-      const matchBusca = c.nome.toLowerCase().includes(busca.toLowerCase()) ||
-                         c.email.toLowerCase().includes(busca.toLowerCase()) ||
-                         c.telefone.includes(busca);
-      const matchStatus = filtroStatus === 'todos' || c.status === filtroStatus;
-      return matchBusca && matchStatus;
-    }) || [];
-
-  // Estatísticas
-  const stats = {
-    total: contactsData?.results.filter(c => c.escola.toString() === currentSchoolId).length || 0,
-    ativos: contactsData?.results.filter(c => c.escola.toString() === currentSchoolId && c.status === 'ativo').length || 0,
-    inativos: contactsData?.results.filter(c => c.escola.toString() === currentSchoolId && c.status === 'inativo').length || 0,
-    novosHoje: contactsData?.results.filter(c => {
-      if (c.escola.toString() !== currentSchoolId) return false;
-      const hoje = new Date().toISOString().split('T')[0];
-      return c.criado_em.startsWith(hoje);
-    }).length || 0,
+  // ✅ Registrar interação
+  const handleRegistrarInteracao = async (id: number) => {
+    try {
+      await registerInteraction(id).unwrap();
+      setMensagem({ tipo: 'sucesso', texto: '✅ Interação registrada!' });
+      refetch();
+    } catch (error: any) {
+      setMensagem({ 
+        tipo: 'erro', 
+        texto: `❌ ${extractErrorMessage(error)}` 
+      });
+    }
   };
 
   // Formatar data
   const formatarData = (data: string): string => {
-    const date = new Date(data);
-    return date.toLocaleDateString('pt-BR', {
+    return new Date(data).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -226,8 +230,7 @@ export default function Contacts() {
   };
 
   const formatarDataHora = (data: string): string => {
-    const date = new Date(data);
-    return date.toLocaleDateString('pt-BR', {
+    return new Date(data).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -236,7 +239,7 @@ export default function Contacts() {
     });
   };
 
-  // LOADING
+  // ✅ LOADING
   if (contactsLoading || schoolsLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
@@ -255,11 +258,13 @@ export default function Contacts() {
         <div className="text-center max-w-md mx-4">
           <UsersIcon className="mx-auto mb-4 h-16 w-16 text-yellow-600" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Nenhuma escola cadastrada</h2>
-          <p className="text-gray-600">Você precisa cadastrar uma escola antes de gerenciar contatos.</p>
+          <p className="text-gray-600">Entre em contato com o administrador.</p>
         </div>
       </div>
     );
   }
+
+  const contatos = contactsData?.results || [];
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -289,38 +294,40 @@ export default function Contacts() {
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
                 <div className="flex items-center gap-2 text-red-700">
                   <AlertCircle size={20} />
-                  <span className="font-semibold">Erro ao carregar contatos</span>
+                  <span className="font-semibold">Erro: {extractErrorMessage(contactsError)}</span>
                 </div>
               </div>
             )}
 
             {/* Estatísticas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard 
-                label="Total de Contatos" 
-                value={stats.total} 
-                color="bg-blue-100 text-blue-700"
-                icon={<UsersIcon size={24} />}
-              />
-              <StatCard 
-                label="Contatos Ativos" 
-                value={stats.ativos} 
-                color="bg-green-100 text-green-700"
-                icon={<Activity size={24} />}
-              />
-              <StatCard 
-                label="Contatos Inativos" 
-                value={stats.inativos} 
-                color="bg-gray-100 text-gray-700"
-                icon={<Activity size={24} />}
-              />
-              <StatCard 
-                label="Novos Hoje" 
-                value={stats.novosHoje} 
-                color="bg-orange-100 text-orange-700"
-                icon={<Calendar size={24} />}
-              />
-            </div>
+            {stats && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard 
+                  label="Total de Contatos" 
+                  value={stats.total} 
+                  color="bg-blue-100 text-blue-700"
+                  icon={<UsersIcon size={24} />}
+                />
+                <StatCard 
+                  label="Contatos Ativos" 
+                  value={stats.ativos} 
+                  color="bg-green-100 text-green-700"
+                  icon={<Activity size={24} />}
+                />
+                <StatCard 
+                  label="Contatos Inativos" 
+                  value={stats.inativos} 
+                  color="bg-gray-100 text-gray-700"
+                  icon={<Activity size={24} />}
+                />
+                <StatCard 
+                  label="Novos Hoje" 
+                  value={stats.novos_hoje} 
+                  color="bg-orange-100 text-orange-700"
+                  icon={<Calendar size={24} />}
+                />
+              </div>
+            )}
 
             {/* Filtros e Busca */}
             <div className="bg-white p-4 rounded-lg shadow-md">
@@ -370,7 +377,7 @@ export default function Contacts() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                   <div>
-                    <label className="block text-gray-700 font-semibold mb-2">Nome *</label>
+                    <label className="block text-gray-700 font-semibold mb-2">Nome</label>
                     <input
                       type="text"
                       placeholder="Nome completo"
@@ -416,7 +423,7 @@ export default function Contacts() {
                     <label className="block text-gray-700 font-semibold mb-2">Origem</label>
                     <select
                       value={formData.origem}
-                      onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({...formData, origem: e.target.value})}
+                      onChange={(e: ChangeEvent<HTMLSelectElement>) => setFormData({...formData, origem: e.target.value as any})}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
                     >
                       <option value="whatsapp">WhatsApp</option>
@@ -440,7 +447,7 @@ export default function Contacts() {
                     </select>
                   </div>
 
-                  <div>
+                  <div className="md:col-span-3">
                     <label className="block text-gray-700 font-semibold mb-2">Tags (separadas por vírgula)</label>
                     <input
                       type="text"
@@ -451,10 +458,10 @@ export default function Contacts() {
                     />
                   </div>
 
-                  <div className="md:col-span-2">
+                  <div className="md:col-span-3">
                     <label className="block text-gray-700 font-semibold mb-2">Observações</label>
                     <textarea
-                      placeholder="Informações adicionais sobre o contato..."
+                      placeholder="Informações adicionais..."
                       value={formData.observacoes}
                       onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setFormData({...formData, observacoes: e.target.value})}
                       rows={3}
@@ -506,16 +513,15 @@ export default function Contacts() {
                     <th className="p-3 text-left font-bold text-gray-900">Status</th>
                     <th className="p-3 text-left font-bold text-gray-900">Origem</th>
                     <th className="p-3 text-left font-bold text-gray-900">Última Interação</th>
-                    <th className="p-3 text-left font-bold text-gray-900">Cadastro</th>
                     <th className="p-3 text-left font-bold text-gray-900">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {contatosFiltrados.length > 0 ? (
-                    contatosFiltrados.map((contato) => (
+                  {contatos.length > 0 ? (
+                    contatos.map((contato) => (
                       <tr key={contato.id} className="border-b hover:bg-gray-50 transition">
                         <td className="p-3 text-gray-900 font-semibold">{contato.id}</td>
-                        <td className="p-3 text-gray-900 font-medium">{contato.nome}</td>
+                        <td className="p-3 text-gray-900 font-medium">{contato.nome || '-'}</td>
                         <td className="p-3 text-gray-700">
                           <div className="flex items-center gap-2">
                             <Mail size={16} className="text-gray-400" />
@@ -539,14 +545,20 @@ export default function Contacts() {
                         </td>
                         <td className="p-3">
                           <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-sm">
-                            {contato.origem}
+                            {contato.origem_display}
                           </span>
                         </td>
                         <td className="p-3 text-gray-700 text-sm">
                           {contato.ultima_interacao ? formatarDataHora(contato.ultima_interacao) : '-'}
                         </td>
-                        <td className="p-3 text-gray-700 text-sm">{formatarData(contato.criado_em)}</td>
                         <td className="p-3 flex gap-2">
+                          <button
+                            onClick={() => handleRegistrarInteracao(contato.id)}
+                            className="text-green-600 hover:text-green-800 hover:underline font-semibold text-sm"
+                            title="Registrar interação"
+                          >
+                            📞
+                          </button>
                           <button
                             onClick={() => iniciarEdicao(contato)}
                             className="text-blue-600 hover:text-blue-800 hover:underline font-semibold text-sm"
@@ -565,14 +577,9 @@ export default function Contacts() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={9} className="p-8 text-center text-gray-500">
+                      <td colSpan={8} className="p-8 text-center text-gray-500">
                         <UsersIcon className="mx-auto mb-2 h-12 w-12 text-gray-400" />
                         <p className="font-semibold">Nenhum contato encontrado</p>
-                        <p className="text-sm">
-                          {busca || filtroStatus !== 'todos'
-                            ? 'Tente ajustar os filtros de busca'
-                            : 'Adicione o primeiro contato'}
-                        </p>
                       </td>
                     </tr>
                   )}
@@ -581,11 +588,13 @@ export default function Contacts() {
             </div>
 
             {/* Info de Resultados */}
-            {contatosFiltrados.length > 0 && (
+            {contatos.length > 0 && (
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                 <p className="text-gray-700 font-semibold">
-                  Mostrando <span className="text-blue-600 font-bold">{contatosFiltrados.length}</span> de{' '}
-                  <span className="text-blue-600 font-bold">{stats.total}</span> contatos
+                  Mostrando <span className="text-blue-600 font-bold">{contatos.length}</span> contato(s)
+                  {contactsData?.count && (
+                    <span> de <span className="text-blue-600 font-bold">{contactsData.count}</span> total</span>
+                  )}
                 </p>
               </div>
             )}

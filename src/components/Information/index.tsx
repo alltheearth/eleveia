@@ -1,12 +1,14 @@
-// src/components/Information/index.tsx - Usando RTK Query
+// src/components/Information/index.tsx - ✅ CORRIGIDO
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { 
   useGetSchoolsQuery, 
   useUpdateSchoolMutation,
-} from '../../services/schoolApi';
+  extractErrorMessage
+} from '../../services';
+import { Save, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface FormData {
-  nomeEscola: string;
+  nome_escola: string;
   cnpj: string;
   telefone: string;
   email: string;
@@ -17,28 +19,12 @@ interface FormData {
   estado: string;
   complemento: string;
   sobre: string;
-  niveisEnsino: {
+  niveis_ensino: {
     infantil: boolean;
-    fundamentoI: boolean;
-    fundamentoII: boolean;
+    fundamental: boolean;
     medio: boolean;
   };
 }
-
-
-interface Contatos {
-  emailPrincipal: string;
-  telefonePrincipal: string;
-  whatsapp: string;
-  instagram: string;
-  facebook: string;
-  horarioAula: string;
-  diretor: string;
-  emailDiretor: string;
-  coordenador: string;
-  emailCoordenador: string;
-}
-
 
 interface InputFieldProps {
   label: string;
@@ -46,20 +32,23 @@ interface InputFieldProps {
   placeholder?: string;
   value: string;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
+  readOnly?: boolean;
 }
 
 export default function Information() {
-  // ✅ USAR RTK QUERY ao invés de AsyncThunk
-  const { data: schoolsData, isLoading, error, refetch } = useGetSchoolsQuery();
+  // ✅ RTK Query Hooks
+  const { data: schoolsData, isLoading, error, refetch } = useGetSchoolsQuery({});
   const [updateSchool, { isLoading: isUpdating }] = useUpdateSchoolMutation();
 
+  // Estados
   const [abaSelecionada, setAbaSelecionada] = useState<string>('dados');
   const [escolaAtualId, setEscolaAtualId] = useState<number | null>(null);
   const [mensagemSucesso, setMensagemSucesso] = useState<string>('');
   const [mensagemErro, setMensagemErro] = useState<string>('');
 
   const [formData, setFormData] = useState<FormData>({
-    nomeEscola: '',
+    nome_escola: '',
     cnpj: '',
     telefone: '',
     email: '',
@@ -70,22 +59,21 @@ export default function Information() {
     estado: '',
     complemento: '',
     sobre: '',
-    niveisEnsino: {
+    niveis_ensino: {
       infantil: false,
-      fundamentoI: false,
-      fundamentoII: false,
+      fundamental: false,
       medio: false,
     }
   });
 
-  // ✅ CARREGAR DADOS DA ESCOLA QUANDO DISPONÍVEL
+  // ✅ Carregar dados quando disponível
   useEffect(() => {
-    if (schoolsData && schoolsData.results.length > 0) {
-      const escola = schoolsData.results[0]; // Pega primeira escola
+    if (schoolsData?.results && schoolsData.results.length > 0) {
+      const escola = schoolsData.results[0];
       setEscolaAtualId(escola.id);
       
       setFormData({
-        nomeEscola: escola.nome_escola || '',
+        nome_escola: escola.nome_escola || '',
         cnpj: escola.cnpj || '',
         telefone: escola.telefone || '',
         email: escola.email || '',
@@ -96,11 +84,10 @@ export default function Information() {
         estado: escola.estado || '',
         complemento: escola.complemento || '',
         sobre: escola.sobre || '',
-        niveisEnsino: {
-          infantil: escola.niveis_ensino?.niveis_ensino?.infantil || false,
-          fundamentoI: escola.niveis_ensino?.niveis_ensino?.fundamentoI || false,
-          fundamentoII: escola.niveis_ensino?.niveis_ensino?.fundamentoII || false,
-          medio: escola.niveis_ensino?.niveis_ensino?.medio || false,
+        niveis_ensino: {
+          infantil: escola.niveis_ensino?.infantil || false,
+          fundamental: escola.niveis_ensino?.fundamental || false,
+          medio: escola.niveis_ensino?.medio || false,
         }
       });
 
@@ -108,19 +95,20 @@ export default function Information() {
     }
   }, [schoolsData]);
 
+  // Limpar mensagens após 5s
+  useEffect(() => {
+    if (mensagemSucesso) {
+      const timer = setTimeout(() => setMensagemSucesso(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [mensagemSucesso]);
 
-  const [contatos, setContatos] = useState<Contatos>({
-    emailPrincipal: 'contato@escola.com.br',
-    telefonePrincipal: '(11) 3000-0000',
-    whatsapp: '(11) 99999-0000',
-    instagram: '@colegioexemplo',
-    facebook: 'Colégio Exemplo',
-    horarioAula: '07:30 - 17:30',
-    diretor: 'José Silva',
-    emailDiretor: 'diretor@escola.com.br',
-    coordenador: 'Maria Santos',
-    emailCoordenador: 'coord@escola.com.br'
-  });
+  useEffect(() => {
+    if (mensagemErro) {
+      const timer = setTimeout(() => setMensagemErro(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [mensagemErro]);
 
   const handleInputChange = (field: keyof FormData, value: string): void => {
     setFormData(prev => ({
@@ -129,17 +117,17 @@ export default function Information() {
     }));
   };
 
-  const handleCheckboxChange = (field: keyof FormData['niveisEnsino']): void => {
+  const handleCheckboxChange = (field: keyof FormData['niveis_ensino']): void => {
     setFormData(prev => ({
       ...prev,
-      niveisEnsino: {
-        ...prev.niveisEnsino,
-        [field]: !prev.niveisEnsino[field]
+      niveis_ensino: {
+        ...prev.niveis_ensino,
+        [field]: !prev.niveis_ensino[field]
       }
     }));
   };
 
-  // ✅ SALVAR ALTERAÇÕES USANDO RTK QUERY MUTATION
+  // ✅ Salvar usando RTK Query
   const handleSalvarAlteracoes = async (): Promise<void> => {
     if (!escolaAtualId) {
       setMensagemErro('Nenhuma escola selecionada');
@@ -147,46 +135,37 @@ export default function Information() {
     }
 
     try {
+      // ✅ Campos que podem ser editados por gestores
+      const dataToUpdate = {
+        telefone: formData.telefone,
+        email: formData.email,
+        website: formData.website,
+        cep: formData.cep,
+        endereco: formData.endereco,
+        cidade: formData.cidade,
+        estado: formData.estado,
+        complemento: formData.complemento,
+        sobre: formData.sobre,
+        niveis_ensino: formData.niveis_ensino,
+      };
+
       await updateSchool({
         id: escolaAtualId,
-        data: {
-          nome_escola: formData.nomeEscola,
-          cnpj: formData.cnpj,
-          telefone: formData.telefone,
-          email: formData.email,
-          website: formData.website,
-          cep: formData.cep,
-          endereco: formData.endereco,
-          cidade: formData.cidade,
-          estado: formData.estado,
-          complemento: formData.complemento,
-          sobre: formData.sobre,
-          niveis_ensino: {
-            niveis_ensino: formData.niveisEnsino
-          }
-        }
+        data: dataToUpdate
       }).unwrap();
 
       setMensagemSucesso('✅ Dados salvos com sucesso!');
       setMensagemErro('');
+      refetch(); // Atualizar dados
       
-      setTimeout(() => setMensagemSucesso(''), 3000);
     } catch (err: any) {
-      setMensagemErro(`❌ Erro ao salvar: ${err.data?.detail || err.message || 'Erro desconhecido'}`);
+      const errorMsg = extractErrorMessage(err);
+      setMensagemErro(`❌ Erro ao salvar: ${errorMsg}`);
       setMensagemSucesso('');
     }
   };
 
-
-
-  const handleContatoChange = (field: keyof Contatos, value: string): void => {
-    setContatos(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  // ✅ LOADING E ERROR STATES
+  // ✅ LOADING
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
@@ -198,12 +177,16 @@ export default function Information() {
     );
   }
 
+  // ✅ ERROR
   if (error) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg max-w-md">
-          <p className="font-bold">❌ Erro ao carregar dados</p>
-          <p className="text-sm mt-2">Não foi possível carregar os dados da escola.</p>
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle size={20} />
+            <p className="font-bold">❌ Erro ao carregar dados</p>
+          </div>
+          <p className="text-sm mt-2">{extractErrorMessage(error)}</p>
           <button 
             onClick={() => refetch()}
             className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
@@ -215,264 +198,217 @@ export default function Information() {
     );
   }
 
-  if (!schoolsData || schoolsData.results.length === 0) {
+  // ✅ SEM ESCOLA
+  if (!schoolsData?.results || schoolsData.results.length === 0) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-6 py-4 rounded-lg max-w-md text-center">
           <p className="font-bold">⚠️ Nenhuma escola cadastrada</p>
-          <p className="text-sm mt-2">Você ainda não cadastrou nenhuma escola.</p>
-          <button className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
-            Cadastrar Escola
-          </button>
+          <p className="text-sm mt-2">Entre em contato com o administrador.</p>
         </div>
       </div>
     );
   }
 
+  const escola = schoolsData.results[0];
+
   return (
-    <div className="flex h-screen bg-gray-50">
-      <div className="flex-1 flex flex-col overflow-hidden">
-       
-        {/* Content */}
-        <main className="flex-1 overflow-auto p-6">
-          <div className="max-w-6xl mx-auto space-y-6">
-            
-            {/* Mensagens */}
-            {mensagemSucesso && (
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
-                {mensagemSucesso}
-              </div>
-            )}
-            
-            {mensagemErro && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
-                {mensagemErro}
-              </div>
-            )}
-
-            {/* Abas */}
-            <div className="flex gap-2 bg-white p-2 rounded-lg shadow-md flex-wrap">
-              {[
-                { id: 'dados', label: 'Dados Básicos' },
-                { id: 'contato', label: 'Contato' }
-              ].map(aba => (
-                <button
-                  key={aba.id}
-                  onClick={() => setAbaSelecionada(aba.id)}
-                  className={`px-4 py-2 rounded-lg transition font-semibold ${
-                    abaSelecionada === aba.id
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {aba.label}
-                </button>
-              ))}
+    <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+      <main className="flex-1 overflow-auto p-6">
+        <div className="max-w-6xl mx-auto space-y-6">
+          
+          {/* Mensagens */}
+          {mensagemSucesso && (
+            <div className="bg-green-100 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
+              <CheckCircle size={20} />
+              {mensagemSucesso}
             </div>
+          )}
+          
+          {mensagemErro && (
+            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+              <AlertCircle size={20} />
+              {mensagemErro}
+            </div>
+          )}
 
-            {/* TAB 1: DADOS BÁSICOS */}
-            {abaSelecionada === 'dados' && (
-              <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
-                <h2 className="text-2xl font-bold text-gray-900">Dados Básicos</h2>
+          {/* Abas */}
+          <div className="flex gap-2 bg-white p-2 rounded-lg shadow-md flex-wrap">
+            <button
+              onClick={() => setAbaSelecionada('dados')}
+              className={`px-4 py-2 rounded-lg transition font-semibold ${
+                abaSelecionada === 'dados'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Dados Básicos
+            </button>
+          </div>
 
-                {/* Identificação */}
-                <div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-4">Identificação</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputField 
-                      label="Nome da Escola" 
-                      value={formData.nomeEscola}
-                      onChange={(e) => handleInputChange('nomeEscola', e.target.value)}
-                    />
-                    <InputField 
-                      label="CNPJ" 
-                      value={formData.cnpj}
-                      onChange={(e) => handleInputChange('cnpj', e.target.value)}
-                    />
-                    <InputField 
-                      label="Telefone" 
-                      value={formData.telefone}
-                      onChange={(e) => handleInputChange('telefone', e.target.value)}
-                    />
-                    <InputField 
-                      label="Email" 
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                    />
+          {/* DADOS BÁSICOS */}
+          {abaSelecionada === 'dados' && (
+            <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
+              <h2 className="text-2xl font-bold text-gray-900">Dados Básicos</h2>
+
+              {/* Identificação - Campos Protegidos */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 mb-4">
+                  Identificação 
+                  <span className="text-sm text-gray-500 ml-2">(Somente leitura)</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <InputField 
+                    label="Nome da Escola" 
+                    value={formData.nome_escola}
+                    onChange={(e) => handleInputChange('nome_escola', e.target.value)}
+                    readOnly
+                    disabled
+                  />
+                  <InputField 
+                    label="CNPJ" 
+                    value={formData.cnpj}
+                    onChange={(e) => handleInputChange('cnpj', e.target.value)}
+                    readOnly
+                    disabled
+                  />
+                </div>
+                <p className="text-sm text-gray-500 mt-2">
+                  ℹ️ Apenas administradores podem editar nome e CNPJ
+                </p>
+              </div>
+
+              {/* Contato - Editável */}
+              <div className="pt-6 border-t">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Contato</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <InputField 
+                    label="Telefone" 
+                    value={formData.telefone}
+                    onChange={(e) => handleInputChange('telefone', e.target.value)}
+                    placeholder="(11) 98765-4321"
+                  />
+                  <InputField 
+                    label="Email" 
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    placeholder="contato@escola.com"
+                  />
+                  <div className="md:col-span-2">
                     <InputField 
                       label="Website" 
                       type="url"
                       value={formData.website}
                       onChange={(e) => handleInputChange('website', e.target.value)}
+                      placeholder="https://www.escola.com"
                     />
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-2">Logo da Escola</label>
-                      <input type="file" className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" />
-                    </div>
                   </div>
                 </div>
-
-                {/* Localização */}
-                <div className="pt-6 border-t">
-                  <h3 className="text-lg font-bold text-gray-800 mb-4">Localização</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputField 
-                      label="CEP" 
-                      value={formData.cep}
-                      onChange={(e) => handleInputChange('cep', e.target.value)}
-                    />
-                    <InputField 
-                      label="Endereço" 
-                      value={formData.endereco}
-                      onChange={(e) => handleInputChange('endereco', e.target.value)}
-                    />
-                    <InputField 
-                      label="Cidade" 
-                      value={formData.cidade}
-                      onChange={(e) => handleInputChange('cidade', e.target.value)}
-                    />
-                    <InputField 
-                      label="Estado" 
-                      value={formData.estado}
-                      onChange={(e) => handleInputChange('estado', e.target.value)}
-                    />
-                    <div className="md:col-span-2">
-                      <InputField 
-                        label="Complemento" 
-                        value={formData.complemento}
-                        onChange={(e) => handleInputChange('complemento', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sobre a Escola */}
-                <div className="pt-6 border-t">
-                  <h3 className="text-lg font-bold text-gray-800 mb-4">Sobre a Escola</h3>
-                  <label className="block text-gray-700 font-semibold mb-2">História, Missão e Valores</label>
-                  <textarea 
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                    rows={4}
-                    value={formData.sobre}
-                    onChange={(e) => handleInputChange('sobre', e.target.value)}
-                  ></textarea>
-                </div>
-
-                {/* Níveis de Ensino */}
-                <div className="pt-6 border-t">
-                  <h3 className="text-lg font-bold text-gray-800 mb-4">Níveis de Ensino</h3>
-                  <div className="space-y-2">
-                    {[
-                      { key: 'infantil' as const, label: 'Educação Infantil' },
-                      { key: 'fundamentoI' as const, label: 'Ensino Fundamental I' },
-                      { key: 'fundamentoII' as const, label: 'Ensino Fundamental II' },
-                      { key: 'medio' as const, label: 'Ensino Médio' }
-                    ].map(nivel => (
-                      <label key={nivel.key} className="flex items-center gap-2">
-                        <input 
-                          type="checkbox" 
-                          checked={formData.niveisEnsino[nivel.key]}
-                          onChange={() => handleCheckboxChange(nivel.key)}
-                          className="w-4 h-4 rounded"
-                        />
-                        <span className="text-gray-700 font-medium">{nivel.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <button 
-                  onClick={handleSalvarAlteracoes}
-                  disabled={isUpdating}
-                  className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isUpdating ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
               </div>
-            )}
 
-            {/* TAB 4: CONTATO */}
-            {abaSelecionada === 'contato' && (
-              <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
-                <h2 className="text-2xl font-bold text-gray-900">Contato e Informações</h2>
-
-                {/* Contatos Principais */}
-                <div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-4">Contatos Principais</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Localização */}
+              <div className="pt-6 border-t">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Localização</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <InputField 
+                    label="CEP" 
+                    value={formData.cep}
+                    onChange={(e) => handleInputChange('cep', e.target.value)}
+                    placeholder="12345-678"
+                  />
+                  <InputField 
+                    label="Endereço" 
+                    value={formData.endereco}
+                    onChange={(e) => handleInputChange('endereco', e.target.value)}
+                    placeholder="Rua das Flores, 123"
+                  />
+                  <InputField 
+                    label="Cidade" 
+                    value={formData.cidade}
+                    onChange={(e) => handleInputChange('cidade', e.target.value)}
+                    placeholder="São Paulo"
+                  />
+                  <InputField 
+                    label="Estado" 
+                    value={formData.estado}
+                    onChange={(e) => handleInputChange('estado', e.target.value)}
+                    placeholder="SP"
+                  />
+                  <div className="md:col-span-2">
                     <InputField 
-                      label="Email Principal" 
-                      type="email"
-                      value={contatos.emailPrincipal}
-                      onChange={(e) => handleContatoChange('emailPrincipal', e.target.value)}
-                    />
-                    <InputField 
-                      label="Telefone Geral" 
-                      value={contatos.telefonePrincipal}
-                      onChange={(e) => handleContatoChange('telefonePrincipal', e.target.value)}
-                    />
-                    <InputField 
-                      label="WhatsApp" 
-                      value={contatos.whatsapp}
-                      onChange={(e) => handleContatoChange('whatsapp', e.target.value)}
-                    />
-                    <InputField 
-                      label="Horário de Aula" 
-                      value={contatos.horarioAula}
-                      onChange={(e) => handleContatoChange('horarioAula', e.target.value)}
-                    />
-                    <InputField 
-                      label="Instagram" 
-                      value={contatos.instagram}
-                      onChange={(e) => handleContatoChange('instagram', e.target.value)}
-                    />
-                    <InputField 
-                      label="Facebook" 
-                      value={contatos.facebook}
-                      onChange={(e) => handleContatoChange('facebook', e.target.value)}
+                      label="Complemento" 
+                      value={formData.complemento}
+                      onChange={(e) => handleInputChange('complemento', e.target.value)}
+                      placeholder="Sala 10"
                     />
                   </div>
                 </div>
-
-                {/* Responsáveis */}
-                <div className="pt-6 border-t">
-                  <h3 className="text-lg font-bold text-gray-800 mb-4">Responsáveis</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputField 
-                      label="Diretor/Diretora" 
-                      value={contatos.diretor}
-                      onChange={(e) => handleContatoChange('diretor', e.target.value)}
-                    />
-                    <InputField 
-                      label="Email do Diretor" 
-                      type="email"
-                      value={contatos.emailDiretor}
-                      onChange={(e) => handleContatoChange('emailDiretor', e.target.value)}
-                    />
-                    <InputField 
-                      label="Coordenador Pedagógico" 
-                      value={contatos.coordenador}
-                      onChange={(e) => handleContatoChange('coordenador', e.target.value)}
-                    />
-                    <InputField 
-                      label="Email do Coordenador" 
-                      type="email"
-                      value={contatos.emailCoordenador}
-                      onChange={(e) => handleContatoChange('emailCoordenador', e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <button className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold">
-                  Salvar Alterações
-                </button>
               </div>
-            )}
 
-          </div>
-        </main>
-      </div>
+              {/* Sobre */}
+              <div className="pt-6 border-t">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Sobre a Escola</h3>
+                <label className="block text-gray-700 font-semibold mb-2">
+                  História, Missão e Valores
+                </label>
+                <textarea 
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                  rows={4}
+                  value={formData.sobre}
+                  onChange={(e) => handleInputChange('sobre', e.target.value)}
+                  placeholder="Conte a história da sua escola..."
+                ></textarea>
+              </div>
+
+              {/* Níveis de Ensino */}
+              <div className="pt-6 border-t">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Níveis de Ensino</h3>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.niveis_ensino.infantil}
+                      onChange={() => handleCheckboxChange('infantil')}
+                      className="w-4 h-4 rounded"
+                    />
+                    <span className="text-gray-700 font-medium">Educação Infantil</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.niveis_ensino.fundamental}
+                      onChange={() => handleCheckboxChange('fundamental')}
+                      className="w-4 h-4 rounded"
+                    />
+                    <span className="text-gray-700 font-medium">Ensino Fundamental</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.niveis_ensino.medio}
+                      onChange={() => handleCheckboxChange('medio')}
+                      className="w-4 h-4 rounded"
+                    />
+                    <span className="text-gray-700 font-medium">Ensino Médio</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Botão Salvar */}
+              <button 
+                onClick={handleSalvarAlteracoes}
+                disabled={isUpdating}
+                className="mt-6 flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save size={20} />
+                {isUpdating ? 'Salvando...' : 'Salvar Alterações'}
+              </button>
+            </div>
+          )}
+
+        </div>
+      </main>
     </div>
   );
 }
@@ -482,7 +418,9 @@ function InputField({
   type = "text",
   placeholder = "",
   value,
-  onChange
+  onChange,
+  disabled = false,
+  readOnly = false
 }: InputFieldProps) {
   return (
     <div>
@@ -492,7 +430,11 @@ function InputField({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
-        className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+        disabled={disabled}
+        readOnly={readOnly}
+        className={`w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 ${
+          disabled || readOnly ? 'bg-gray-100 cursor-not-allowed' : ''
+        }`}
       />
     </div>
   );

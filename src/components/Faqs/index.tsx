@@ -1,9 +1,15 @@
-// src/components/Faqs/index.tsx
+// src/components/Faqs/index.tsx - ✅ CORRIGIDO
 import { useState, useEffect } from "react";
-import { useGetFaqsQuery, useCreateFaqMutation, useUpdateFaqMutation, useDeleteFaqMutation } from "../../services/faqsApi";
+import { 
+  useGetFAQsQuery, 
+  useCreateFAQMutation, 
+  useUpdateFAQMutation, 
+  useDeleteFAQMutation,
+  extractErrorMessage,
+  type FAQ
+} from "../../services";
 import { useCurrentSchool } from "../../hooks/useCurrentSchool";
 import { Trash2, Edit2, Plus, Save, X, MessageSquare, AlertCircle, School, Search } from 'lucide-react';
-import type {Faqs as Faq } from "../../services/faqsApi";
 
 interface FaqFormData {
   escola: number;
@@ -12,7 +18,6 @@ interface FaqFormData {
   categoria: string;
   status: 'ativa' | 'inativa';
 }
-
 
 const CATEGORIAS = [
   'Admissão',
@@ -38,37 +43,37 @@ export default function Faqs() {
   } = useCurrentSchool();
 
   // ✅ RTK Query Hooks para FAQs
-  const { data: faqs, isLoading: faqsIsLoading, error: faqsError, refetch: faqRefetch } = useGetFaqsQuery();
-  const [createFaq, { isLoading: isCreating }] = useCreateFaqMutation();
-  const [updateFaq, { isLoading: isUpdating }] = useUpdateFaqMutation();
-  const [deleteFaq, { isLoading: isDeleting }] = useDeleteFaqMutation();
+  const { data: faqsData, isLoading: faqsIsLoading, error: faqsError, refetch } = useGetFAQsQuery({});
+  const [createFaq, { isLoading: isCreating }] = useCreateFAQMutation();
+  const [updateFaq, { isLoading: isUpdating }] = useUpdateFAQMutation();
+  const [deleteFaq, { isLoading: isDeleting }] = useDeleteFAQMutation();
 
   // ✅ Estados
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [editandoFaq, setEditandoFaq] = useState<Faq | null>(null);
+  const [editandoFaq, setEditandoFaq] = useState<FAQ | null>(null);
   const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
   const [faqParaDeletar, setFaqParaDeletar] = useState<number | null>(null);
   const [busca, setBusca] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('todas');
   const [filtroStatus, setFiltroStatus] = useState<'todas' | 'ativa' | 'inativa'>('todas');
 
-const [formData, setFormData] = useState<FaqFormData>({
-  escola: parseInt(currentSchoolId),
-  pergunta: '',
-  resposta: '',
-  categoria: 'Geral',
-  status: 'ativa',
-});
+  const [formData, setFormData] = useState<FaqFormData>({
+    escola: parseInt(currentSchoolId),
+    pergunta: '',
+    resposta: '',
+    categoria: 'Geral',
+    status: 'ativa',
+  });
 
-// ✅ CORRETO - Atualizar o useEffect
-useEffect(() => {
-  if (currentSchoolId && !editandoFaq) {
-    setFormData(prev => ({ 
-      ...prev, 
-      escola: parseInt(currentSchoolId) // ⚠️ MUDOU: converter para number
-    }));
-  }
-}, [currentSchoolId, editandoFaq]);
+  // ✅ Atualizar escola no form quando mudar
+  useEffect(() => {
+    if (currentSchoolId && !editandoFaq) {
+      setFormData(prev => ({ 
+        ...prev, 
+        escola: parseInt(currentSchoolId)
+      }));
+    }
+  }, [currentSchoolId, editandoFaq]);
 
   // ✅ Limpar mensagens automaticamente
   useEffect(() => {
@@ -79,31 +84,31 @@ useEffect(() => {
   }, [mensagem]);
 
   // ✅ Reset form
-const resetForm = () => {
-  setFormData({
-    escola: parseInt(currentSchoolId), // ⚠️ MUDOU: converter para number
-    pergunta: '',
-    resposta: '',
-    categoria: 'Geral',
-    status: 'ativa',
-  });
-  setEditandoFaq(null);
-  setMostrarFormulario(false);
-};
+  const resetForm = () => {
+    setFormData({
+      escola: parseInt(currentSchoolId),
+      pergunta: '',
+      resposta: '',
+      categoria: 'Geral',
+      status: 'ativa',
+    });
+    setEditandoFaq(null);
+    setMostrarFormulario(false);
+  };
 
   // ✅ Carregar dados para edição
-const iniciarEdicao = (faq: Faq) => {
-  setFormData({
-    escola: faq.escola, // ⚠️ MUDOU: não precisa mais converter para string
-    pergunta: faq.pergunta,
-    resposta: faq.resposta,
-    categoria: faq.categoria,
-    status: faq.status as 'ativa' | 'inativa', // ⚠️ MUDOU: adicionar type assertion
-  });
-  setEditandoFaq(faq);
-  setMostrarFormulario(true);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
+  const iniciarEdicao = (faq: FAQ) => {
+    setFormData({
+      escola: faq.escola,
+      pergunta: faq.pergunta,
+      resposta: faq.resposta,
+      categoria: faq.categoria,
+      status: faq.status,
+    });
+    setEditandoFaq(faq);
+    setMostrarFormulario(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // ✅ Validação
   const validarFormulario = (): string | null => {
@@ -126,9 +131,9 @@ const iniciarEdicao = (faq: Faq) => {
       await createFaq(formData).unwrap();
       setMensagem({ tipo: 'sucesso', texto: '✅ FAQ adicionada com sucesso!' });
       resetForm();
-      faqRefetch();
+      refetch();
     } catch (error: any) {
-      setMensagem({ tipo: 'erro', texto: `❌ ${error.data?.detail || 'Erro ao adicionar FAQ'}` });
+      setMensagem({ tipo: 'erro', texto: `❌ ${extractErrorMessage(error)}` });
     }
   };
 
@@ -146,9 +151,9 @@ const iniciarEdicao = (faq: Faq) => {
       await updateFaq({ id: editandoFaq.id, data: formData }).unwrap();
       setMensagem({ tipo: 'sucesso', texto: '✅ FAQ atualizada com sucesso!' });
       resetForm();
-      faqRefetch();
+      refetch();
     } catch (error: any) {
-      setMensagem({ tipo: 'erro', texto: `❌ ${error.data?.detail || 'Erro ao atualizar FAQ'}` });
+      setMensagem({ tipo: 'erro', texto: `❌ ${extractErrorMessage(error)}` });
     }
   };
 
@@ -160,14 +165,14 @@ const iniciarEdicao = (faq: Faq) => {
       await deleteFaq(faqParaDeletar).unwrap();
       setMensagem({ tipo: 'sucesso', texto: '✅ FAQ deletada com sucesso!' });
       setFaqParaDeletar(null);
-      faqRefetch();
+      refetch();
     } catch (error: any) {
-      setMensagem({ tipo: 'erro', texto: `❌ ${error.data?.detail || 'Erro ao deletar FAQ'}` });
+      setMensagem({ tipo: 'erro', texto: `❌ ${extractErrorMessage(error)}` });
     }
   };
 
   // ✅ FILTRAR FAQs
-  const faqsFiltradas = faqs?.results
+  const faqsFiltradas = faqsData?.results
     .filter(f => f.escola.toString() === currentSchoolId)
     .filter(f => {
       const matchBusca = f.pergunta.toLowerCase().includes(busca.toLowerCase()) ||
@@ -179,9 +184,9 @@ const iniciarEdicao = (faq: Faq) => {
 
   // ✅ Estatísticas
   const stats = {
-    total: faqs?.results.filter(f => f.escola.toString() === currentSchoolId).length || 0,
-    ativas: faqs?.results.filter(f => f.escola.toString() === currentSchoolId && f.status === 'ativa').length || 0,
-    inativas: faqs?.results.filter(f => f.escola.toString() === currentSchoolId && f.status === 'inativa').length || 0,
+    total: faqsData?.results.filter(f => f.escola.toString() === currentSchoolId).length || 0,
+    ativas: faqsData?.results.filter(f => f.escola.toString() === currentSchoolId && f.status === 'ativa').length || 0,
+    inativas: faqsData?.results.filter(f => f.escola.toString() === currentSchoolId && f.status === 'inativa').length || 0,
   };
 
   // ✅ LOADING
@@ -206,9 +211,6 @@ const iniciarEdicao = (faq: Faq) => {
           <p className="text-gray-600 mb-6">
             Você precisa cadastrar uma escola antes de adicionar FAQs.
           </p>
-          <button className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold">
-            Cadastrar Escola
-          </button>
         </div>
       </div>
     );
@@ -243,7 +245,7 @@ const iniciarEdicao = (faq: Faq) => {
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
                 <div className="flex items-center gap-2 text-red-700">
                   <AlertCircle size={20} />
-                  <span className="font-semibold">Erro ao carregar FAQs</span>
+                  <span className="font-semibold">Erro: {extractErrorMessage(faqsError)}</span>
                 </div>
               </div>
             )}
@@ -328,25 +330,25 @@ const iniciarEdicao = (faq: Faq) => {
 
                 <div className="space-y-4">
                   {/* Campo Escola - só mostra se tiver múltiplas */}
-                 {hasMultipleSchools && (
-                  <div>
-                    <label className="block text-gray-700 font-semibold mb-2">Escola *</label>
-                    <select
-                      value={formData.escola}
-                      onChange={(e) => setFormData({ 
-                        ...formData, 
-                        escola: parseInt(e.target.value) // ⚠️ MUDOU: converter para number
-                      })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
-                    >
-                      {schools.map(escola => (
-                        <option key={escola.id} value={escola.id}>
-                          {escola.nome_escola}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                  {hasMultipleSchools && (
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Escola *</label>
+                      <select
+                        value={formData.escola}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          escola: parseInt(e.target.value)
+                        })}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
+                      >
+                        {schools.map(escola => (
+                          <option key={escola.id} value={escola.id}>
+                            {escola.nome_escola}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>

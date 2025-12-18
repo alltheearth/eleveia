@@ -1,26 +1,33 @@
-// src/components/Auth/Login/index.tsx - CORRIGIDO
+// src/components/Auth/Login/index.tsx - ✅ CORRIGIDO
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, User, ArrowRight, CheckCircle } from 'lucide-react';
-import { loginUser, registerUser } from '../../../store/slices/authSlice';
-import { useDispatch, useSelector } from 'react-redux';
-import type { AppDispatch, RootState } from '../../../store';
+import { 
+  useLoginMutation, 
+  useRegisterMutation,
+  extractErrorMessage 
+} from '../../../services';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../store';
 
 export default function Login() {
-  const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { loading, error, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+
+  // ✅ RTK Query Hooks
+  const [login, { isLoading: isLoggingIn }] = useLoginMutation();
+  const [register, { isLoading: isRegistering }] = useRegisterMutation();
 
   const [telaAtual, setTelaAtual] = useState<'login' | 'registro'>('login');
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarSenhaConfirm, setMostrarSenhaConfirm] = useState(false);
   
-  const [login, setLogin] = useState({
+  const [loginData, setLoginData] = useState({
     username: '',
     password: '',
   });
 
-  const [registro, setRegistro] = useState({
+  const [registroData, setRegistroData] = useState({
     first_name: '',
     last_name: '',
     username: '',
@@ -30,9 +37,9 @@ export default function Login() {
     termo: false
   });
 
-  const [erroLocal, setErroLocal] = useState('');
+  const [erro, setErro] = useState('');
 
-  // ✅ REDIRECIONAR quando autenticado
+  // ✅ Redirecionar quando autenticado
   useEffect(() => {
     if (isAuthenticated) {
       console.log('✅ Usuário autenticado, redirecionando...');
@@ -40,81 +47,85 @@ export default function Login() {
     }
   }, [isAuthenticated, navigate]);
 
+  // ✅ Handler de Login
   const handleLogin = async () => {
-    setErroLocal('');
+    setErro('');
 
-    if (!login.username || !login.password) {
-      setErroLocal('Preencha todos os campos');
+    // Validação
+    if (!loginData.username || !loginData.password) {
+      setErro('Preencha todos os campos');
       return;
     }
 
     try {
       console.log('🔐 Tentando login...');
       
-      const result = await dispatch(
-        loginUser({
-          username: login.username,
-          password: login.password,
-        })
-      ).unwrap();
+      const result = await login({
+        username: loginData.username,
+        password: loginData.password,
+      }).unwrap();
 
       console.log('✅ Login bem-sucedido:', result);
-      // O redirecionamento acontecerá pelo useEffect acima
+      // Redirecionamento acontece pelo useEffect acima
       
     } catch (err: any) {
       console.error('❌ Erro no login:', err);
-      setErroLocal(err || 'Erro ao fazer login');
+      setErro(extractErrorMessage(err));
     }
   };
 
+  // ✅ Handler de Registro
   const handleRegistro = async () => {
-    setErroLocal('');
+    setErro('');
 
-    if (!registro.first_name || !registro.last_name || !registro.username || 
-        !registro.email || !registro.password) {
-      setErroLocal('Preencha todos os campos obrigatórios');
+    // Validação
+    if (!registroData.first_name || !registroData.last_name || 
+        !registroData.username || !registroData.email || !registroData.password) {
+      setErro('Preencha todos os campos obrigatórios');
       return;
     }
 
-    if (registro.password !== registro.password2) {
-      setErroLocal('As senhas não coincidem');
+    if (registroData.password !== registroData.password2) {
+      setErro('As senhas não coincidem');
       return;
     }
 
-    if (!registro.termo) {
-      setErroLocal('Você deve aceitar os termos de uso');
+    if (registroData.password.length < 8) {
+      setErro('A senha deve ter no mínimo 8 caracteres');
+      return;
+    }
+
+    if (!registroData.termo) {
+      setErro('Você deve aceitar os termos de uso');
       return;
     }
 
     try {
       console.log('📝 Tentando registro...');
       
-      await dispatch(
-        registerUser({
-          first_name: registro.first_name,
-          last_name: registro.last_name,
-          username: registro.username,
-          email: registro.email,
-          password: registro.password,
-          password2: registro.password2,
-        })
-      ).unwrap();
+      await register({
+        first_name: registroData.first_name,
+        last_name: registroData.last_name,
+        username: registroData.username,
+        email: registroData.email,
+        password: registroData.password,
+        password2: registroData.password2,
+      }).unwrap();
 
       console.log('✅ Registro bem-sucedido');
-      // O redirecionamento acontecerá pelo useEffect acima
+      // Redirecionamento acontece pelo useEffect acima
       
     } catch (err: any) {
       console.error('❌ Erro no registro:', err);
-      setErroLocal(err || 'Erro ao registrar');
+      setErro(extractErrorMessage(err));
     }
   };
 
-  // Mostrar erro global se existir
-  const displayError = erroLocal || error;
-
+  // ✅ TELA DE LOGIN
   if (telaAtual === 'login') {
     return (
       <div className="flex h-screen bg-gradient-to-br from-blue-600 to-blue-900">
+        {/* Lado Esquerdo - Informações */}
         <div className="hidden lg:flex w-1/2 flex-col justify-center items-center text-white p-12">
           <div className="max-w-md">
             <div className="text-5xl font-bold mb-6">🎓</div>
@@ -140,24 +151,29 @@ export default function Login() {
           </div>
         </div>
 
+        {/* Lado Direito - Formulário */}
         <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6">
           <div className="w-full max-w-md">
+            {/* Logo Mobile */}
             <div className="lg:hidden text-center mb-8">
               <div className="text-4xl mb-2">🎓</div>
               <h1 className="text-3xl font-bold text-blue-600">ELEVE.IA</h1>
             </div>
 
+            {/* Card de Login */}
             <div className="bg-white rounded-2xl shadow-2xl p-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Bem-vindo</h2>
               <p className="text-gray-600 mb-8">Faça login para acessar sua conta</p>
 
-              {displayError && (
+              {/* Mensagem de Erro */}
+              {erro && (
                 <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
-                  ❌ {displayError}
+                  ❌ {erro}
                 </div>
               )}
 
               <div className="space-y-4">
+                {/* Usuário */}
                 <div>
                   <label className="block text-gray-700 font-semibold mb-2">Usuário</label>
                   <div className="relative">
@@ -165,15 +181,16 @@ export default function Login() {
                     <input
                       type="text"
                       placeholder="seu_usuario"
-                      value={login.username}
-                      onChange={(e) => setLogin({ ...login, username: e.target.value })}
+                      value={loginData.username}
+                      onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
                       onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-                      disabled={loading}
+                      disabled={isLoggingIn}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 disabled:opacity-50"
                     />
                   </div>
                 </div>
 
+                {/* Senha */}
                 <div>
                   <label className="block text-gray-700 font-semibold mb-2">Senha</label>
                   <div className="relative">
@@ -181,10 +198,10 @@ export default function Login() {
                     <input
                       type={mostrarSenha ? 'text' : 'password'}
                       placeholder="Sua senha"
-                      value={login.password}
-                      onChange={(e) => setLogin({ ...login, password: e.target.value })}
+                      value={loginData.password}
+                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                       onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-                      disabled={loading}
+                      disabled={isLoggingIn}
                       className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 disabled:opacity-50"
                     />
                     <button
@@ -197,15 +214,26 @@ export default function Login() {
                   </div>
                 </div>
 
+                {/* Botão Login */}
                 <button
                   onClick={handleLogin}
-                  disabled={loading}
+                  disabled={isLoggingIn}
                   className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-bold text-lg flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {loading ? 'Entrando...' : 'Entrar'} <ArrowRight size={20} />
+                  {isLoggingIn ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      Entrando...
+                    </>
+                  ) : (
+                    <>
+                      Entrar <ArrowRight size={20} />
+                    </>
+                  )}
                 </button>
               </div>
 
+              {/* Link para Registro */}
               <p className="text-center text-gray-600 mt-6">
                 Não tem conta?{' '}
                 <button
@@ -222,9 +250,10 @@ export default function Login() {
     );
   }
 
-  // TELA DE REGISTRO
+  // ✅ TELA DE REGISTRO
   return (
     <div className="flex h-screen bg-gradient-to-br from-blue-600 to-blue-900">
+      {/* Lado Esquerdo - Informações */}
       <div className="hidden lg:flex w-1/2 flex-col justify-center items-center text-white p-12">
         <div className="max-w-md">
           <div className="text-5xl font-bold mb-6">🎓</div>
@@ -238,39 +267,44 @@ export default function Login() {
             </div>
             <div className="flex gap-3">
               <CheckCircle size={24} className="flex-shrink-0" />
-              <span>Teste gratuito por 14 dias</span>
+              <span>Suporte completo da nossa equipe</span>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Lado Direito - Formulário */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6 overflow-y-auto">
         <div className="w-full max-w-md my-8">
+          {/* Logo Mobile */}
           <div className="lg:hidden text-center mb-8">
             <div className="text-4xl mb-2">🎓</div>
             <h1 className="text-3xl font-bold text-blue-600">ELEVE.IA</h1>
           </div>
 
+          {/* Card de Registro */}
           <div className="bg-white rounded-2xl shadow-2xl p-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">Crie sua conta</h2>
-            <p className="text-gray-600 mb-8">Teste gratuito por 14 dias</p>
+            <p className="text-gray-600 mb-8">Preencha os dados abaixo</p>
 
-            {displayError && (
+            {/* Mensagem de Erro */}
+            {erro && (
               <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
-                ❌ {displayError}
+                ❌ {erro}
               </div>
             )}
 
             <div className="space-y-4">
+              {/* Nome e Sobrenome */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-gray-700 font-semibold mb-2 text-sm">Nome *</label>
                   <input
                     type="text"
                     placeholder="João"
-                    value={registro.first_name}
-                    onChange={(e) => setRegistro({ ...registro, first_name: e.target.value })}
-                    disabled={loading}
+                    value={registroData.first_name}
+                    onChange={(e) => setRegistroData({ ...registroData, first_name: e.target.value })}
+                    disabled={isRegistering}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
                   />
                 </div>
@@ -279,69 +313,74 @@ export default function Login() {
                   <input
                     type="text"
                     placeholder="Silva"
-                    value={registro.last_name}
-                    onChange={(e) => setRegistro({ ...registro, last_name: e.target.value })}
-                    disabled={loading}
+                    value={registroData.last_name}
+                    onChange={(e) => setRegistroData({ ...registroData, last_name: e.target.value })}
+                    disabled={isRegistering}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
                   />
                 </div>
               </div>
 
+              {/* Usuário */}
               <div>
                 <label className="block text-gray-700 font-semibold mb-2">Usuário *</label>
                 <input
                   type="text"
                   placeholder="seu_usuario"
-                  value={registro.username}
-                  onChange={(e) => setRegistro({ ...registro, username: e.target.value })}
-                  disabled={loading}
+                  value={registroData.username}
+                  onChange={(e) => setRegistroData({ ...registroData, username: e.target.value })}
+                  disabled={isRegistering}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
                 />
               </div>
 
+              {/* Email */}
               <div>
                 <label className="block text-gray-700 font-semibold mb-2">Email *</label>
                 <input
                   type="email"
                   placeholder="seu@email.com"
-                  value={registro.email}
-                  onChange={(e) => setRegistro({ ...registro, email: e.target.value })}
-                  disabled={loading}
+                  value={registroData.email}
+                  onChange={(e) => setRegistroData({ ...registroData, email: e.target.value })}
+                  disabled={isRegistering}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
                 />
               </div>
 
+              {/* Senha */}
               <div>
                 <label className="block text-gray-700 font-semibold mb-2">Senha *</label>
                 <input
                   type={mostrarSenha ? 'text' : 'password'}
                   placeholder="Mínimo 8 caracteres"
-                  value={registro.password}
-                  onChange={(e) => setRegistro({ ...registro, password: e.target.value })}
-                  disabled={loading}
+                  value={registroData.password}
+                  onChange={(e) => setRegistroData({ ...registroData, password: e.target.value })}
+                  disabled={isRegistering}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
                 />
               </div>
 
+              {/* Confirmar Senha */}
               <div>
                 <label className="block text-gray-700 font-semibold mb-2">Confirmar Senha *</label>
                 <input
                   type={mostrarSenhaConfirm ? 'text' : 'password'}
                   placeholder="Confirme sua senha"
-                  value={registro.password2}
-                  onChange={(e) => setRegistro({ ...registro, password2: e.target.value })}
+                  value={registroData.password2}
+                  onChange={(e) => setRegistroData({ ...registroData, password2: e.target.value })}
                   onFocus={() => setMostrarSenhaConfirm(true)}
-                  disabled={loading}
+                  disabled={isRegistering}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
                 />
               </div>
 
+              {/* Termos */}
               <label className="flex items-start gap-3">
                 <input
                   type="checkbox"
-                  checked={registro.termo}
-                  onChange={(e) => setRegistro({ ...registro, termo: e.target.checked })}
-                  disabled={loading}
+                  checked={registroData.termo}
+                  onChange={(e) => setRegistroData({ ...registroData, termo: e.target.checked })}
+                  disabled={isRegistering}
                   className="w-4 h-4 mt-1 disabled:opacity-50"
                 />
                 <span className="text-gray-700 text-sm">
@@ -349,15 +388,24 @@ export default function Login() {
                 </span>
               </label>
 
+              {/* Botão Criar Conta */}
               <button
                 onClick={handleRegistro}
-                disabled={loading}
+                disabled={isRegistering}
                 className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-bold text-lg disabled:opacity-50"
               >
-                {loading ? 'Criando conta...' : 'Criar Conta'}
+                {isRegistering ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Criando conta...
+                  </div>
+                ) : (
+                  'Criar Conta'
+                )}
               </button>
             </div>
 
+            {/* Link para Login */}
             <p className="text-center text-gray-600 mt-6">
               Já tem conta?{' '}
               <button

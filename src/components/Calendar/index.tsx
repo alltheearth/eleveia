@@ -1,54 +1,60 @@
+// src/components/Calendar/index.tsx - ✅ CORRIGIDO
 import { useState, useEffect } from "react";
-import { useGetEventsQuery, useCreateEventMutation, useUpdateEventMutation, useDeleteEventMutation } from "../../services/eventsApi";
+import { 
+  useGetEventsQuery, 
+  useCreateEventMutation, 
+  useUpdateEventMutation, 
+  useDeleteEventMutation,
+  extractErrorMessage,
+  type Event
+} from "../../services";
 import { Trash2, Edit2, Plus, Save, X, Calendar as CalendarIcon, AlertCircle } from 'lucide-react';
-import type { Event } from "../../services/eventsApi";
 import { useCurrentSchool } from "../../hooks/useCurrentSchool";
-
- // ✅ Adicionar hook customizado
-
 
 interface EventFormData {
   escola: number;
   data: string;
   evento: string;
-  tipo: string;
+  tipo: 'feriado' | 'prova' | 'formatura' | 'evento_cultural';
 }
 
 export default function Calendar() {
-    const { 
+  const { 
     currentSchoolId, 
+    currentSchool,
+    hasMultipleSchools,
+    schools,
+    isLoading: schoolsLoading
   } = useCurrentSchool();
 
-
   // ✅ RTK Query Hooks
-  const { data: events, isLoading: eventsIsLoading, error: eventsError, refetch: eventRefetch } = useGetEventsQuery();
+  const { data: eventsData, isLoading: eventsIsLoading, error: eventsError, refetch } = useGetEventsQuery();
   const [createEvent, { isLoading: isCreating }] = useCreateEventMutation();
   const [updateEvent, { isLoading: isUpdating }] = useUpdateEventMutation();
   const [deleteEvent, { isLoading: isDeleting }] = useDeleteEventMutation();
+
   // ✅ Estados
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editandoEvento, setEditandoEvento] = useState<Event | null>(null);
   const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
   const [eventoParaDeletar, setEventoParaDeletar] = useState<number | null>(null);
 
-
-    const [formData, setFormData] = useState<EventFormData>({
-    escola: parseInt(currentSchoolId), // ⚠️ MUDOU: converter para number
+  const [formData, setFormData] = useState<EventFormData>({
+    escola: parseInt(currentSchoolId),
     data: '',
     evento: '',
     tipo: 'feriado',
   });
 
-  // ✅ Pegar escola automaticamente quando carregar
-   useEffect(() => {
+  // ✅ Atualizar escola quando mudar
+  useEffect(() => {
     if (currentSchoolId && !editandoEvento) {
       setFormData(prev => ({ 
         ...prev, 
-        escola: parseInt(currentSchoolId) // ⚠️ MUDOU: converter para number
+        escola: parseInt(currentSchoolId)
       }));
     }
   }, [currentSchoolId, editandoEvento]);
-
 
   // ✅ Limpar mensagens automaticamente
   useEffect(() => {
@@ -58,10 +64,10 @@ export default function Calendar() {
     }
   }, [mensagem]);
 
-  // ✅ Reset form quando fechar
-const resetForm = () => {
+  // ✅ Reset form
+  const resetForm = () => {
     setFormData({
-      escola: parseInt(currentSchoolId), // ⚠️ MUDOU: converter para number
+      escola: parseInt(currentSchoolId),
       data: '',
       evento: '',
       tipo: 'feriado',
@@ -70,10 +76,10 @@ const resetForm = () => {
     setMostrarFormulario(false);
   };
 
-  // ✅ Carregar dados do evento para edição
-   const iniciarEdicao = (evento: Event) => {
+  // ✅ Carregar dados para edição
+  const iniciarEdicao = (evento: Event) => {
     setFormData({
-      escola: evento.escola, // ⚠️ MUDOU: não precisa mais converter para string
+      escola: evento.escola,
       data: evento.data,
       evento: evento.evento,
       tipo: evento.tipo,
@@ -83,8 +89,7 @@ const resetForm = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-
-  // ✅ Validação do formulário
+  // ✅ Validação
   const validarFormulario = (): string | null => {
     if (!formData.data) return 'A data é obrigatória';
     if (!formData.evento.trim()) return 'O nome do evento é obrigatório';
@@ -104,12 +109,12 @@ const resetForm = () => {
       await createEvent(formData).unwrap();
       setMensagem({ tipo: 'sucesso', texto: '✅ Evento adicionado com sucesso!' });
       resetForm();
-      eventRefetch();
+      refetch();
     } catch (error: any) {
       console.error('Erro ao adicionar evento:', error);
       setMensagem({ 
         tipo: 'erro', 
-        texto: `❌ Erro ao adicionar evento: ${error.data?.detail || error.message || 'Erro desconhecido'}` 
+        texto: `❌ ${extractErrorMessage(error)}` 
       });
     }
   };
@@ -132,17 +137,17 @@ const resetForm = () => {
       
       setMensagem({ tipo: 'sucesso', texto: '✅ Evento atualizado com sucesso!' });
       resetForm();
-      eventRefetch();
+      refetch();
     } catch (error: any) {
       console.error('Erro ao atualizar evento:', error);
       setMensagem({ 
         tipo: 'erro', 
-        texto: `❌ Erro ao atualizar evento: ${error.data?.detail || error.message || 'Erro desconhecido'}` 
+        texto: `❌ ${extractErrorMessage(error)}` 
       });
     }
   };
 
-  // ✅ DELETAR evento (com confirmação)
+  // ✅ DELETAR evento
   const confirmarDelecao = (id: number) => {
     setEventoParaDeletar(id);
   };
@@ -154,17 +159,17 @@ const resetForm = () => {
       await deleteEvent(eventoParaDeletar).unwrap();
       setMensagem({ tipo: 'sucesso', texto: '✅ Evento deletado com sucesso!' });
       setEventoParaDeletar(null);
-      eventRefetch();
+      refetch();
     } catch (error: any) {
       console.error('Erro ao deletar evento:', error);
       setMensagem({ 
         tipo: 'erro', 
-        texto: `❌ Erro ao deletar evento: ${error.data?.detail || error.message || 'Erro desconhecido'}` 
+        texto: `❌ ${extractErrorMessage(error)}` 
       });
     }
   };
 
-  // ✅ Função para formatar data brasileira
+  // ✅ Formatar data brasileira
   const formatarDataBrasileira = (data: string): string => {
     const [ano, mes, dia] = data.split('-');
     return `${dia}/${mes}/${ano}`;
@@ -181,13 +186,44 @@ const resetForm = () => {
     return emojis[tipo] || '📌';
   };
 
+  // ✅ Get label do tipo
+  const getLabelTipo = (tipo: string): string => {
+    const labels: Record<string, string> = {
+      'feriado': 'Feriado',
+      'prova': 'Prova/Avaliação',
+      'formatura': 'Formatura',
+      'evento_cultural': 'Evento Cultural',
+    };
+    return labels[tipo] || tipo;
+  };
+
+  // ✅ Filtrar eventos da escola atual
+  const eventosFiltrados = eventsData?.results.filter(
+    e => e.escola.toString() === currentSchoolId
+  ) || [];
+
   // ✅ LOADING STATE
-  if (eventsIsLoading) {
+  if (eventsIsLoading || schoolsLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
           <CalendarIcon className="mx-auto mb-4 h-12 w-12 animate-pulse text-blue-600" />
           <p className="text-gray-600 font-semibold">Carregando eventos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Sem escola cadastrada
+  if (!currentSchool) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md mx-4">
+          <CalendarIcon className="mx-auto mb-4 h-16 w-16 text-yellow-600" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Nenhuma escola cadastrada</h2>
+          <p className="text-gray-600 mb-6">
+            Entre em contato com o administrador.
+          </p>
         </div>
       </div>
     );
@@ -222,7 +258,7 @@ const resetForm = () => {
               <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
                 <div className="flex items-center gap-2 text-red-700">
                   <AlertCircle size={20} />
-                  <span className="font-semibold">Erro ao carregar eventos</span>
+                  <span className="font-semibold">Erro: {extractErrorMessage(eventsError)}</span>
                 </div>
               </div>
             )}
@@ -255,72 +291,93 @@ const resetForm = () => {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <label className="block text-gray-700 font-semibold mb-2">Data *</label>
-                    <input
-                      type="date"
-                      value={formData.data}
-                      onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-700 font-semibold mb-2">Evento *</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: Prova Bimestral"
-                      value={formData.evento}
-                      onChange={(e) => setFormData({ ...formData, evento: e.target.value })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-700 font-semibold mb-2">Tipo *</label>
-                    <select
-                      value={formData.tipo}
-                      onChange={(e) => setFormData({ ...formData, tipo: e.target.value })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
-                    >
-                      <option value="feriado">📌 Feriado</option>
-                      <option value="prova">📝 Prova/Avaliação</option>
-                      <option value="formatura">🎓 Formatura</option>
-                      <option value="evento_cultural">🎉 Evento Cultural</option>
-                      <option value="reuniao">📋 Reunião</option>
-                      <option value="excursao">🚌 Excursão</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  {editandoEvento ? (
-                    <button
-                      onClick={atualizarEvento}
-                      disabled={isUpdating}
-                      className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Save size={20} />
-                      {isUpdating ? 'Atualizando...' : 'Atualizar Evento'}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={adicionarEvento}
-                      disabled={isCreating}
-                      className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allow"
-                    >
-                      <Plus size={20} />
-                      {isCreating ? 'Adicionando...' : 'Adicionar Evento'}
-                    </button>
+                <div className="space-y-4">
+                  {/* Campo Escola - só mostra se tiver múltiplas */}
+                  {hasMultipleSchools && (
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Escola *</label>
+                      <select
+                        value={formData.escola}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          escola: parseInt(e.target.value)
+                        })}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
+                      >
+                        {schools.map(escola => (
+                          <option key={escola.id} value={escola.id}>
+                            {escola.nome_escola}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   )}
 
-                  <button
-                    onClick={resetForm}
-                    className="bg-gray-400 text-white px-6 py-3 rounded-lg hover:bg-gray-500 transition font-semibold"
-                  >
-                    Cancelar
-                  </button>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Data *</label>
+                      <input
+                        type="date"
+                        value={formData.data}
+                        onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Evento *</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Prova Bimestral"
+                        value={formData.evento}
+                        onChange={(e) => setFormData({ ...formData, evento: e.target.value })}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Tipo *</label>
+                      <select
+                        value={formData.tipo}
+                        onChange={(e) => setFormData({ ...formData, tipo: e.target.value as any })}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
+                      >
+                        <option value="feriado">📌 Feriado</option>
+                        <option value="prova">📝 Prova/Avaliação</option>
+                        <option value="formatura">🎓 Formatura</option>
+                        <option value="evento_cultural">🎉 Evento Cultural</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    {editandoEvento ? (
+                      <button
+                        onClick={atualizarEvento}
+                        disabled={isUpdating}
+                        className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Save size={20} />
+                        {isUpdating ? 'Atualizando...' : 'Atualizar Evento'}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={adicionarEvento}
+                        disabled={isCreating}
+                        className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allow"
+                      >
+                        <Plus size={20} />
+                        {isCreating ? 'Adicionando...' : 'Adicionar Evento'}
+                      </button>
+                    )}
+
+                    <button
+                      onClick={resetForm}
+                      className="bg-gray-400 text-white px-6 py-3 rounded-lg hover:bg-gray-500 transition font-semibold"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -338,8 +395,8 @@ const resetForm = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {events?.results && events.results.length > 0 ? (
-                      events.results.map((evento) => (
+                    {eventosFiltrados.length > 0 ? (
+                      eventosFiltrados.map((evento) => (
                         <tr key={evento.id} className="border-b hover:bg-gray-50 transition">
                           <td className="p-4 font-medium text-gray-900">
                             {formatarDataBrasileira(evento.data)}
@@ -347,7 +404,7 @@ const resetForm = () => {
                           <td className="p-4 text-gray-700">{evento.evento}</td>
                           <td className="p-4">
                             <span className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
-                              {getEmojiTipo(evento.tipo)} {evento.tipo}
+                              {getEmojiTipo(evento.tipo)} {getLabelTipo(evento.tipo)}
                             </span>
                           </td>
                           <td className="p-4 flex gap-2">
@@ -384,10 +441,10 @@ const resetForm = () => {
             </div>
 
             {/* Info */}
-            {events?.results && events.results.length > 0 && (
+            {eventosFiltrados.length > 0 && (
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                 <p className="text-gray-700 font-semibold">
-                  Total de eventos: <span className="text-blue-600 font-bold">{events.results.length}</span>
+                  Total de eventos: <span className="text-blue-600 font-bold">{eventosFiltrados.length}</span>
                 </p>
               </div>
             )}

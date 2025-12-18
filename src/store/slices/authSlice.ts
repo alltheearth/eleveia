@@ -1,6 +1,6 @@
-// src/store/slices/authSlice.ts
+// src/store/slices/authSlice.ts - ✅ CORRIGIDO
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { authApi, type User } from '../../services/api/authApi';
+import { authApi, type User } from '../../services';
 
 interface AuthState {
   user: User | null;
@@ -15,7 +15,7 @@ const initialState: AuthState = {
 };
 
 /**
- * Slice de autenticação
+ * ✅ Slice de autenticação
  * Gerencia apenas o estado de user e token
  * As chamadas de API são feitas via RTK Query
  */
@@ -37,55 +37,90 @@ const authSlice = createSlice({
     },
   },
   
-  // Reagir aos resultados das mutations/queries do RTK Query
+  // ✅ Reagir aos resultados das mutations/queries do RTK Query
   extraReducers: (builder) => {
-    // Login bem-sucedido
+    // ✅ Login bem-sucedido
     builder.addMatcher(
       authApi.endpoints.login.matchFulfilled,
       (state, action) => {
+        console.log('✅ Login fulfilled - Atualizando state:', action.payload);
         state.user = action.payload.user;
         state.token = action.payload.token;
         state.isAuthenticated = true;
+        
+        // Garantir que o token está no localStorage
+        if (action.payload.token) {
+          localStorage.setItem('eleve_token', action.payload.token);
+        }
       }
     );
     
-    // Registro bem-sucedido
+    // ✅ Registro bem-sucedido
     builder.addMatcher(
       authApi.endpoints.register.matchFulfilled,
       (state, action) => {
+        console.log('✅ Registro fulfilled - Atualizando state:', action.payload);
         state.user = action.payload.user;
         state.token = action.payload.token;
         state.isAuthenticated = true;
+        
+        // Garantir que o token está no localStorage
+        if (action.payload.token) {
+          localStorage.setItem('eleve_token', action.payload.token);
+        }
       }
     );
     
-    // Logout bem-sucedido
+    // ✅ Logout bem-sucedido
     builder.addMatcher(
       authApi.endpoints.logout.matchFulfilled,
       (state) => {
+        console.log('✅ Logout fulfilled - Limpando state');
         state.user = null;
         state.token = null;
         state.isAuthenticated = false;
+        localStorage.removeItem('eleve_token');
       }
     );
     
-    // Profile carregado
+    // ✅ Profile carregado
     builder.addMatcher(
       authApi.endpoints.getProfile.matchFulfilled,
       (state, action) => {
+        console.log('✅ Profile carregado:', action.payload);
         state.user = action.payload;
         state.isAuthenticated = true;
       }
     );
     
-    // Profile falhou (token inválido)
+    // ✅ Profile falhou (token inválido)
     builder.addMatcher(
       authApi.endpoints.getProfile.matchRejected,
-      (state) => {
+      (state, action) => {
+        console.error('❌ Profile rejected:', action);
         state.user = null;
         state.token = null;
         state.isAuthenticated = false;
         localStorage.removeItem('eleve_token');
+      }
+    );
+
+    // ✅ Login falhou
+    builder.addMatcher(
+      authApi.endpoints.login.matchRejected,
+      (state, action) => {
+        console.error('❌ Login rejected:', action);
+        // Não limpa o state em caso de erro de login
+        // (pode ser só senha errada)
+      }
+    );
+
+    // ✅ Registro falhou
+    builder.addMatcher(
+      authApi.endpoints.register.matchRejected,
+      (state, action) => {
+        console.error('❌ Registro rejected:', action);
+        // Não limpa o state em caso de erro de registro
       }
     );
   },
