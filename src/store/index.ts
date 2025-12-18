@@ -1,42 +1,23 @@
-// src/store/index.ts - CORRIGIDO COM RTK QUERY
+// src/store/index.ts
 import { configureStore } from '@reduxjs/toolkit';
+import { baseApi } from '../services/api/baseApi';
 import authReducer from './slices/authSlice';
-import leadReducer from './slices/leadSlice';
-import contatoReducer from './slices/contatoSlice';
 
-// ✅ IMPORTAR RTK QUERY APIs
-import { schoolApi } from '../services/schoolApi';
-import { leadsApi } from '../services/leadsApi';
-import { contactsApi } from '../services/contactsApi';
-import { eventsApi } from '../services/eventsApi';
-import { faqsApi } from '../services/faqsApi';
-import { uzapiApi } from '../services/uzapiApi';
-
+/**
+ * Store Redux centralizado
+ * Usa RTK Query para todas as chamadas de API
+ */
 const store = configureStore({
   reducer: {
-    // Redux Slices tradicionais
-    auth: authReducer,
-    leads: leadReducer,
-    contatos: contatoReducer,
+    // API (RTK Query)
+    [baseApi.reducerPath]: baseApi.reducer,
     
-    // ✅ RTK Query APIs
-    [schoolApi.reducerPath]: schoolApi.reducer,
-    [leadsApi.reducerPath]: leadsApi.reducer,
-    [contactsApi.reducerPath]: contactsApi.reducer,
-    [eventsApi.reducerPath]: eventsApi.reducer,
-    [faqsApi.reducerPath]: faqsApi.reducer,
-    [uzapiApi.reducerPath]: uzapiApi.reducer,
+    // Apenas estado de autenticação (user, token)
+    auth: authReducer,
   },
   
-  // ✅ Adicionar middleware do RTK Query
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware()
-      .concat(schoolApi.middleware)
-      .concat(leadsApi.middleware)
-      .concat(contactsApi.middleware)
-      .concat(eventsApi.middleware)
-      .concat(faqsApi.middleware)
-      .concat(uzapiApi.middleware),
+    getDefaultMiddleware().concat(baseApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

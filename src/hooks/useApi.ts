@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { extractErrorMessage } from '../api/client';
+import { extractErrorMessage } from '../api';
 
 export const useApi = <T,>(apiFunc: (...args: any[]) => Promise<T>) => {
   const [data, setData] = useState<T | null>(null);
