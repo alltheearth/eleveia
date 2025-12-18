@@ -1,7 +1,6 @@
 // ✅ CORRETO - src/hooks/useCurrentSchool.ts
 import { useState, useEffect } from 'react';
-import { useGetSchoolsQuery } from '../services/schoolApi';
-import type { School } from '../services/schoolApi';
+import { useGetSchoolsQuery, type School } from '../services'; // ✅ Importar do index
 
 interface UseCurrentSchoolReturn {
   currentSchool: School | null;
@@ -21,7 +20,7 @@ export function useCurrentSchool(): UseCurrentSchoolReturn {
     isLoading, 
     error,
     refetch 
-  } = useGetSchoolsQuery();
+  } = useGetSchoolsQuery({});
 
   const [currentSchoolId, setCurrentSchoolId] = useState<string>('');
 

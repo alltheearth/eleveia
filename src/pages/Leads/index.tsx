@@ -1,16 +1,47 @@
-// src/components/Leads/index.tsx - EXEMPLO DE USO
-import { useState } from 'react';
-import { 
-  useGetLeadsQuery,
-  useCreateLeadMutation,
-  useUpdateLeadMutation,
-  useDeleteLeadMutation,
-  useGetLeadStatsQuery,
-  extractErrorMessage,
-  type Lead
-} from '../../services';
+// ✅ CORRETO - src/components/Leads/index.tsx (INÍCIO)
+import { useState, useEffect, type ChangeEvent } from 'react';
 
-export default function LeadsComponent() {
+// ✅ IMPORTAR TUDO DO INDEX CENTRALIZADO
+import { 
+  useGetLeadsQuery, 
+  useGetLeadStatsQuery,
+  useCreateLeadMutation, 
+  useUpdateLeadMutation, 
+  useDeleteLeadMutation,
+  useChangeLeadStatusMutation,
+  useExportLeadsCSVMutation,
+  extractErrorMessage,
+  type Lead 
+} from '../../services'; // ✅ SEM .ts
+
+import { useCurrentSchool } from '../../hooks/useCurrentSchool';
+import { Download, Trash2, Plus, X, AlertCircle, Search, Users as UsersIcon } from 'lucide-react';
+
+interface NovoLead {
+  nome: string;
+  email: string;
+  telefone: string;
+  status: 'novo' | 'contato' | 'qualificado' | 'conversao' | 'perdido';
+  origem: string;
+  observacoes?: string;
+}
+
+interface StatCardProps {
+  label: string;
+  value: number;
+  color: string;
+}
+
+type StatusFilter = 'todos' | 'novo' | 'contato' | 'qualificado' | 'conversao' | 'perdido';
+
+export default function Leads() {
+  // ✅ Hook customizado - gerencia escola
+  const { 
+    currentSchool, 
+    currentSchoolId, 
+    isLoading: schoolsLoading 
+  } = useCurrentSchool();
+
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   

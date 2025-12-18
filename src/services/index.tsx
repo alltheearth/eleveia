@@ -1,9 +1,13 @@
+// ✅ COMPLETO - src/services/index.tsx
 
-
-// Base API
+// ============================================
+// BASE API
+// ============================================
 export { baseApi, extractErrorMessage } from './api/baseApi';
 
-// Auth API
+// ============================================
+// AUTH API
+// ============================================
 export { authApi } from './api/authApi';
 export {
   useLoginMutation,
@@ -14,7 +18,9 @@ export {
 } from './api/authApi';
 export type { User, LoginRequest, RegisterRequest, AuthResponse } from './api/authApi';
 
-// Schools API
+// ============================================
+// SCHOOLS API
+// ============================================
 export { schoolsApi } from './api/schoolsApi';
 export {
   useGetSchoolsQuery,
@@ -26,7 +32,9 @@ export {
 } from './api/schoolsApi';
 export type { School, SchoolsResponse, Perfil } from './api/schoolsApi';
 
-// Contacts API
+// ============================================
+// CONTACTS API
+// ============================================
 export { contactsApi } from './api/contactsApi';
 export {
   useGetContactsQuery,
@@ -39,7 +47,9 @@ export {
 } from './api/contactsApi';
 export type { Contact, ContactsResponse, ContactStats, ContactFilters } from './api/contactsApi';
 
-// Leads API
+// ============================================
+// LEADS API
+// ============================================
 export { leadsApi } from './api/leadsApi';
 export {
   useGetLeadsQuery,
@@ -54,7 +64,9 @@ export {
 } from './api/leadsApi';
 export type { Lead, LeadsResponse, LeadStats, LeadFilters } from './api/leadsApi';
 
-// Events API
+// ============================================
+// EVENTS API
+// ============================================
 export { eventsApi } from './api/eventsApi';
 export {
   useGetEventsQuery,
@@ -66,7 +78,9 @@ export {
 } from './api/eventsApi';
 export type { Event, EventsResponse } from './api/eventsApi';
 
-// FAQs API
+// ============================================
+// FAQS API
+// ============================================
 export { faqsApi } from './api/faqsApi';
 export {
   useGetFAQsQuery,
@@ -77,7 +91,9 @@ export {
 } from './api/faqsApi';
 export type { FAQ, FAQsResponse } from './api/faqsApi';
 
-// Tickets API
+// ============================================
+// TICKETS API
+// ============================================
 export { ticketsApi } from './api/ticketsApi';
 export {
   useGetTicketsQuery,
@@ -93,7 +109,9 @@ export {
 } from './api/ticketsApi';
 export type { Ticket, TicketsResponse, TicketFilters } from './api/ticketsApi';
 
-// Dashboard API
+// ============================================
+// DASHBOARD API
+// ============================================
 export { dashboardApi } from './api/dashboardApi';
 export {
   useGetDashboardQuery,
