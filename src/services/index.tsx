@@ -89,7 +89,7 @@ export {
   useUpdateFAQMutation,
   useDeleteFAQMutation,
 } from './api/faqsApi';
-export type { FAQ, FAQsResponse } from './api/faqsApi';
+export type { FAQ, FAQsResponse, FAQFilters } from './api/faqsApi';
 
 // ============================================
 // TICKETS API

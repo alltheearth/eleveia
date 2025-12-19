@@ -3,11 +3,12 @@ import { useState, useEffect } from 'react';
 import { Search, Plus, Download, Edit2, Trash2, Ticket as TicketIcon } from 'lucide-react';
 
 // Componentes de Layout
-import StatCard  from '../../components/Statistics/StatCard';
-import FilterBar from '../../components/FilterBar';
-import DataTable from '../../components/DataTable';
+import PageModel from '../../components/layout/PageModel';
 
 // Componentes Comuns (reutilizáveis)
+import StatCard  from '../../components/common/Statistics/StatCard';
+import FilterBar from '../../components/common/FilterBar';
+import DataTable from '../../components/common/DataTable';
 import MessageAlert from '../../components/common/MessageAlert';
 import LoadingState from '../../components/common/LoadingState';
 import EmptyState from '../../components/common/EmptyState';
@@ -33,7 +34,7 @@ import {
   type Ticket,
   type TicketFilters
 } from '../../services';
-import PageModel from '../../components/layout/PageModel';
+
 
 export default function Tickets() {
   // ============================================

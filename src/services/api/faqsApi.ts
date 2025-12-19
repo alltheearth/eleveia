@@ -6,7 +6,7 @@ export interface FAQ {
   escola_nome: string;
   pergunta: string;
   resposta: string;
-  categoria: string;
+  categoria: 'Admissão' | 'Valores' | 'Uniforme' | 'Horários' | 'Documentação' | 'Atividades' | 'Alimentação' | 'Transporte' | 'Pedagógico' | 'Geral';
   status: 'ativa' | 'inativa';
   criado_em: string;
   atualizado_em: string;
@@ -18,6 +18,13 @@ export interface FAQsResponse {
   previous: string | null;
   results: FAQ[];
 }
+
+export interface FAQFilters {
+  status?: FAQ['status'];
+  search?: string;
+  page?: number;
+}
+
 
 export const faqsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({

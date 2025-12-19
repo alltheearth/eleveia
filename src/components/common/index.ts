@@ -5,3 +5,7 @@ export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as FormModal } from './FormModal';
 export { default as Badge } from './Badge';
 export { default as LoadingState } from './LoadingState';
+export { default as DataTable } from './DataTable';
+export { default as StatCard } from './Statistics/StatCard';
+export { default as ResultsInformation } from './ResultsInformation';
+export { default as FilterBar } from './FilterBar';

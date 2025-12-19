@@ -8,7 +8,7 @@ import Dashboard from '../components/Dashboard';
 import Leads from '../pages/Leads';
 import Contatos from '../components/Contacts';
 import Eventos from '../components/Calendar';
-import FAQs from '../components/FAQs';
+import FAQs from '../pages/FAQs';
 import Tickets from '../pages/Tickets';
 // import Documentos from '../components/Documentos';
 // import Relatorios from '../pages/Relatorios';
