@@ -1,3 +1,4 @@
+// src/routes/AppRoutes.tsx - ✅ ATUALIZADO COM NOVAS ROTAS
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import MainLayout from '../components/layout/MainLayout';
@@ -10,9 +11,8 @@ import Contatos from '../components/Contacts';
 import Eventos from '../components/Calendar';
 import FAQs from '../pages/FAQs';
 import Tickets from '../pages/Tickets';
-// import Documentos from '../components/Documentos';
-// import Relatorios from '../pages/Relatorios';
-// import Configuracoes from '../pages/Configuracoes';
+import Perfil from '../pages/Perfil';
+import InformacoesEscola from '../components/Information';
 
 const AppRoutes = () => {
   return (
@@ -29,11 +29,12 @@ const AppRoutes = () => {
           <Route path="/contatos" element={<Contatos />} />
           <Route path="/eventos" element={<Eventos />} />
           <Route path="/faqs" element={<FAQs />} />
-          <Route path='/tickets' element={<Tickets />} />
-          {/* <Route path="/documentos" element={<Documentos />} />
-          <Route path="/relatorios" element={<Relatorios />} />
-          <Route path="/configuracoes" element={<Configuracoes />} />*/}
-        </Route> 
+          <Route path="/tickets" element={<Tickets />} />
+          
+          {/* ✅ NOVAS ROTAS */}
+          <Route path="/perfil" element={<Perfil />} />
+          <Route path="/informacoes-escola" element={<InformacoesEscola />} />
+        </Route>
       </Route>
 
       {/* 404 */}

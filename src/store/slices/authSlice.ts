@@ -1,4 +1,4 @@
-// src/store/slices/authSlice.ts - ✅ CORRIGIDO COM isLoading
+// src/store/slices/authSlice.ts - ✅ CORRIGIDO COM TOKEN
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { authApi, type User } from '../../services';
 
@@ -6,19 +6,22 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  isLoading: boolean; // ✅ ADICIONADO
+  isLoading: boolean;
 }
+
+// ✅ Carregar token do localStorage na inicialização
+const tokenFromStorage = localStorage.getItem('eleve_token');
 
 const initialState: AuthState = {
   user: null,
-  token: localStorage.getItem('eleve_token'),
-  isAuthenticated: !!localStorage.getItem('eleve_token'),
-  isLoading: false, // ✅ ADICIONADO
+  token: tokenFromStorage,
+  isAuthenticated: !!tokenFromStorage,
+  isLoading: false,
 };
 
 /**
  * ✅ Slice de autenticação
- * Gerencia user, token e loading states
+ * Gerencia user, token e estado de autenticação
  */
 const authSlice = createSlice({
   name: 'auth',
@@ -26,6 +29,7 @@ const authSlice = createSlice({
   reducers: {
     // Logout local (sem chamada de API)
     logoutLocal: (state) => {
+      console.log('🚪 [AUTH] Logout local - Limpando estado');
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
@@ -36,12 +40,14 @@ const authSlice = createSlice({
     // Setar user manualmente (se necessário)
     setUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload;
-      state.isAuthenticated = true;
     },
 
-    // ✅ ADICIONADO - Setar loading manualmente se necessário
-    setLoading: (state, action: PayloadAction<boolean>) => {
-      state.isLoading = action.payload;
+    // ✅ Setar token manualmente
+    setToken: (state, action: PayloadAction<string>) => {
+      console.log('🔑 [AUTH] Setando token manualmente');
+      state.token = action.payload;
+      state.isAuthenticated = true;
+      localStorage.setItem('eleve_token', action.payload);
     },
   },
   
@@ -53,24 +59,29 @@ const authSlice = createSlice({
     builder.addMatcher(
       authApi.endpoints.login.matchPending,
       (state) => {
-        console.log('🔄 Login pending...');
+        console.log('🔄 [AUTH] Login pending...');
         state.isLoading = true;
-        state.error = null;
       }
     );
-    
+
     builder.addMatcher(
       authApi.endpoints.login.matchFulfilled,
       (state, action) => {
-        console.log('✅ Login fulfilled - Atualizando state:', action.payload);
-        state.user = action.payload.user;
-        state.token = action.payload.token;
+        console.log('✅ [AUTH] Login fulfilled:', action.payload);
+        
+        const { user, token } = action.payload;
+        
+        state.user = user;
+        state.token = token;
         state.isAuthenticated = true;
         state.isLoading = false;
         
-        // Garantir que o token está no localStorage
-        if (action.payload.token) {
-          localStorage.setItem('eleve_token', action.payload.token);
+        // ✅ CRÍTICO: Salvar token no localStorage
+        if (token) {
+          localStorage.setItem('eleve_token', token);
+          console.log('💾 [AUTH] Token salvo no localStorage:', token.substring(0, 10) + '...');
+        } else {
+          console.error('❌ [AUTH] Token não retornado pela API!');
         }
       }
     );
@@ -78,35 +89,39 @@ const authSlice = createSlice({
     builder.addMatcher(
       authApi.endpoints.login.matchRejected,
       (state, action) => {
-        console.error('❌ Login rejected:', action);
+        console.error('❌ [AUTH] Login rejected:', action);
         state.isLoading = false;
         state.isAuthenticated = false;
       }
     );
     
     // ============================================
-    // REGISTER
+    // REGISTRO
     // ============================================
     builder.addMatcher(
       authApi.endpoints.register.matchPending,
       (state) => {
-        console.log('🔄 Register pending...');
+        console.log('🔄 [AUTH] Registro pending...');
         state.isLoading = true;
       }
     );
-    
+
     builder.addMatcher(
       authApi.endpoints.register.matchFulfilled,
       (state, action) => {
-        console.log('✅ Registro fulfilled - Atualizando state:', action.payload);
-        state.user = action.payload.user;
-        state.token = action.payload.token;
+        console.log('✅ [AUTH] Registro fulfilled:', action.payload);
+        
+        const { user, token } = action.payload;
+        
+        state.user = user;
+        state.token = token;
         state.isAuthenticated = true;
         state.isLoading = false;
         
-        // Garantir que o token está no localStorage
-        if (action.payload.token) {
-          localStorage.setItem('eleve_token', action.payload.token);
+        // ✅ Salvar token no localStorage
+        if (token) {
+          localStorage.setItem('eleve_token', token);
+          console.log('💾 [AUTH] Token salvo no localStorage (registro):', token.substring(0, 10) + '...');
         }
       }
     );
@@ -114,7 +129,7 @@ const authSlice = createSlice({
     builder.addMatcher(
       authApi.endpoints.register.matchRejected,
       (state, action) => {
-        console.error('❌ Registro rejected:', action);
+        console.error('❌ [AUTH] Registro rejected:', action);
         state.isLoading = false;
       }
     );
@@ -123,28 +138,9 @@ const authSlice = createSlice({
     // LOGOUT
     // ============================================
     builder.addMatcher(
-      authApi.endpoints.logout.matchPending,
-      (state) => {
-        state.isLoading = true;
-      }
-    );
-
-    builder.addMatcher(
       authApi.endpoints.logout.matchFulfilled,
       (state) => {
-        console.log('✅ Logout fulfilled - Limpando state');
-        state.user = null;
-        state.token = null;
-        state.isAuthenticated = false;
-        state.isLoading = false;
-        localStorage.removeItem('eleve_token');
-      }
-    );
-
-    builder.addMatcher(
-      authApi.endpoints.logout.matchRejected,
-      (state) => {
-        // Mesmo com erro, limpar tudo
+        console.log('✅ [AUTH] Logout fulfilled - Limpando state');
         state.user = null;
         state.token = null;
         state.isAuthenticated = false;
@@ -154,12 +150,12 @@ const authSlice = createSlice({
     );
     
     // ============================================
-    // GET PROFILE
+    // PROFILE
     // ============================================
     builder.addMatcher(
       authApi.endpoints.getProfile.matchPending,
       (state) => {
-        console.log('🔄 Buscando perfil...');
+        console.log('🔄 [AUTH] Buscando perfil...');
         state.isLoading = true;
       }
     );
@@ -167,7 +163,7 @@ const authSlice = createSlice({
     builder.addMatcher(
       authApi.endpoints.getProfile.matchFulfilled,
       (state, action) => {
-        console.log('✅ Profile carregado:', action.payload);
+        console.log('✅ [AUTH] Profile carregado:', action.payload);
         state.user = action.payload;
         state.isAuthenticated = true;
         state.isLoading = false;
@@ -177,16 +173,20 @@ const authSlice = createSlice({
     builder.addMatcher(
       authApi.endpoints.getProfile.matchRejected,
       (state, action) => {
-        console.error('❌ Profile rejected - Token inválido:', action);
+        console.error('❌ [AUTH] Profile rejected - Token inválido:', action);
+        
+        // ✅ Token inválido - limpar tudo
         state.user = null;
         state.token = null;
         state.isAuthenticated = false;
         state.isLoading = false;
         localStorage.removeItem('eleve_token');
+        
+        console.log('🧹 [AUTH] Token inválido - localStorage limpo');
       }
     );
   },
 });
 
-export const { logoutLocal, setUser, setLoading } = authSlice.actions;
+export const { logoutLocal, setUser, setToken } = authSlice.actions;
 export default authSlice.reducer;

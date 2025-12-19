@@ -1,10 +1,8 @@
-// src/services/api/baseApi.ts - ✅ CORRIGIDO
+// src/services/api/baseApi.ts - ✅ CORRIGIDA
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../../store';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/v1';
-
-console.log('🔧 API Base URL:', API_BASE_URL);
 
 /**
  * Configuração base do RTK Query para toda a aplicação
@@ -14,20 +12,24 @@ export const baseApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: API_BASE_URL,
     prepareHeaders: (headers, { getState }) => {
-      // ✅ Pegar token do estado Redux OU localStorage
+      // ✅ CRÍTICO: Pegar token do estado E do localStorage
       const state = getState() as RootState;
+      
+      // Tentar pegar do estado primeiro
       let token = state.auth.token;
       
-      // ✅ Fallback para localStorage se não tiver no state
+      // Se não tiver no estado, tentar localStorage
       if (!token) {
         token = localStorage.getItem('eleve_token');
+        console.log('🔍 [API] Token não estava no state, buscando do localStorage');
       }
       
+      // ✅ Sempre logar o token (preview)
       if (token) {
+        console.log('🔑 [API] Token encontrado:', token.substring(0, 20) + '...');
         headers.set('Authorization', `Token ${token}`);
-        console.log('✅ Token adicionado ao header:', token.substring(0, 20) + '...');
       } else {
-        console.warn('⚠️ Nenhum token encontrado');
+        console.warn('⚠️ [API] Nenhum token encontrado');
       }
       
       headers.set('Content-Type', 'application/json');
@@ -56,8 +58,6 @@ export const baseApi = createApi({
 
 // Helper para extrair mensagens de erro
 export const extractErrorMessage = (error: any): string => {
-  console.error('📋 Extraindo erro:', error);
-  
   if (error.data) {
     if (typeof error.data === 'string') return error.data;
     if (error.data.detail) return error.data.detail;
@@ -66,18 +66,9 @@ export const extractErrorMessage = (error: any): string => {
     
     // Erros de validação
     const firstKey = Object.keys(error.data)[0];
-    if (firstKey && Array.isArray(error.data[firstKey])) {
+    if (Array.isArray(error.data[firstKey])) {
       return error.data[firstKey][0];
     }
-    
-    // Se tiver non_field_errors
-    if (error.data.non_field_errors && Array.isArray(error.data.non_field_errors)) {
-      return error.data.non_field_errors[0];
-    }
-  }
-  
-  if (error.error) {
-    return error.error;
   }
   
   return error.message || 'Erro desconhecido';

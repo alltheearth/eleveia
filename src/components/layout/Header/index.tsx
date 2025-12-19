@@ -1,7 +1,7 @@
 // src/components/layout/Header/index.tsx - ✅ CORRIGIDO
-import {  useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Bell, User, Building2, ChevronDown } from 'lucide-react';
+import { LogOut, Bell, User, Building2, ChevronDown, Settings } from 'lucide-react';
 import { useLogoutMutation, useGetProfileQuery } from '../../../services';
 import type { RootState } from '../../../store';
 import { useState, useEffect, useRef } from 'react';
@@ -11,8 +11,8 @@ const Header = () => {
   const { user: userFromState, isAuthenticated } = useSelector((state: RootState) => state.auth);
   
   // ✅ Buscar perfil atualizado do usuário
-  const { data: profile } = useGetProfileQuery(undefined, {
-    skip: !isAuthenticated, // Só busca se estiver autenticado
+  const { data: profile, refetch } = useGetProfileQuery(undefined, {
+    skip: !isAuthenticated,
   });
 
   // ✅ RTK Query Mutation para logout
@@ -24,6 +24,13 @@ const Header = () => {
 
   // ✅ User: prioriza profile da API, fallback para state
   const user = profile || userFromState;
+
+  // ✅ Recarregar perfil quando autenticar
+  useEffect(() => {
+    if (isAuthenticated) {
+      refetch();
+    }
+  }, [isAuthenticated, refetch]);
 
   // ✅ Fechar menu ao clicar fora
   useEffect(() => {
@@ -50,7 +57,6 @@ const Header = () => {
       navigate('/login');
     } catch (err) {
       console.error('❌ Erro no logout:', err);
-      // Mesmo com erro, redireciona (token já foi removido)
       navigate('/login');
     }
   };
@@ -63,13 +69,20 @@ const Header = () => {
   const primeiroNome = user?.first_name || user?.username?.split('.')[0] || 'Usuário';
   
   const tipoPerfil = user?.perfil?.tipo_display || 'Usuário';
-  const escolaNome = user?.perfil?.escola_nome || 'Sem escola';
+  const escolaNome = user?.perfil?.escola_nome || 'Carregando...';
   const escolaId = user?.perfil?.escola;
 
   // ✅ Iniciais para avatar
   const iniciais = user?.first_name && user?.last_name
     ? `${user.first_name[0]}${user.last_name[0]}`.toUpperCase()
     : (user?.username?.[0]?.toUpperCase() || 'U');
+
+  // ✅ DEBUG - verificar dados
+  useEffect(() => {
+    console.log('👤 User atual:', user);
+    console.log('🏫 Perfil:', user?.perfil);
+    console.log('🏫 Escola:', escolaNome);
+  }, [user, escolaNome]);
 
   return (
     <header className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
@@ -167,12 +180,23 @@ const Header = () => {
                 <button
                   onClick={() => {
                     setMostrarMenu(false);
-                    navigate('/configuracoes');
+                    navigate('/perfil');
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg transition text-left"
                 >
                   <User size={16} className="text-gray-600" />
                   <span className="text-sm text-gray-700">Meu Perfil</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setMostrarMenu(false);
+                    navigate('/informacoes-escola');
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg transition text-left"
+                >
+                  <Settings size={16} className="text-gray-600" />
+                  <span className="text-sm text-gray-700">Informações da Escola</span>
                 </button>
 
                 <button
