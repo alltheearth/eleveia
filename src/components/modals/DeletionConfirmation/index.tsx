@@ -1,5 +1,4 @@
 import { AlertCircle } from "lucide-react";
-import React from "react";
 
 const DeletionConfirmation = ({ info, onConfirm, onCancel, isDeleting }: { info?: string; onConfirm: () => void; onCancel: () => void; isDeleting: boolean }) => {
 
