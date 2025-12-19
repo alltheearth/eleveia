@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de localStorage</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-success:hover { background: #059669; }
+        .btn-danger:hover { background: #dc2626; }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 300px;
+        }
+        .result {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success { background: #d1fae5; color: #065f46; }
+        .error { background: #fee2e2; color: #991b1b; }
+        .info { background: #dbeafe; color: #1e40af; }
+        h2 { color: #1f2937; margin-top: 0; }
+        h3 { color: #4b5563; }
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Teste de localStorage - EleveAI</h1>
+    
+    <div class="card">
+        <h2>1️⃣ Testar Salvamento Básico</h2>
+        <p>Teste se o localStorage está funcionando no seu navegador:</p>
+        <input type="text" id="testValue" placeholder="Digite algo..." value="meu_token_123">
+        <br>
+        <button class="btn-primary" onclick="testBasicSave()">Salvar Teste</button>
+        <button class="btn-success" onclick="testBasicRead()">Ler Teste</button>
+        <button class="btn-danger" onclick="testBasicClear()">Limpar Teste</button>
+        <div id="basicResult" class="result"></div>
+    </div>
+
+    <div class="card">
+        <h2>2️⃣ Simular Token EleveAI</h2>
+        <p>Simula o salvamento do token como a aplicação faz:</p>
+        <input type="text" id="tokenValue" placeholder="Token..." value="abc123xyz456def789">
+        <br>
+        <button class="btn-primary" onclick="simulateTokenSave()">Salvar como eleve_token</button>
+        <button class="btn-success" onclick="simulateTokenRead()">Ler eleve_token</button>
+        <button class="btn-danger" onclick="simulateTokenClear()">Limpar eleve_token</button>
+        <div id="tokenResult" class="result"></div>
+    </div>
+
+    <div class="card">
+        <h2>3️⃣ Verificar Estado Atual</h2>
+        <p>Veja o que está armazenado agora:</p>
+        <button class="btn-primary" onclick="checkCurrentState()">Verificar Tudo</button>
+        <button class="btn-danger" onclick="clearAll()">Limpar Tudo</button>
+        <div id="stateResult" class="result"></div>
+    </div>
+
+    <div class="card">
+        <h2>4️⃣ Teste de Persistência</h2>
+        <p>Verifica se o token persiste após recarregar:</p>
+        <button class="btn-primary" onclick="persistenceTest()">Iniciar Teste</button>
+        <div id="persistenceResult" class="result"></div>
+        <div id="persistenceInstructions" style="display:none; margin-top:10px; padding:10px; background:#fef3c7; border-left:4px solid #f59e0b;">
+            <strong>⚠️ Instruções:</strong><br>
+            1. Clique no botão acima<br>
+            2. Aguarde 2 segundos<br>
+            3. Recarregue a página (F5)<br>
+            4. O token deve aparecer automaticamente
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>📋 Informações do Navegador</h2>
+        <div id="browserInfo" class="result info"></div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. Testes Básicos
+        // ==========================================
+        function testBasicSave() {
+            const value = document.getElementById('testValue').value;
+            try {
+                localStorage.setItem('test_key', value);
+                showResult('basicResult', `✅ Salvo com sucesso!\nChave: test_key\nValor: ${value}`, 'success');
+            } catch (e) {
+                showResult('basicResult', `❌ Erro ao salvar:\n${e.message}`, 'error');
+            }
+        }
+
+        function testBasicRead() {
+            try {
+                const value = localStorage.getItem('test_key');
+                if (value) {
+                    showResult('basicResult', `✅ Lido com sucesso!\nValor: ${value}`, 'success');
+                } else {
+                    showResult('basicResult', `⚠️ Nenhum valor encontrado para 'test_key'`, 'error');
+                }
+            } catch (e) {
+                showResult('basicResult', `❌ Erro ao ler:\n${e.message}`, 'error');
+            }
+        }
+
+        function testBasicClear() {
+            try {
+                localStorage.removeItem('test_key');
+                showResult('basicResult', `✅ Removido com sucesso!`, 'success');
+            } catch (e) {
+                showResult('basicResult', `❌ Erro ao remover:\n${e.message}`, 'error');
+            }
+        }
+
+        // ==========================================
+        // 2. Simulação Token
+        // ==========================================
+        function simulateTokenSave() {
+            const token = document.getElementById('tokenValue').value;
+            try {
+                console.log('🔐 Salvando token:', token);
+                localStorage.setItem('eleve_token', token);
+                
+                // Verificar imediatamente
+                const saved = localStorage.getItem('eleve_token');
+                if (saved === token) {
+                    showResult('tokenResult', `✅ Token salvo e verificado!\n\nToken: ${token}\n\nVerificação: OK`, 'success');
+                    console.log('✅ Token verificado:', saved);
+                } else {
+                    showResult('tokenResult', `⚠️ Token salvo mas verificação falhou!\n\nSalvo: ${token}\nLido: ${saved}`, 'error');
+                }
+            } catch (e) {
+                showResult('tokenResult', `❌ Erro ao salvar token:\n${e.message}`, 'error');
+                console.error('❌ Erro:', e);
+            }
+        }
+
+        function simulateTokenRead() {
+            try {
+                const token = localStorage.getItem('eleve_token');
+                if (token) {
+                    showResult('tokenResult', `✅ Token encontrado!\n\nToken: ${token}\nTamanho: ${token.length} caracteres`, 'success');
+                    console.log('✅ Token lido:', token);
+                } else {
+                    showResult('tokenResult', `⚠️ Nenhum token encontrado!\n\nChave 'eleve_token' está vazia ou não existe.`, 'error');
+                    console.warn('⚠️ Token não encontrado');
+                }
+            } catch (e) {
+                showResult('tokenResult', `❌ Erro ao ler token:\n${e.message}`, 'error');
+                console.error('❌ Erro:', e);
+            }
+        }
+
+        function simulateTokenClear() {
+            try {
+                localStorage.removeItem('eleve_token');
+                showResult('tokenResult', `✅ Token removido com sucesso!`, 'success');
+                console.log('✅ Token removido');
+            } catch (e) {
+                showResult('tokenResult', `❌ Erro ao remover token:\n${e.message}`, 'error');
+            }
+        }
+
+        // ==========================================
+        // 3. Verificar Estado
+        // ==========================================
+        function checkCurrentState() {
+            try {
+                let result = '📊 Estado Atual do localStorage:\n\n';
+                
+                if (localStorage.length === 0) {
+                    result += '⚠️ localStorage está vazio\n';
+                } else {
+                    result += `Total de itens: ${localStorage.length}\n\n`;
+                    
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        const value = localStorage.getItem(key);
+                        const preview = value.length > 50 ? value.substring(0, 50) + '...' : value;
+                        result += `${i + 1}. ${key}\n   → ${preview}\n\n`;
+                    }
+                }
+                
+                // Verificar especificamente o token
+                const token = localStorage.getItem('eleve_token');
+                if (token) {
+                    result += `✅ Token EleveAI: EXISTE\n   Tamanho: ${token.length} caracteres`;
+                } else {
+                    result += `⚠️ Token EleveAI: NÃO EXISTE`;
+                }
+                
+                showResult('stateResult', result, 'info');
+            } catch (e) {
+                showResult('stateResult', `❌ Erro ao verificar:\n${e.message}`, 'error');
+            }
+        }
+
+        function clearAll() {
+            if (confirm('⚠️ Isso vai limpar TODO o localStorage. Continuar?')) {
+                try {
+                    localStorage.clear();
+                    showResult('stateResult', `✅ Todo o localStorage foi limpo!`, 'success');
+                    console.log('✅ localStorage limpo');
+                } catch (e) {
+                    showResult('stateResult', `❌ Erro ao limpar:\n${e.message}`, 'error');
+                }
+            }
+        }
+
+        // ==========================================
+        // 4. Teste de Persistência
+        // ==========================================
+        function persistenceTest() {
+            const testToken = 'persistence_test_' + Date.now();
+            
+            try {
+                localStorage.setItem('eleve_token', testToken);
+                console.log('🔐 Token de teste salvo:', testToken);
+                
+                let countdown = 2;
+                document.getElementById('persistenceInstructions').style.display = 'block';
+                showResult('persistenceResult', `⏳ Token de teste salvo!\n\nAguarde ${countdown} segundos e recarregue a página (F5)...\n\nToken: ${testToken}`, 'info');
+                
+                const interval = setInterval(() => {
+                    countdown--;
+                    if (countdown > 0) {
+                        showResult('persistenceResult', `⏳ Token de teste salvo!\n\nAguarde ${countdown} segundo(s) e recarregue a página (F5)...\n\nToken: ${testToken}`, 'info');
+                    } else {
+                        clearInterval(interval);
+                        showResult('persistenceResult', `✅ Pronto! Agora recarregue a página (F5)\n\nToken: ${testToken}`, 'success');
+                    }
+                }, 1000);
+                
+            } catch (e) {
+                showResult('persistenceResult', `❌ Erro no teste:\n${e.message}`, 'error');
+            }
+        }
+
+        // ==========================================
+        // Verificar automaticamente ao carregar
+        // ==========================================
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('eleve_token');
+            if (token && token.startsWith('persistence_test_')) {
+                showResult('persistenceResult', 
+                    `🎉 SUCESSO!\n\n` +
+                    `O token persistiu após recarregar!\n\n` +
+                    `Token encontrado: ${token}\n\n` +
+                    `✅ Seu navegador está salvando corretamente!`, 
+                    'success'
+                );
+                document.getElementById('persistenceInstructions').style.display = 'none';
+            }
+            
+            // Mostrar info do navegador
+            const info = `Navegador: ${navigator.userAgent}\n\n` +
+                        `localStorage disponível: ${typeof(Storage) !== "undefined" ? "✅ SIM" : "❌ NÃO"}\n\n` +
+                        `Cookies habilitados: ${navigator.cookieEnabled ? "✅ SIM" : "❌ NÃO"}\n\n` +
+                        `Modo privado: ${detectPrivateMode() ? "⚠️ PROVÁVEL" : "✅ NORMAL"}`;
+            document.getElementById('browserInfo').textContent = info;
+        });
+
+        // ==========================================
+        // Helpers
+        // ==========================================
+        function showResult(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `result ${type}`;
+            element.style.display = 'block';
+        }
+
+        function detectPrivateMode() {
+            // Teste simples (não 100% confiável)
+            try {
+                localStorage.setItem('test_private', '1');
+                localStorage.removeItem('test_private');
+                return false;
+            } catch (e) {
+                return true;
+            }
+        }
+
+        // Log inicial
+        console.log('🔧 Página de teste carregada');
+        console.log('📋 Token atual:', localStorage.getItem('eleve_token'));
+    </script>
+</body>
+</html>

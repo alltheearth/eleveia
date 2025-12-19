@@ -1,9 +1,9 @@
 // src/pages/Tickets/index.tsx - ✅ COMPLETO E FUNCIONAL
 import { useState, useEffect } from 'react';
 import { Search, Plus, Download, X, Edit2, Trash2, Ticket as TicketIcon, AlertCircle, User as UserIcon } from 'lucide-react';
-import StatCard from '../../components/layout/StatCard';
-import FilterBar from '../../components/layout/FilterBar';
-import DataTable from '../../components/layout/DataTable';
+import StatCard from '../../components/Statistics/StatCard';
+import FilterBar from '../../components/FilterBar';
+import DataTable from '../../components/DataTable';
 import { useCurrentSchool } from '../../hooks/useCurrentSchool';
 import {
   useGetTicketsQuery,
@@ -17,6 +17,10 @@ import {
   type Ticket,
   type TicketFilters
 } from '../../services';
+import PageModel from '../../components/layout/PageModel';
+import Statistics from '../../components/Statistics';
+import ResultsInformation from '../../components/ResultsInformation';
+import DeletionConfirmation from '../../components/modals/DeletionConfirmation';
 
 export default function Tickets() {
   // ✅ Hook para escola atual
@@ -50,7 +54,9 @@ export default function Tickets() {
     refetch 
   } = useGetTicketsQuery(filters);
 
-  const { data: stats } = useGetTicketStatsQuery();
+
+const { data: stats } = useGetTicketStatsQuery();
+
 
   const [createTicket, { isLoading: isCreating }] = useCreateTicketMutation();
   const [updateTicket, { isLoading: isUpdating }] = useUpdateTicketMutation();
@@ -305,7 +311,7 @@ export default function Tickets() {
   // ============================================
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+      <PageModel>
       {/* Mensagens */}
       {mensagem && (
         <div className={`p-4 rounded-lg border-l-4 ${
@@ -334,14 +340,15 @@ export default function Tickets() {
 
       {/* Estatísticas */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-          <StatCard label="Total" value={stats.total} color="blue" icon={<TicketIcon size={24} />} />
-          <StatCard label="Abertos" value={stats.open} color="green" description="Aguardando" />
-          <StatCard label="Em Andamento" value={stats.in_progress} color="yellow" description="Processando" />
-          <StatCard label="Pendentes" value={stats.pending} color="orange" description="Aguardando info" />
-          <StatCard label="Resolvidos" value={stats.resolved} color="purple" description="Finalizados" />
-          <StatCard label="Fechados" value={stats.closed} color="gray" description="Arquivados" />
-        </div>
+        <Statistics  statsData={
+          [{ label: 'Total', value: stats.total, color: 'blue', icon: <TicketIcon size={24} /> },
+          { label: 'Abertos', value: stats.open, color: 'green', description: 'Aguardando' },
+          { label: 'Em Andamento', value: stats.in_progress, color: 'yellow', description: 'Processando' },
+          { label: 'Pendentes', value: stats.pending, color: 'orange', description: 'Aguardando info' },
+          { label: 'Resolvidos', value: stats.resolved, color: 'purple', description: 'Finalizados' },
+          { label: 'Fechados', value: stats.closed, color: 'gray', description: 'Arquivados' }
+        ]
+        }/>
       )}
 
       {/* Formulário */}
@@ -569,43 +576,18 @@ export default function Tickets() {
 
       {/* Info de Resultados */}
       {tickets.length > 0 && (
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <p className="text-gray-700 font-semibold">
-            Mostrando <span className="text-blue-600 font-bold">{tickets.length}</span> de{' '}
-            <span className="text-blue-600 font-bold">{stats?.total || 0}</span> tickets
-          </p>
-        </div>
+        <ResultsInformation itemsNumber={tickets.length} statsNumber={stats?.total || 0} />
       )}
 
       {/* Modal de Confirmação de Deleção */}
       {ticketParaDeletar && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <AlertCircle className="text-red-600" size={24} />
-              <h3 className="text-xl font-bold text-gray-900">Confirmar Exclusão</h3>
-            </div>
-            <p className="text-gray-700 mb-6">
-              Tem certeza que deseja deletar este ticket? Esta ação não pode ser desfeita.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setTicketParaDeletar(null)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleDeletar}
-                disabled={isDeleting}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold disabled:opacity-50"
-              >
-                {isDeleting ? 'Deletando...' : 'Deletar'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeletionConfirmation
+          info="Tem certeza que deseja deletar este ticket? Esta ação não pode ser desfeita."
+          onConfirm={handleDeletar}
+          onCancel={() => setTicketParaDeletar(null)}
+          isDeleting={isDeleting}
+        />
       )}
-    </div>
+    </PageModel>   
   );
 }

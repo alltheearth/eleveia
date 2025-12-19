@@ -1,28 +1,63 @@
-// ✅ CORRETO - src/App.tsx
+// src/App.tsx - ✅ CORRIGIDO
 import { BrowserRouter } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import AppRoutes from './routes/AppRoutes';
+import { useGetProfileQuery } from './services';
 import type { RootState } from './store';
-import { useGetProfileQuery } from './services'; // ✅ Importar do services
 
 function App() {
-  const { isAuthenticated, token } = useSelector((state: RootState) => state.auth);
+  const { token, isAuthenticated, user } = useSelector((state: RootState) => state.auth);
 
-  // ✅ Buscar perfil automaticamente se estiver autenticado
-  const { refetch } = useGetProfileQuery(undefined, {
-    skip: !isAuthenticated, // Só busca se estiver autenticado
+  console.log('🚀 [APP] Inicializando App:', {
+    hasToken: !!token,
+    isAuthenticated,
+    hasUser: !!user,
+    tokenPreview: token ? `${token.substring(0, 20)}...` : 'NENHUM'
   });
 
-  // ✅ Verificar autenticação ao carregar
+  // ✅ Buscar perfil SOMENTE se tiver token
+  const { 
+    data: profile,
+    isLoading: isLoadingProfile,
+    error: profileError
+  } = useGetProfileQuery(undefined, {
+    skip: !token, // ✅ Só busca se tiver token
+  });
+
   useEffect(() => {
-    const storedToken = localStorage.getItem('eleve_token');
-    
-    if (storedToken && isAuthenticated) {
-      console.log('✅ Token encontrado, buscando perfil...');
-      refetch();
+    console.log('🔄 [APP] Estado de autenticação:', {
+      token: token ? 'Existe' : 'Não existe',
+      isAuthenticated,
+      isLoadingProfile,
+      hasProfile: !!profile,
+      hasError: !!profileError
+    });
+  }, [token, isAuthenticated, isLoadingProfile, profile, profileError]);
+
+  useEffect(() => {
+    if (profile) {
+      console.log('✅ [APP] Perfil carregado:', profile);
     }
-  }, [isAuthenticated, refetch]);
+  }, [profile]);
+
+  useEffect(() => {
+    if (profileError) {
+      console.error('❌ [APP] Erro ao buscar perfil:', profileError);
+    }
+  }, [profileError]);
+
+  // ✅ Mostrar loading enquanto busca perfil (apenas se tiver token)
+  if (token && isLoadingProfile) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando perfil...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <BrowserRouter>

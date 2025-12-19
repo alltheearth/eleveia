@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 // ============================================
-interface StatCardProps {
+export interface StatCardProps {
   label: string;
   value: number | string;
   color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'gray' | 'orange';

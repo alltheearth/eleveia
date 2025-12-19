@@ -1,4 +1,4 @@
-// src/services/api/authApi.ts
+// src/services/api/authApi.ts - ✅ CORRIGIDO COM PERSISTÊNCIA
 import { baseApi } from './baseApi';
 
 // ============================================
@@ -60,11 +60,26 @@ export const authApi = baseApi.injectEndpoints({
         body: credentials,
       }),
       invalidatesTags: ['Auth'],
-      transformResponse: (response: AuthResponse) => {
-        // Salvar token no localStorage
-        localStorage.setItem('eleve_token', response.token);
-        console.log('✅ Login bem-sucedido');
-        return response;
+      // ✅ CRÍTICO: onQueryStarted para salvar IMEDIATAMENTE
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('✅ [AUTH] Login response:', data);
+          
+          // ✅ SALVAR TOKEN IMEDIATAMENTE
+          if (data.token) {
+            localStorage.setItem('eleve_token', data.token);
+            console.log('✅ [AUTH] Token salvo no localStorage:', data.token.substring(0, 20) + '...');
+            
+            // ✅ VERIFICAR SE SALVOU
+            const savedToken = localStorage.getItem('eleve_token');
+            console.log('✅ [AUTH] Token verificado:', savedToken ? 'OK' : 'FALHOU');
+          } else {
+            console.error('❌ [AUTH] Resposta não contém token!');
+          }
+        } catch (error) {
+          console.error('❌ [AUTH] Erro no login:', error);
+        }
       },
     }),
     
@@ -76,10 +91,26 @@ export const authApi = baseApi.injectEndpoints({
         body: userData,
       }),
       invalidatesTags: ['Auth'],
-      transformResponse: (response: AuthResponse) => {
-        localStorage.setItem('eleve_token', response.token);
-        console.log('✅ Registro bem-sucedido');
-        return response;
+      // ✅ CRÍTICO: onQueryStarted para salvar IMEDIATAMENTE
+      async onQueryStarted(_arg, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          console.log('✅ [AUTH] Register response:', data);
+          
+          // ✅ SALVAR TOKEN IMEDIATAMENTE
+          if (data.token) {
+            localStorage.setItem('eleve_token', data.token);
+            console.log('✅ [AUTH] Token salvo no localStorage:', data.token.substring(0, 20) + '...');
+            
+            // ✅ VERIFICAR SE SALVOU
+            const savedToken = localStorage.getItem('eleve_token');
+            console.log('✅ [AUTH] Token verificado:', savedToken ? 'OK' : 'FALHOU');
+          } else {
+            console.error('❌ [AUTH] Resposta não contém token!');
+          }
+        } catch (error) {
+          console.error('❌ [AUTH] Erro no registro:', error);
+        }
       },
     }),
     
@@ -90,14 +121,16 @@ export const authApi = baseApi.injectEndpoints({
         method: 'POST',
       }),
       invalidatesTags: ['Auth'],
-      onQueryStarted: async (_arg, { queryFulfilled }) => {
+      // ✅ SEMPRE REMOVE TOKEN, mesmo com erro
+      async onQueryStarted(_arg, { queryFulfilled }) {
         try {
           await queryFulfilled;
+          console.log('✅ [AUTH] Logout bem-sucedido');
+        } catch (error) {
+          console.error('⚠️ [AUTH] Erro no logout, mas limpando token mesmo assim');
+        } finally {
           localStorage.removeItem('eleve_token');
-          console.log('✅ Logout bem-sucedido');
-        } catch {
-          // Mesmo com erro, remover token
-          localStorage.removeItem('eleve_token');
+          console.log('✅ [AUTH] Token removido do localStorage');
         }
       },
     }),
@@ -106,6 +139,17 @@ export const authApi = baseApi.injectEndpoints({
     getProfile: builder.query<User, void>({
       query: () => '/auth/perfil/',
       providesTags: ['Auth'],
+      transformErrorResponse: (error: any) => {
+        console.error('❌ [AUTH] Erro ao buscar perfil:', error);
+        
+        // Se for 401, token inválido
+        if (error.status === 401) {
+          console.error('❌ [AUTH] Token inválido - Limpando localStorage');
+          localStorage.removeItem('eleve_token');
+        }
+        
+        return error;
+      },
     }),
     
     // Atualizar perfil
