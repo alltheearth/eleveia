@@ -1,4 +1,4 @@
-// src/components/Auth/Login/index.tsx - ✅ CORRIGIDO
+// src/components/Auth/Login/index.tsx - ✅ COMPLETO E CORRIGIDO
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, User, ArrowRight, CheckCircle } from 'lucide-react';
@@ -42,7 +42,7 @@ export default function Login() {
   // ✅ Redirecionar quando autenticado
   useEffect(() => {
     if (isAuthenticated) {
-      console.log('✅ Usuário autenticado, redirecionando...');
+      console.log('✅ [LOGIN] Usuário autenticado, redirecionando para /dashboard...');
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
@@ -58,18 +58,25 @@ export default function Login() {
     }
 
     try {
-      console.log('🔐 Tentando login...');
+      console.log('🔐 [LOGIN] Tentando login com:', loginData.username);
       
       const result = await login({
         username: loginData.username,
         password: loginData.password,
       }).unwrap();
 
-      console.log('✅ Login bem-sucedido:', result);
+      console.log('✅ [LOGIN] Login bem-sucedido!');
+      console.log('📦 [LOGIN] Dados recebidos:', result);
+      console.log('🔑 [LOGIN] Token:', result.token.substring(0, 20) + '...');
+      
+      // Verificar se token foi salvo
+      const tokenSalvo = localStorage.getItem('eleve_token');
+      console.log('💾 [LOGIN] Token no localStorage após login:', tokenSalvo ? tokenSalvo.substring(0, 20) + '...' : 'NÃO ENCONTRADO!');
+      
       // Redirecionamento acontece pelo useEffect acima
       
     } catch (err: any) {
-      console.error('❌ Erro no login:', err);
+      console.error('❌ [LOGIN] Erro no login:', err);
       setErro(extractErrorMessage(err));
     }
   };
@@ -101,7 +108,7 @@ export default function Login() {
     }
 
     try {
-      console.log('📝 Tentando registro...');
+      console.log('📝 [LOGIN] Tentando registro...');
       
       await register({
         first_name: registroData.first_name,
@@ -112,11 +119,11 @@ export default function Login() {
         password2: registroData.password2,
       }).unwrap();
 
-      console.log('✅ Registro bem-sucedido');
+      console.log('✅ [LOGIN] Registro bem-sucedido');
       // Redirecionamento acontece pelo useEffect acima
       
     } catch (err: any) {
-      console.error('❌ Erro no registro:', err);
+      console.error('❌ [LOGIN] Erro no registro:', err);
       setErro(extractErrorMessage(err));
     }
   };
@@ -250,172 +257,125 @@ export default function Login() {
     );
   }
 
-  // ✅ TELA DE REGISTRO
+  // ✅ TELA DE REGISTRO (continua no próximo artefato...)
   return (
     <div className="flex h-screen bg-gradient-to-br from-blue-600 to-blue-900">
-      {/* Lado Esquerdo - Informações */}
-      <div className="hidden lg:flex w-1/2 flex-col justify-center items-center text-white p-12">
-        <div className="max-w-md">
-          <div className="text-5xl font-bold mb-6">🎓</div>
-          <h1 className="text-4xl font-bold mb-4">ELEVE.IA</h1>
-          <p className="text-xl mb-8 opacity-90">Crie sua conta e comece agora</p>
+      <div className="w-full flex items-center justify-center p-6">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Criar Conta</h2>
+          <p className="text-gray-600 mb-6">Preencha os dados para se registrar</p>
 
-          <div className="bg-white bg-opacity-20 rounded-lg p-6 space-y-3">
-            <div className="flex gap-3">
-              <CheckCircle size={24} className="flex-shrink-0" />
-              <span>Sem necessidade de configuração técnica</span>
+          {erro && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+              ❌ {erro}
             </div>
-            <div className="flex gap-3">
-              <CheckCircle size={24} className="flex-shrink-0" />
-              <span>Suporte completo da nossa equipe</span>
-            </div>
-          </div>
-        </div>
-      </div>
+          )}
 
-      {/* Lado Direito - Formulário */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6 overflow-y-auto">
-        <div className="w-full max-w-md my-8">
-          {/* Logo Mobile */}
-          <div className="lg:hidden text-center mb-8">
-            <div className="text-4xl mb-2">🎓</div>
-            <h1 className="text-3xl font-bold text-blue-600">ELEVE.IA</h1>
-          </div>
-
-          {/* Card de Registro */}
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Crie sua conta</h2>
-            <p className="text-gray-600 mb-8">Preencha os dados abaixo</p>
-
-            {/* Mensagem de Erro */}
-            {erro && (
-              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
-                ❌ {erro}
-              </div>
-            )}
-
-            <div className="space-y-4">
-              {/* Nome e Sobrenome */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-gray-700 font-semibold mb-2 text-sm">Nome *</label>
-                  <input
-                    type="text"
-                    placeholder="João"
-                    value={registroData.first_name}
-                    onChange={(e) => setRegistroData({ ...registroData, first_name: e.target.value })}
-                    disabled={isRegistering}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-700 font-semibold mb-2 text-sm">Sobrenome *</label>
-                  <input
-                    type="text"
-                    placeholder="Silva"
-                    value={registroData.last_name}
-                    onChange={(e) => setRegistroData({ ...registroData, last_name: e.target.value })}
-                    disabled={isRegistering}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
-                  />
-                </div>
-              </div>
-
-              {/* Usuário */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-gray-700 font-semibold mb-2">Usuário *</label>
+                <label className="block text-gray-700 font-semibold mb-2 text-sm">Nome *</label>
                 <input
                   type="text"
-                  placeholder="seu_usuario"
-                  value={registroData.username}
-                  onChange={(e) => setRegistroData({ ...registroData, username: e.target.value })}
+                  placeholder="João"
+                  value={registroData.first_name}
+                  onChange={(e) => setRegistroData({ ...registroData, first_name: e.target.value })}
                   disabled={isRegistering}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
                 />
               </div>
-
-              {/* Email */}
               <div>
-                <label className="block text-gray-700 font-semibold mb-2">Email *</label>
+                <label className="block text-gray-700 font-semibold mb-2 text-sm">Sobrenome *</label>
                 <input
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={registroData.email}
-                  onChange={(e) => setRegistroData({ ...registroData, email: e.target.value })}
+                  type="text"
+                  placeholder="Silva"
+                  value={registroData.last_name}
+                  onChange={(e) => setRegistroData({ ...registroData, last_name: e.target.value })}
                   disabled={isRegistering}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
                 />
               </div>
-
-              {/* Senha */}
-              <div>
-                <label className="block text-gray-700 font-semibold mb-2">Senha *</label>
-                <input
-                  type={mostrarSenha ? 'text' : 'password'}
-                  placeholder="Mínimo 8 caracteres"
-                  value={registroData.password}
-                  onChange={(e) => setRegistroData({ ...registroData, password: e.target.value })}
-                  disabled={isRegistering}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
-                />
-              </div>
-
-              {/* Confirmar Senha */}
-              <div>
-                <label className="block text-gray-700 font-semibold mb-2">Confirmar Senha *</label>
-                <input
-                  type={mostrarSenhaConfirm ? 'text' : 'password'}
-                  placeholder="Confirme sua senha"
-                  value={registroData.password2}
-                  onChange={(e) => setRegistroData({ ...registroData, password2: e.target.value })}
-                  onFocus={() => setMostrarSenhaConfirm(true)}
-                  disabled={isRegistering}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
-                />
-              </div>
-
-              {/* Termos */}
-              <label className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={registroData.termo}
-                  onChange={(e) => setRegistroData({ ...registroData, termo: e.target.checked })}
-                  disabled={isRegistering}
-                  className="w-4 h-4 mt-1 disabled:opacity-50"
-                />
-                <span className="text-gray-700 text-sm">
-                  Concordo com os Termos de Uso *
-                </span>
-              </label>
-
-              {/* Botão Criar Conta */}
-              <button
-                onClick={handleRegistro}
-                disabled={isRegistering}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-bold text-lg disabled:opacity-50"
-              >
-                {isRegistering ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    Criando conta...
-                  </div>
-                ) : (
-                  'Criar Conta'
-                )}
-              </button>
             </div>
 
-            {/* Link para Login */}
-            <p className="text-center text-gray-600 mt-6">
-              Já tem conta?{' '}
-              <button
-                onClick={() => setTelaAtual('login')}
-                className="text-blue-600 hover:text-blue-700 font-bold"
-              >
-                Faça login aqui
-              </button>
-            </p>
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Usuário *</label>
+              <input
+                type="text"
+                placeholder="seu_usuario"
+                value={registroData.username}
+                onChange={(e) => setRegistroData({ ...registroData, username: e.target.value })}
+                disabled={isRegistering}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Email *</label>
+              <input
+                type="email"
+                placeholder="seu@email.com"
+                value={registroData.email}
+                onChange={(e) => setRegistroData({ ...registroData, email: e.target.value })}
+                disabled={isRegistering}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Senha *</label>
+              <input
+                type={mostrarSenha ? 'text' : 'password'}
+                placeholder="Mínimo 8 caracteres"
+                value={registroData.password}
+                onChange={(e) => setRegistroData({ ...registroData, password: e.target.value })}
+                disabled={isRegistering}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Confirmar Senha *</label>
+              <input
+                type={mostrarSenhaConfirm ? 'text' : 'password'}
+                placeholder="Confirme sua senha"
+                value={registroData.password2}
+                onChange={(e) => setRegistroData({ ...registroData, password2: e.target.value })}
+                disabled={isRegistering}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
+              />
+            </div>
+
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={registroData.termo}
+                onChange={(e) => setRegistroData({ ...registroData, termo: e.target.checked })}
+                disabled={isRegistering}
+                className="w-4 h-4 mt-1 disabled:opacity-50"
+              />
+              <span className="text-gray-700 text-sm">
+                Concordo com os Termos de Uso *
+              </span>
+            </label>
+
+            <button
+              onClick={handleRegistro}
+              disabled={isRegistering}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-bold text-lg disabled:opacity-50"
+            >
+              {isRegistering ? 'Criando conta...' : 'Criar Conta'}
+            </button>
           </div>
+
+          <p className="text-center text-gray-600 mt-6">
+            Já tem conta?{' '}
+            <button
+              onClick={() => setTelaAtual('login')}
+              className="text-blue-600 hover:text-blue-700 font-bold"
+            >
+              Faça login aqui
+            </button>
+          </p>
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-// src/services/api/authApi.ts - ✅ CORRIGIDO
+// src/services/api/authApi.ts - ✅ COMPLETO E CORRIGIDO
 import { baseApi } from './baseApi';
 
 // ============================================
@@ -54,76 +54,90 @@ export const authApi = baseApi.injectEndpoints({
     
     // Login
     login: builder.mutation<AuthResponse, LoginRequest>({
-      query: (credentials) => ({
-        url: '/auth/login/',
-        method: 'POST',
-        body: credentials,
-      }),
+      query: (credentials) => {
+        console.log('🔐 [AUTH API] Fazendo login...', credentials.username);
+        return {
+          url: '/auth/login/',
+          method: 'POST',
+          body: credentials,
+        };
+      },
       invalidatesTags: ['Auth'],
       transformResponse: (response: AuthResponse) => {
-        // ✅ CRÍTICO: Salvar token no localStorage
-        console.log('🔑 [AUTH API] Salvando token no localStorage...');
-        localStorage.setItem('eleve_token', response.token);
-        console.log('💾 [AUTH API] Token salvo:', response.token.substring(0, 20) + '...');
+        console.log('✅ [AUTH API] Login bem-sucedido, resposta:', response);
+        return response;
+      },
+      transformErrorResponse: (response: any) => {
+        console.error('❌ [AUTH API] Erro no login:', response);
         return response;
       },
     }),
     
     // Registro
     register: builder.mutation<AuthResponse, RegisterRequest>({
-      query: (userData) => ({
-        url: '/auth/registro/',
-        method: 'POST',
-        body: userData,
-      }),
+      query: (userData) => {
+        console.log('📝 [AUTH API] Registrando usuário...', userData.username);
+        return {
+          url: '/auth/registro/',
+          method: 'POST',
+          body: userData,
+        };
+      },
       invalidatesTags: ['Auth'],
       transformResponse: (response: AuthResponse) => {
-        localStorage.setItem('eleve_token', response.token);
-        console.log('✅ Registro bem-sucedido');
+        console.log('✅ [AUTH API] Registro bem-sucedido');
+        return response;
+      },
+      transformErrorResponse: (response: any) => {
+        console.error('❌ [AUTH API] Erro no registro:', response);
         return response;
       },
     }),
     
     // Logout
     logout: builder.mutation<void, void>({
-      query: () => ({
-        url: '/auth/logout/',
-        method: 'POST',
-      }),
+      query: () => {
+        console.log('👋 [AUTH API] Fazendo logout...');
+        return {
+          url: '/auth/logout/',
+          method: 'POST',
+        };
+      },
       invalidatesTags: ['Auth'],
       onQueryStarted: async (_arg, { queryFulfilled }) => {
         try {
           await queryFulfilled;
           localStorage.removeItem('eleve_token');
-          console.log('✅ Logout bem-sucedido');
+          console.log('✅ [AUTH API] Logout bem-sucedido');
         } catch {
           // Mesmo com erro, remover token
           localStorage.removeItem('eleve_token');
+          console.log('🧹 [AUTH API] Token removido mesmo com erro');
         }
       },
     }),
     
-    // Obter perfil do usuário - ✅ ROTA CORRETA
+    // Obter perfil do usuário
     getProfile: builder.query<User, void>({
       query: () => {
-        console.log('🔍 [AUTH API] Buscando perfil em /auth/perfil/');
+        console.log('🔄 [AUTH API] Buscando perfil em /auth/perfil/');
         return '/auth/perfil/';
       },
       providesTags: ['Auth'],
       transformResponse: (response: User) => {
-        console.log('✅ [AUTH API] Perfil recebido:', response);
+        console.log('✅ [AUTH API] Perfil carregado:', response);
         return response;
       },
-      transformErrorResponse: (error: any) => {
-        console.error('❌ [AUTH API] Erro ao buscar perfil:', error);
+      transformErrorResponse: (response: any) => {
+        console.error('❌ [AUTH API] Erro ao buscar perfil:', response);
         
-        // Se for 401, limpar token
-        if (error.status === 401) {
-          console.log('🧹 [AUTH API] Token inválido - Limpando localStorage');
+        // Se for 401, token inválido - limpar localStorage
+        if (response.status === 401) {
           localStorage.removeItem('eleve_token');
+          console.log('🧹 [AUTH API] Token inválido - Limpando localStorage');
         }
         
-        return error;
+        return response;
       },
     }),
     

@@ -1,4 +1,4 @@
-// src/services/api/baseApi.ts - ✅ CORRIGIDA
+// src/services/api/baseApi.ts - ✅ COMPLETO E CORRIGIDO
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../../store';
 
@@ -6,27 +6,25 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/
 
 /**
  * Configuração base do RTK Query para toda a aplicação
+ * Todas as APIs devem injetar endpoints nesta base
  */
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
     baseUrl: API_BASE_URL,
     prepareHeaders: (headers, { getState }) => {
-      // ✅ CRÍTICO: Pegar token do estado E do localStorage
+      // 🔍 Prioridade: State -> localStorage
       const state = getState() as RootState;
-      
-      // Tentar pegar do estado primeiro
       let token = state.auth.token;
       
-      // Se não tiver no estado, tentar localStorage
+      // Se não estiver no state, buscar do localStorage
       if (!token) {
         token = localStorage.getItem('eleve_token');
         console.log('🔍 [API] Token não estava no state, buscando do localStorage');
       }
       
-      // ✅ Sempre logar o token (preview)
       if (token) {
-        console.log('🔑 [API] Token encontrado:', token.substring(0, 20) + '...');
+        console.log('✅ [API] Token encontrado, adicionando ao header:', token.substring(0, 20) + '...');
         headers.set('Authorization', `Token ${token}`);
       } else {
         console.warn('⚠️ [API] Nenhum token encontrado');
@@ -53,6 +51,7 @@ export const baseApi = createApi({
     'Document'
   ],
   
+  // Endpoints serão injetados pelas APIs específicas
   endpoints: () => ({}),
 });
 
