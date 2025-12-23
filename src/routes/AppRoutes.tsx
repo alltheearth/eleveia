@@ -5,14 +5,15 @@ import MainLayout from '../components/layout/MainLayout';
 
 // Pages
 import Login from '../components/Auth/Login';
-import Dashboard from '../components/Dashboard';
+import Dashboard from '../pages/Dashboard';
 import Leads from '../pages/Leads';
-import Contatos from '../components/Contacts';
-import Eventos from '../components/Calendar';
+import Contatos from '../pages/Contacts';
+import Eventos from '../pages/Calendar';
 import FAQs from '../pages/FAQs';
 import Tickets from '../pages/Tickets';
 import Perfil from '../pages/Perfil';
 import InformacoesEscola from '../components/Information';
+
 
 const AppRoutes = () => {
   return (

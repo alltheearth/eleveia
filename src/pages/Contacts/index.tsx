@@ -1,6 +1,6 @@
-// src/pages/Leads/index.tsx - ✅ REFATORADO
+// src/pages/Contacts/index.tsx - ✅ REFATORADO
 import { useState, useEffect } from 'react';
-import { Edit2, Trash2, Plus, Users as UsersIcon, Download, TrendingUp } from 'lucide-react';
+import { Edit2, Trash2, Plus, Users as UsersIcon, Phone, Mail } from 'lucide-react';
 
 // Componentes de Layout
 import PageModel from '../../components/layout/PageModel';
@@ -21,29 +21,29 @@ import {
 // Hooks e Services
 import { useCurrentSchool } from '../../hooks/useCurrentSchool';
 import {
-  useGetLeadsQuery,
-  useGetLeadStatsQuery,
-  useCreateLeadMutation,
-  useUpdateLeadMutation,
-  useDeleteLeadMutation,
-  useChangeLeadStatusMutation,
-  useExportLeadsCSVMutation,
+  useGetContactsQuery,
+  useGetContactStatsQuery,
+  useCreateContactMutation,
+  useUpdateContactMutation,
+  useDeleteContactMutation,
+  useRegisterInteractionMutation,
   extractErrorMessage,
-  type Lead,
-  type LeadFilters
+  type Contact,
+  type ContactFilters
 } from '../../services';
 
-interface LeadFormData {
+interface ContactFormData {
   nome: string;
   email: string;
   telefone: string;
-  status: Lead['status'];
-  origem: Lead['origem'];
+  data_nascimento: string;
+  status: Contact['status'];
+  origem: Contact['origem'];
   observacoes: string;
-  interesses: Record<string, any>;
+  tags: string;
 }
 
-export default function Leads() {
+export default function Contacts() {
   // ============================================
   // HOOKS
   // ============================================
@@ -61,45 +61,45 @@ export default function Leads() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [editandoLead, setEditandoLead] = useState<Lead | null>(null);
-  const [leadParaDeletar, setLeadParaDeletar] = useState<Lead | null>(null);
+  const [editandoContato, setEditandoContato] = useState<Contact | null>(null);
+  const [contatoParaDeletar, setContatoParaDeletar] = useState<Contact | null>(null);
   const [mensagem, setMensagem] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
 
-  const [formData, setFormData] = useState<LeadFormData>({
+  const [formData, setFormData] = useState<ContactFormData>({
     nome: '',
     email: '',
     telefone: '',
-    status: 'novo',
-    origem: 'site',
+    data_nascimento: '',
+    status: 'ativo',
+    origem: 'whatsapp',
     observacoes: '',
-    interesses: {},
+    tags: '',
   });
 
   // ============================================
   // RTK QUERY
   // ============================================
   
-  const filters: LeadFilters = {
+  const filters: ContactFilters = {
     search: searchTerm || undefined,
-    status: statusFilter !== 'todos' ? statusFilter : undefined,
+    status: statusFilter !== 'todos' ? (statusFilter as 'ativo' | 'inativo') : undefined,
   };
 
   const { 
-    data: leadsData, 
-    isLoading: leadsLoading, 
+    data: contactsData, 
+    isLoading: contactsLoading, 
     error: fetchError,
     refetch 
-  } = useGetLeadsQuery(filters);
+  } = useGetContactsQuery(filters);
 
-  const { data: stats } = useGetLeadStatsQuery();
+  const { data: stats } = useGetContactStatsQuery();
 
-  const [createLead, { isLoading: isCreating }] = useCreateLeadMutation();
-  const [updateLead, { isLoading: isUpdating }] = useUpdateLeadMutation();
-  const [deleteLead, { isLoading: isDeleting }] = useDeleteLeadMutation();
-  const [changeStatus] = useChangeLeadStatusMutation();
-  const [exportCSV, { isLoading: isExporting }] = useExportLeadsCSVMutation();
+  const [createContact, { isLoading: isCreating }] = useCreateContactMutation();
+  const [updateContact, { isLoading: isUpdating }] = useUpdateContactMutation();
+  const [deleteContact, { isLoading: isDeleting }] = useDeleteContactMutation();
+  const [registerInteraction] = useRegisterInteractionMutation();
 
-  const leads = leadsData?.results || [];
+  const contacts = contactsData?.results || [];
 
   // ============================================
   // EFFECTS
@@ -121,21 +121,21 @@ export default function Leads() {
       nome: '',
       email: '',
       telefone: '',
-      status: 'novo',
-      origem: 'site',
+      data_nascimento: '',
+      status: 'ativo',
+      origem: 'whatsapp',
       observacoes: '',
-      interesses: {},
+      tags: '',
     });
-    setEditandoLead(null);
+    setEditandoContato(null);
     setMostrarFormulario(false);
   };
 
   const validarFormulario = (): string | null => {
-    if (!formData.nome.trim()) return 'Nome é obrigatório';
-    if (formData.nome.trim().length < 3) return 'Nome deve ter no mínimo 3 caracteres';
-    if (!formData.email.trim()) return 'Email é obrigatório';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return 'Email inválido';
     if (!formData.telefone.trim()) return 'Telefone é obrigatório';
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      return 'Email inválido';
+    }
     return null;
   };
 
@@ -147,21 +147,21 @@ export default function Leads() {
     }
 
     try {
-      if (editandoLead) {
-        await updateLead({ 
-          id: editandoLead.id, 
+      if (editandoContato) {
+        await updateContact({ 
+          id: editandoContato.id, 
           data: {
             ...formData,
             escola: parseInt(currentSchoolId),
           }
         }).unwrap();
-        setMensagem({ tipo: 'success', texto: '✅ Lead atualizado com sucesso!' });
+        setMensagem({ tipo: 'success', texto: '✅ Contato atualizado com sucesso!' });
       } else {
-        await createLead({
+        await createContact({
           ...formData,
           escola: parseInt(currentSchoolId),
         }).unwrap();
-        setMensagem({ tipo: 'success', texto: '✅ Lead criado com sucesso!' });
+        setMensagem({ tipo: 'success', texto: '✅ Contato criado com sucesso!' });
       }
       resetForm();
       refetch();
@@ -170,60 +170,46 @@ export default function Leads() {
     }
   };
 
-  const handleEditar = (lead: Lead) => {
+  const handleEditar = (contact: Contact) => {
     setFormData({
-      nome: lead.nome,
-      email: lead.email,
-      telefone: lead.telefone,
-      status: lead.status,
-      origem: lead.origem,
-      observacoes: lead.observacoes || '',
-      interesses: lead.interesses || {},
+      nome: contact.nome,
+      email: contact.email,
+      telefone: contact.telefone,
+      data_nascimento: contact.data_nascimento || '',
+      status: contact.status,
+      origem: contact.origem,
+      observacoes: contact.observacoes || '',
+      tags: contact.tags || '',
     });
-    setEditandoLead(lead);
+    setEditandoContato(contact);
     setMostrarFormulario(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDeletar = async () => {
-    if (!leadParaDeletar) return;
+    if (!contatoParaDeletar) return;
 
     try {
-      await deleteLead(leadParaDeletar.id).unwrap();
-      setMensagem({ tipo: 'success', texto: '✅ Lead deletado com sucesso!' });
-      setLeadParaDeletar(null);
+      await deleteContact(contatoParaDeletar.id).unwrap();
+      setMensagem({ tipo: 'success', texto: '✅ Contato deletado com sucesso!' });
+      setContatoParaDeletar(null);
       refetch();
     } catch (err) {
       setMensagem({ tipo: 'error', texto: `❌ ${extractErrorMessage(err)}` });
     }
   };
 
-  const handleMudarStatus = async (id: number, novoStatus: Lead['status']) => {
+  const handleRegistrarInteracao = async (id: number) => {
     try {
-      await changeStatus({ id, status: novoStatus }).unwrap();
-      setMensagem({ tipo: 'success', texto: '✅ Status atualizado!' });
+      await registerInteraction(id).unwrap();
+      setMensagem({ tipo: 'success', texto: '✅ Interação registrada!' });
       refetch();
     } catch (err) {
       setMensagem({ tipo: 'error', texto: `❌ ${extractErrorMessage(err)}` });
     }
   };
 
-  const handleExportar = async () => {
-    try {
-      const blob = await exportCSV().unwrap();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `leads_${currentSchool?.nome_escola || 'escola'}_${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      setMensagem({ tipo: 'success', texto: '✅ CSV exportado!' });
-    } catch (err) {
-      setMensagem({ tipo: 'error', texto: '❌ Erro ao exportar CSV' });
-    }
-  };
-
-  const formatarData = (data: string) => {
+  const formatarDataHora = (data: string): string => {
     return new Date(data).toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
@@ -233,36 +219,14 @@ export default function Leads() {
     });
   };
 
-  const getStatusColor = (status: Lead['status']) => {
-    const colors: Record<Lead['status'], 'blue' | 'yellow' | 'purple' | 'green' | 'red'> = {
-      novo: 'blue',
-      contato: 'yellow',
-      qualificado: 'purple',
-      conversao: 'green',
-      perdido: 'red',
-    };
-    return colors[status];
-  };
-
-  const getStatusLabel = (status: Lead['status']) => {
-    const labels: Record<Lead['status'], string> = {
-      novo: '🆕 Novo',
-      contato: '📞 Em Contato',
-      qualificado: '⭐ Qualificado',
-      conversao: '✅ Conversão',
-      perdido: '❌ Perdido',
-    };
-    return labels[status];
-  };
-
   // ============================================
   // LOADING & ERROR STATES
   // ============================================
   
-  if (leadsLoading || schoolsLoading) {
+  if (contactsLoading || schoolsLoading) {
     return (
       <LoadingState 
-        message="Carregando leads..."
+        message="Carregando contatos..."
         icon={<UsersIcon size={48} className="text-blue-600" />}
       />
     );
@@ -304,62 +268,31 @@ export default function Leads() {
 
       {/* Estatísticas */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard 
             label="Total" 
             value={stats.total} 
-            color="gray" 
+            color="blue" 
             icon={<UsersIcon size={24} />} 
           />
           <StatCard 
-            label="Novos" 
-            value={stats.novo} 
-            color="blue" 
-            description="Aguardando contato" 
-          />
-          <StatCard 
-            label="Em Contato" 
-            value={stats.contato} 
-            color="yellow" 
-            description="Sendo trabalhados" 
-          />
-          <StatCard 
-            label="Qualificados" 
-            value={stats.qualificado} 
-            color="purple" 
-            description="Prontos para conversão" 
-          />
-          <StatCard 
-            label="Conversão" 
-            value={stats.conversao} 
+            label="Ativos" 
+            value={stats.ativos} 
             color="green" 
-            description="Matriculados" 
+            description="Contatos ativos" 
           />
           <StatCard 
-            label="Perdidos" 
-            value={stats.perdido} 
-            color="red" 
-            description="Não convertidos" 
+            label="Inativos" 
+            value={stats.inativos} 
+            color="gray" 
+            description="Contatos inativos" 
           />
-        </div>
-      )}
-
-      {/* Taxa de Conversão */}
-      {stats && stats.taxa_conversao > 0 && (
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <TrendingUp className="text-green-600" size={24} />
-              <div>
-                <p className="text-sm text-gray-600 font-medium">Taxa de Conversão</p>
-                <p className="text-2xl font-bold text-green-600">{stats.taxa_conversao}%</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-600">Novos Hoje</p>
-              <p className="text-xl font-bold text-blue-600">{stats.novos_hoje}</p>
-            </div>
-          </div>
+          <StatCard 
+            label="Novos Hoje" 
+            value={stats.novos_hoje} 
+            color="orange" 
+            description="Adicionados hoje" 
+          />
         </div>
       )}
 
@@ -369,7 +302,7 @@ export default function Leads() {
           {
             type: 'search',
             name: 'search',
-            placeholder: 'Buscar por nome ou email...',
+            placeholder: 'Buscar por nome, email ou telefone...',
             value: searchTerm,
             onChange: setSearchTerm,
           },
@@ -380,24 +313,14 @@ export default function Leads() {
             onChange: setStatusFilter,
             options: [
               { label: 'Todos os Status', value: 'todos' },
-              { label: 'Novo', value: 'novo' },
-              { label: 'Em Contato', value: 'contato' },
-              { label: 'Qualificado', value: 'qualificado' },
-              { label: 'Conversão', value: 'conversao' },
-              { label: 'Perdido', value: 'perdido' },
+              { label: 'Ativo', value: 'ativo' },
+              { label: 'Inativo', value: 'inativo' },
             ],
           },
         ]}
         actions={[
           {
-            label: 'Exportar',
-            onClick: handleExportar,
-            icon: <Download size={18} />,
-            variant: 'success',
-            loading: isExporting,
-          },
-          {
-            label: 'Novo Lead',
+            label: 'Novo Contato',
             onClick: () => setMostrarFormulario(true),
             icon: <Plus size={18} />,
             variant: 'primary',
@@ -417,39 +340,35 @@ export default function Leads() {
             key: 'nome', 
             label: 'Nome', 
             sortable: true,
-            render: (value) => <span className="font-medium text-gray-900">{value}</span>
+            render: (value) => <span className="font-medium text-gray-900">{value || '-'}</span>
           },
           { 
             key: 'email', 
             label: 'Email',
-            render: (value) => <span className="text-sm text-gray-600">{value}</span>
+            render: (value) => (
+              <div className="flex items-center gap-2">
+                <Mail size={16} className="text-gray-400" />
+                <span className="text-sm">{value || '-'}</span>
+              </div>
+            )
           },
           { 
             key: 'telefone', 
             label: 'Telefone',
-            render: (value) => <span className="text-sm text-gray-600">{value}</span>
+            render: (value) => (
+              <div className="flex items-center gap-2">
+                <Phone size={16} className="text-gray-400" />
+                <span className="text-sm">{value}</span>
+              </div>
+            )
           },
           { 
             key: 'status', 
             label: 'Status',
-            render: (value, row) => (
-              <select
-                value={value}
-                onChange={(e) => handleMudarStatus(row.id, e.target.value as Lead['status'])}
-                className={`px-3 py-1 rounded-full font-semibold text-sm border-0 cursor-pointer focus:outline-none ${
-                  value === 'novo' ? 'bg-blue-100 text-blue-700' :
-                  value === 'contato' ? 'bg-yellow-100 text-yellow-700' :
-                  value === 'qualificado' ? 'bg-purple-100 text-purple-700' :
-                  value === 'conversao' ? 'bg-green-100 text-green-700' :
-                  'bg-red-100 text-red-700'
-                }`}
-              >
-                <option value="novo">🆕 Novo</option>
-                <option value="contato">📞 Em Contato</option>
-                <option value="qualificado">⭐ Qualificado</option>
-                <option value="conversao">✅ Conversão</option>
-                <option value="perdido">❌ Perdido</option>
-              </select>
+            render: (value) => (
+              <Badge variant={value === 'ativo' ? 'green' : 'gray'}>
+                {value === 'ativo' ? '✅ Ativo' : '⛔ Inativo'}
+              </Badge>
             )
           },
           { 
@@ -462,15 +381,24 @@ export default function Leads() {
             )
           },
           { 
-            key: 'criado_em', 
-            label: 'Criado em',
-            sortable: true,
-            render: (value) => <span className="text-sm">{formatarData(value)}</span>
+            key: 'ultima_interacao', 
+            label: 'Última Interação',
+            render: (value) => (
+              <span className="text-sm text-gray-600">
+                {value ? formatarDataHora(value) : '-'}
+              </span>
+            )
           },
         ]}
-        data={leads}
-        keyExtractor={(lead) => lead.id.toString()}
+        data={contacts}
+        keyExtractor={(contact) => contact.id.toString()}
         actions={[
+          {
+            icon: <span className="text-lg">📞</span>,
+            onClick: (contact) => handleRegistrarInteracao(contact.id),
+            variant: 'success',
+            label: 'Registrar Interação',
+          },
           {
             icon: <Edit2 size={18} />,
             onClick: handleEditar,
@@ -479,21 +407,21 @@ export default function Leads() {
           },
           {
             icon: <Trash2 size={18} />,
-            onClick: (lead) => setLeadParaDeletar(lead),
+            onClick: (contact) => setContatoParaDeletar(contact),
             variant: 'danger',
             label: 'Deletar',
           },
         ]}
-        emptyMessage="Nenhum lead encontrado"
+        emptyMessage="Nenhum contato encontrado"
         emptyIcon={<UsersIcon size={48} className="text-gray-400" />}
       />
 
       {/* Info de Resultados */}
-      {leads.length > 0 && (
+      {contacts.length > 0 && (
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
           <p className="text-gray-700 font-semibold">
-            Mostrando <span className="text-blue-600 font-bold">{leads.length}</span> de{' '}
-            <span className="text-blue-600 font-bold">{stats?.total || 0}</span> leads
+            Mostrando <span className="text-blue-600 font-bold">{contacts.length}</span> de{' '}
+            <span className="text-blue-600 font-bold">{stats?.total || 0}</span> contatos
           </p>
         </div>
       )}
@@ -501,30 +429,30 @@ export default function Leads() {
       {/* Modal de Formulário */}
       <FormModal
         isOpen={mostrarFormulario}
-        title={editandoLead ? '✏️ Editar Lead' : '➕ Novo Lead'}
-        subtitle={editandoLead ? 'Atualize as informações do lead' : 'Preencha os dados do novo lead'}
+        title={editandoContato ? '✏️ Editar Contato' : '➕ Novo Contato'}
+        subtitle={editandoContato ? 'Atualize as informações do contato' : 'Preencha os dados do novo contato'}
         onClose={resetForm}
         size="lg"
       >
-        <LeadForm
+        <ContactForm
           formData={formData}
           onChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
           onSubmit={handleSubmit}
           onCancel={resetForm}
           isLoading={isCreating || isUpdating}
-          isEditing={!!editandoLead}
+          isEditing={!!editandoContato}
         />
       </FormModal>
 
       {/* Modal de Confirmação de Deleção */}
       <ConfirmDialog
-        isOpen={!!leadParaDeletar}
+        isOpen={!!contatoParaDeletar}
         title="Confirmar Exclusão"
-        message={`Tem certeza que deseja deletar o lead "${leadParaDeletar?.nome}"? Esta ação não pode ser desfeita.`}
+        message={`Tem certeza que deseja deletar o contato "${contatoParaDeletar?.nome || contatoParaDeletar?.telefone}"? Esta ação não pode ser desfeita.`}
         confirmLabel="Deletar"
         cancelLabel="Cancelar"
         onConfirm={handleDeletar}
-        onCancel={() => setLeadParaDeletar(null)}
+        onCancel={() => setContatoParaDeletar(null)}
         isLoading={isDeleting}
         variant="danger"
       />
@@ -536,29 +464,29 @@ export default function Leads() {
 // COMPONENTE DE FORMULÁRIO
 // ============================================
 
-interface LeadFormProps {
-  formData: LeadFormData;
-  onChange: (field: string, value: any) => void;
+interface ContactFormProps {
+  formData: ContactFormData;
+  onChange: (field: string, value: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
   isLoading?: boolean;
   isEditing?: boolean;
 }
 
-function LeadForm({
+function ContactForm({
   formData,
   onChange,
   onSubmit,
   onCancel,
   isLoading = false,
   isEditing = false,
-}: LeadFormProps) {
+}: ContactFormProps) {
   return (
     <div className="space-y-4">
       {/* Nome e Email */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-gray-700 font-semibold mb-2">Nome *</label>
+          <label className="block text-gray-700 font-semibold mb-2">Nome</label>
           <input
             type="text"
             placeholder="Nome completo"
@@ -569,7 +497,7 @@ function LeadForm({
         </div>
 
         <div>
-          <label className="block text-gray-700 font-semibold mb-2">Email *</label>
+          <label className="block text-gray-700 font-semibold mb-2">Email</label>
           <input
             type="email"
             placeholder="email@exemplo.com"
@@ -580,7 +508,7 @@ function LeadForm({
         </div>
       </div>
 
-      {/* Telefone e Origem */}
+      {/* Telefone e Data de Nascimento */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-gray-700 font-semibold mb-2">Telefone *</label>
@@ -594,44 +522,66 @@ function LeadForm({
         </div>
 
         <div>
+          <label className="block text-gray-700 font-semibold mb-2">Data de Nascimento</label>
+          <input
+            type="date"
+            value={formData.data_nascimento}
+            onChange={(e) => onChange('data_nascimento', e.target.value)}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+          />
+        </div>
+      </div>
+
+      {/* Origem e Status */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
           <label className="block text-gray-700 font-semibold mb-2">Origem</label>
           <select
             value={formData.origem}
             onChange={(e) => onChange('origem', e.target.value)}
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
           >
-            <option value="site">Site</option>
             <option value="whatsapp">WhatsApp</option>
-            <option value="indicacao">Indicação</option>
-            <option value="ligacao">Ligação</option>
+            <option value="site">Site</option>
+            <option value="telefone">Telefone</option>
+            <option value="presencial">Presencial</option>
             <option value="email">Email</option>
-            <option value="facebook">Facebook</option>
-            <option value="instagram">Instagram</option>
+            <option value="indicacao">Indicação</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-gray-700 font-semibold mb-2">Status</label>
+          <select
+            value={formData.status}
+            onChange={(e) => onChange('status', e.target.value)}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+          >
+            <option value="ativo">✅ Ativo</option>
+            <option value="inativo">⛔ Inativo</option>
           </select>
         </div>
       </div>
 
-      {/* Status */}
+      {/* Tags */}
       <div>
-        <label className="block text-gray-700 font-semibold mb-2">Status</label>
-        <select
-          value={formData.status}
-          onChange={(e) => onChange('status', e.target.value)}
+        <label className="block text-gray-700 font-semibold mb-2">
+          Tags (separadas por vírgula)
+        </label>
+        <input
+          type="text"
+          placeholder="interessado, aguardando, urgente"
+          value={formData.tags}
+          onChange={(e) => onChange('tags', e.target.value)}
           className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-        >
-          <option value="novo">🆕 Novo</option>
-          <option value="contato">📞 Em Contato</option>
-          <option value="qualificado">⭐ Qualificado</option>
-          <option value="conversao">✅ Conversão</option>
-          <option value="perdido">❌ Perdido</option>
-        </select>
+        />
       </div>
 
       {/* Observações */}
       <div>
         <label className="block text-gray-700 font-semibold mb-2">Observações</label>
         <textarea
-          placeholder="Informações adicionais sobre o lead..."
+          placeholder="Informações adicionais..."
           value={formData.observacoes}
           onChange={(e) => onChange('observacoes', e.target.value)}
           rows={3}
@@ -649,7 +599,7 @@ function LeadForm({
           <Plus size={20} />
           {isLoading 
             ? (isEditing ? 'Atualizando...' : 'Criando...')
-            : (isEditing ? 'Atualizar' : 'Criar Lead')
+            : (isEditing ? 'Atualizar' : 'Criar Contato')
           }
         </button>
 
