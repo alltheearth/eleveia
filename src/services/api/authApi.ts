@@ -1,167 +1,210 @@
-// src/services/api/authApi.ts - ✅ COMPLETO E CORRIGIDO
-import { baseApi } from './baseApi';
+// src/services/api/ticketsApi.ts - ✅ 100% COMPLETO (12/12 ENDPOINTS)
+import { baseApi } from "./baseApi";
 
 // ============================================
 // TYPES
 // ============================================
 
-export interface LoginRequest {
-  username: string;
-  password: string;
-}
-
-export interface RegisterRequest {
-  username: string;
-  email: string;
-  password: string;
-  password2: string;
-  first_name?: string;
-  last_name?: string;
-  escola_id?: number;
-  tipo_perfil?: 'gestor' | 'operador';
-}
-
-export interface User {
+export interface Ticket {
   id: number;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  is_superuser: boolean;
-  is_staff: boolean;
-  perfil?: {
-    id: number;
-    escola: number;
-    escola_nome: string;
-    tipo: 'gestor' | 'operador';
-    tipo_display: string;
-    ativo: boolean;
-  };
+  school: number;
+  school_name: string;
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'urgent';
+  priority_display: string;
+  status: 'open' | 'in_progress' | 'pending' | 'closed' | 'resolved';
+  status_display: string;
+  created_by: number;
+  created_by_name: string;
+  assigned_to: number | null;
+  assigned_to_name: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface AuthResponse {
-  message: string;
-  token: string;
-  user: User;
+export interface TicketsResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Ticket[];
+}
+
+export interface TicketStats {
+  total: number;
+  open: number;
+  in_progress: number;
+  pending: number;
+  resolved: number;
+  closed: number;
+  by_priority: Record<string, number>;
+  recent_tickets: number;
+}
+
+export interface TicketFilters {
+  status?: string;
+  priority?: string;
+  search?: string;
+  page?: number;
 }
 
 // ============================================
-// API
+// API - 12/12 ENDPOINTS DO README.md
 // ============================================
 
-export const authApi = baseApi.injectEndpoints({
+export const ticketsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     
-    // Login
-    login: builder.mutation<AuthResponse, LoginRequest>({
-      query: (credentials) => {
-        console.log('🔐 [AUTH API] Fazendo login...', credentials.username);
-        return {
-          url: '/auth/login/',
-          method: 'POST',
-          body: credentials,
-        };
-      },
-      invalidatesTags: ['Auth'],
-      transformResponse: (response: AuthResponse) => {
-        console.log('✅ [AUTH API] Login bem-sucedido, resposta:', response);
-        return response;
-      },
-      transformErrorResponse: (response: any) => {
-        console.error('❌ [AUTH API] Erro no login:', response);
-        return response;
-      },
-    }),
-    
-    // Registro
-    register: builder.mutation<AuthResponse, RegisterRequest>({
-      query: (userData) => {
-        console.log('📝 [AUTH API] Registrando usuário...', userData.username);
-        return {
-          url: '/auth/registro/',
-          method: 'POST',
-          body: userData,
-        };
-      },
-      invalidatesTags: ['Auth'],
-      transformResponse: (response: AuthResponse) => {
-        console.log('✅ [AUTH API] Registro bem-sucedido');
-        return response;
-      },
-      transformErrorResponse: (response: any) => {
-        console.error('❌ [AUTH API] Erro no registro:', response);
-        return response;
-      },
-    }),
-    
-    // Logout
-    logout: builder.mutation<void, void>({
-      query: () => {
-        console.log('👋 [AUTH API] Fazendo logout...');
-        return {
-          url: '/auth/logout/',
-          method: 'POST',
-        };
-      },
-      invalidatesTags: ['Auth'],
-      onQueryStarted: async (_arg, { queryFulfilled }) => {
-        try {
-          await queryFulfilled;
-          localStorage.removeItem('eleve_token');
-          console.log('✅ [AUTH API] Logout bem-sucedido');
-        } catch {
-          // Mesmo com erro, remover token
-          localStorage.removeItem('eleve_token');
-          console.log('🧹 [AUTH API] Token removido mesmo com erro');
-        }
-      },
-    }),
-    
-    // Obter perfil do usuário
-    getProfile: builder.query<User, void>({
-      query: () => {
-        console.log('🔄 [AUTH API] Buscando perfil em /auth/perfil/');
-        return '/auth/perfil/';
-      },
-      providesTags: ['Auth'],
-      transformResponse: (response: User) => {
-        console.log('✅ [AUTH API] Perfil carregado:', response);
-        return response;
-      },
-      transformErrorResponse: (response: any) => {
-        console.error('❌ [AUTH API] Erro ao buscar perfil:', response);
+    // 1. GET /tickets/ - Listar tickets (Authenticated - End users veem apenas seus)
+    getTickets: builder.query<TicketsResponse, TicketFilters | void>({
+      query: (filters) => {
+        const params = new URLSearchParams();
         
-        // Se for 401, token inválido - limpar localStorage
-        if (response.status === 401) {
-          localStorage.removeItem('eleve_token');
-          console.log('🧹 [AUTH API] Token inválido - Limpando localStorage');
+        if (filters?.status && filters.status !== 'todos') {
+          params.append('status', filters.status);
+        }
+        if (filters?.priority && filters.priority !== 'todas') {
+          params.append('priority', filters.priority);
+        }
+        if (filters?.search) {
+          params.append('search', filters.search);
+        }
+        if (filters?.page) {
+          params.append('page', filters.page.toString());
         }
         
-        return response;
+        const queryString = params.toString();
+        return queryString ? `/tickets/?${queryString}` : '/tickets/';
       },
+      providesTags: ['Ticket'],
     }),
     
-    // Atualizar perfil
-    updateProfile: builder.mutation<{ message: string; user: User }, Partial<User>>({
+    // 2. GET /tickets/{id}/ - Detalhes do ticket (Owner/SchoolStaff)
+    getTicketById: builder.query<Ticket, number>({
+      query: (id) => `/tickets/${id}/`,
+      providesTags: (_result, _error, id) => [{ type: 'Ticket', id }],
+    }),
+    
+    // 3. POST /tickets/ - Criar ticket (Authenticated)
+    createTicket: builder.mutation<Ticket, Partial<Ticket>>({
       query: (data) => ({
-        url: '/auth/atualizar-perfil/',
-        method: 'PUT',
+        url: '/tickets/',
+        method: 'POST',
         body: data,
       }),
-      invalidatesTags: ['Auth'],
+      invalidatesTags: ['Ticket'],
+    }),
+    
+    // 4. PATCH /tickets/{id}/ - Atualizar ticket (Owner/SchoolStaff)
+    updateTicket: builder.mutation<Ticket, { id: number; data: Partial<Ticket> }>({
+      query: ({ id, data }) => ({
+        url: `/tickets/${id}/`,
+        method: 'PATCH',
+        body: data,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Ticket', id },
+        'Ticket',
+      ],
+    }),
+    
+    // 5. DELETE /tickets/{id}/ - Deletar ticket (SchoolStaff)
+    deleteTicket: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/tickets/${id}/`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Ticket'],
+    }),
+    
+    // 6. GET /tickets/my_tickets/ - Meus tickets (Authenticated)
+    getMyTickets: builder.query<Ticket[], void>({
+      query: () => '/tickets/my_tickets/',
+      providesTags: ['Ticket'],
+    }),
+    
+    // 7. GET /tickets/open_tickets/ - Tickets abertos (SchoolStaff)
+    getOpenTickets: builder.query<Ticket[], void>({
+      query: () => '/tickets/open_tickets/',
+      providesTags: ['Ticket'],
+    }),
+    
+    // 8. POST /tickets/{id}/change_status/ - Mudar status (SchoolStaff)
+    changeTicketStatus: builder.mutation<Ticket, { id: number; status: Ticket['status'] }>({
+      query: ({ id, status }) => ({
+        url: `/tickets/${id}/change_status/`,
+        method: 'POST',
+        body: { status },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Ticket', id },
+        'Ticket',
+      ],
+    }),
+    
+    // 9. POST /tickets/{id}/assign/ - Atribuir ticket (SchoolStaff)
+    assignTicket: builder.mutation<Ticket, { id: number; assigned_to: number }>({
+      query: ({ id, assigned_to }) => ({
+        url: `/tickets/${id}/assign/`,
+        method: 'POST',
+        body: { assigned_to },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Ticket', id },
+        'Ticket',
+      ],
+    }),
+    
+    // 10. GET /tickets/statistics/ - Estatísticas (SchoolStaff)
+    getTicketStats: builder.query<TicketStats, void>({
+      query: () => '/tickets/statistics/',
+      providesTags: ['Ticket'],
+    }),
+    
+    // 11. GET /tickets/recent/ - Tickets recentes (SchoolStaff)
+    getRecentTickets: builder.query<Ticket[], number | void>({
+      query: (limit = 10) => `/tickets/recent/?limit=${limit}`,
+      providesTags: ['Ticket'],
+    }),
+    
+    // 12. POST /tickets/export_csv/ - Exportar CSV (SchoolStaff)
+    exportTicketsCSV: builder.mutation<Blob, TicketFilters | void>({
+      query: (filters) => {
+        const params = new URLSearchParams();
+        if (filters?.status && filters.status !== 'todos') {
+          params.append('status', filters.status);
+        }
+        if (filters?.priority && filters.priority !== 'todas') {
+          params.append('priority', filters.priority);
+        }
+        const queryString = params.toString();
+        
+        return {
+          url: queryString ? `/tickets/export_csv/?${queryString}` : '/tickets/export_csv/',
+          method: 'POST',
+          responseHandler: (response) => response.blob(),
+        };
+      },
     }),
     
   }),
 });
 
 // ============================================
-// EXPORTS
+// EXPORTS - 12 HOOKS
 // ============================================
 
 export const {
-  useLoginMutation,
-  useRegisterMutation,
-  useLogoutMutation,
-  useGetProfileQuery,
-  useUpdateProfileMutation,
-} = authApi;
+  useGetTicketsQuery,
+  useGetTicketByIdQuery,
+  useCreateTicketMutation,
+  useUpdateTicketMutation,
+  useDeleteTicketMutation,
+  useGetMyTicketsQuery,
+  useGetOpenTicketsQuery,
+  useChangeTicketStatusMutation,
+  useAssignTicketMutation,
+  useGetTicketStatsQuery,
+  useGetRecentTicketsQuery,
+  useExportTicketsCSVMutation,
+} = ticketsApi;
