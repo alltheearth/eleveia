@@ -1,9 +1,5 @@
-// src/services/api/dashboardApi.ts
+// src/services/api/dashboardApi.ts - ✅ CORRIGIDO
 import { baseApi } from './baseApi';
-
-// ============================================
-// TYPES
-// ============================================
 
 export interface Dashboard {
   id: number;
@@ -26,26 +22,19 @@ export interface DashboardResponse {
   results: Dashboard[];
 }
 
-// ============================================
-// API
-// ============================================
-
 export const dashboardApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     
-    // Obter dashboard da escola
     getDashboard: builder.query<DashboardResponse, void>({
       query: () => '/dashboard/',
       providesTags: ['Dashboard'],
     }),
     
-    // Obter dashboard por ID
     getDashboardById: builder.query<Dashboard, number>({
       query: (id) => `/dashboard/${id}/`,
       providesTags: (_result, _error, id) => [{ type: 'Dashboard', id }],
     }),
     
-    // Atualizar dashboard
     updateDashboard: builder.mutation<Dashboard, { id: number; data: Partial<Dashboard> }>({
       query: ({ id, data }) => ({
         url: `/dashboard/${id}/`,
@@ -60,10 +49,6 @@ export const dashboardApi = baseApi.injectEndpoints({
     
   }),
 });
-
-// ============================================
-// EXPORTS
-// ============================================
 
 export const {
   useGetDashboardQuery,

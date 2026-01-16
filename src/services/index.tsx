@@ -1,4 +1,4 @@
-// ✅ COMPLETO - src/services/index.tsx - 100% DAS APIs IMPLEMENTADAS
+// src/services/index.tsx - ✅ CORRIGIDO E COMPLETO
 // Export central de todos os serviços da API
 
 // ============================================
@@ -7,7 +7,7 @@
 export { baseApi, extractErrorMessage } from './api/baseApi';
 
 // ============================================
-// AUTH API - ✅ 100% COMPLETO (13/13)
+// AUTH API
 // ============================================
 export { authApi } from './api/authApi';
 export {
@@ -16,26 +16,16 @@ export {
   useLogoutMutation,
   useGetProfileQuery,
   useUpdateProfileMutation,
-  useChangePasswordMutation,
-  useGetUsersQuery,
-  useGetUserByIdQuery,
-  useCreateUserMutation,
-  useUpdateUserMutation,
-  useDeleteUserMutation,
-  useGetCurrentUserQuery,
-  useGetUserStatsQuery,
 } from './api/authApi';
 export type { 
   User, 
   LoginRequest, 
   RegisterRequest, 
   AuthResponse,
-  UserStats,
-  CreateUserRequest,
 } from './api/authApi';
 
 // ============================================
-// SCHOOLS API - ✅ 100% COMPLETO (6/6)
+// SCHOOLS API
 // ============================================
 export { schoolsApi } from './api/schoolsApi';
 export {
@@ -45,18 +35,15 @@ export {
   useUpdateSchoolMutation,
   useDeleteSchoolMutation,
   useGetSchoolUsersQuery,
-  useGetSchoolStatisticsQuery,
-  useGenerateTokenMutation,
 } from './api/schoolsApi';
 export type { 
   School, 
   SchoolsResponse, 
   Perfil,
-  SchoolStatistics,
 } from './api/schoolsApi';
 
 // ============================================
-// CONTACTS API - ✅ 100% COMPLETO (7/7)
+// CONTACTS API
 // ============================================
 export { contactsApi } from './api/contactsApi';
 export {
@@ -76,7 +63,7 @@ export type {
 } from './api/contactsApi';
 
 // ============================================
-// LEADS API - ✅ 100% COMPLETO (9/9)
+// LEADS API
 // ============================================
 export { leadsApi } from './api/leadsApi';
 export {
@@ -98,7 +85,7 @@ export type {
 } from './api/leadsApi';
 
 // ============================================
-// EVENTS API - ✅ 100% COMPLETO (6/6)
+// EVENTS API
 // ============================================
 export { eventsApi } from './api/eventsApi';
 export {
@@ -115,7 +102,7 @@ export type {
 } from './api/eventsApi';
 
 // ============================================
-// FAQS API - ✅ 100% COMPLETO (5/5)
+// FAQS API
 // ============================================
 export { faqsApi } from './api/faqsApi';
 export {
@@ -132,7 +119,7 @@ export type {
 } from './api/faqsApi';
 
 // ============================================
-// TICKETS API - ✅ 100% COMPLETO (12/12)
+// TICKETS API
 // ============================================
 export { ticketsApi } from './api/ticketsApi';
 export {
@@ -145,8 +132,6 @@ export {
   useAssignTicketMutation,
   useGetTicketStatsQuery,
   useGetRecentTicketsQuery,
-  //useGetMyTicketsQuery,
-  //useGetOpenTicketsQuery,
   useExportTicketsCSVMutation,
 } from './api/ticketsApi';
 export type { 
@@ -157,7 +142,7 @@ export type {
 } from './api/ticketsApi';
 
 // ============================================
-// DOCUMENTS API - ✅ 100% COMPLETO (6/6)
+// DOCUMENTS API
 // ============================================
 export { documentsApi } from './api/documentsApi';
 export {
@@ -175,7 +160,7 @@ export type {
 } from './api/documentsApi';
 
 // ============================================
-// DASHBOARD API - ✅ 100% COMPLETO (3/3)
+// DASHBOARD API
 // ============================================
 export { dashboardApi } from './api/dashboardApi';
 export {
@@ -187,17 +172,3 @@ export type {
   Dashboard, 
   DashboardResponse 
 } from './api/dashboardApi';
-
-// ============================================
-// 🎉 RESUMO: 67/67 ENDPOINTS IMPLEMENTADOS
-// ============================================
-// Auth: 13/13 ✅
-// Schools: 6/6 ✅
-// Contacts: 7/7 ✅
-// Leads: 9/9 ✅
-// Events: 6/6 ✅
-// FAQs: 5/5 ✅
-// Tickets: 12/12 ✅
-// Documents: 6/6 ✅
-// Dashboard: 3/3 ✅
-// ============================================

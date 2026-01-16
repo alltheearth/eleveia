@@ -1,4 +1,4 @@
-// src/services/api/schoolsApi.ts
+// src/services/api/schoolsApi.ts - ✅ CORRIGIDO
 import { baseApi } from './baseApi';
 
 // ============================================
@@ -76,7 +76,7 @@ export const schoolsApi = baseApi.injectEndpoints({
       providesTags: (_result, _error, id) => [{ type: 'School', id }],
     }),
     
-    // Criar escola (apenas superuser)
+    // Criar escola
     createSchool: builder.mutation<School, Partial<School>>({
       query: (data) => ({
         url: '/schools/',
@@ -99,21 +99,19 @@ export const schoolsApi = baseApi.injectEndpoints({
       ],
     }),
     
+    // Deletar escola
+    deleteSchool: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/schools/${id}/`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['School'],
+    }),
+    
     // Listar usuários da escola
     getSchoolUsers: builder.query<Perfil[], number>({
       query: (schoolId) => `/schools/${schoolId}/usuarios/`,
       providesTags: (_result, _error, schoolId) => [
-        { type: 'School', id: schoolId },
-      ],
-    }),
-    
-    // Gerar token de mensagens (superuser)
-    generateToken: builder.mutation<{ message: string; token: string }, number>({
-      query: (schoolId) => ({
-        url: `/schools/${schoolId}/gerar_token/`,
-        method: 'POST',
-      }),
-      invalidatesTags: (_result, _error, schoolId) => [
         { type: 'School', id: schoolId },
       ],
     }),
@@ -130,6 +128,6 @@ export const {
   useGetSchoolByIdQuery,
   useCreateSchoolMutation,
   useUpdateSchoolMutation,
+  useDeleteSchoolMutation,
   useGetSchoolUsersQuery,
-  useGenerateTokenMutation,
 } = schoolsApi;

@@ -1,4 +1,4 @@
-// src/services/api/eventsApi.ts
+// src/services/api/eventsApi.ts - ✅ CORRIGIDO
 import { baseApi } from './baseApi';
 
 export interface Event {
