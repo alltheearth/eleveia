@@ -1,4 +1,4 @@
-// src/components/Auth/Login/index.tsx - ✅ COMPLETO E CORRIGIDO
+// src/components/Auth/Login/index.tsx - ✅ CORRIGIDO COM LOGS
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, User, ArrowRight, CheckCircle } from 'lucide-react';
@@ -13,6 +13,8 @@ import type { RootState } from '../../../store';
 export default function Login() {
   const navigate = useNavigate();
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+
+  console.log('🔐 [LOGIN] Componente renderizado, isAuthenticated:', isAuthenticated);
 
   // ✅ RTK Query Hooks
   const [login, { isLoading: isLoggingIn }] = useLoginMutation();
@@ -41,9 +43,11 @@ export default function Login() {
 
   // ✅ Redirecionar quando autenticado
   useEffect(() => {
+    console.log('🔍 [LOGIN] useEffect autenticação, isAuthenticated:', isAuthenticated);
+    
     if (isAuthenticated) {
       console.log('✅ [LOGIN] Usuário autenticado, redirecionando para /dashboard...');
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
@@ -67,13 +71,12 @@ export default function Login() {
 
       console.log('✅ [LOGIN] Login bem-sucedido!');
       console.log('📦 [LOGIN] Dados recebidos:', result);
-      console.log('🔑 [LOGIN] Token:', result.token.substring(0, 20) + '...');
       
       // Verificar se token foi salvo
       const tokenSalvo = localStorage.getItem('eleve_token');
-      console.log('💾 [LOGIN] Token no localStorage após login:', tokenSalvo ? tokenSalvo.substring(0, 20) + '...' : 'NÃO ENCONTRADO!');
+      console.log('💾 [LOGIN] Token no localStorage:', tokenSalvo ? tokenSalvo.substring(0, 20) + '...' : 'NÃO ENCONTRADO!');
       
-      // Redirecionamento acontece pelo useEffect acima
+      // Não precisa fazer navigate manualmente, o useEffect acima fará isso
       
     } catch (err: any) {
       console.error('❌ [LOGIN] Erro no login:', err);
@@ -164,7 +167,7 @@ export default function Login() {
             {/* Logo Mobile */}
             <div className="lg:hidden text-center mb-8">
               <div className="text-4xl mb-2">🎓</div>
-              <h1 className="text-3xl font-bold text-blue-600">ELEVE.IA</h1>
+              <h1 className="text-3xl font-bold text-white">ELEVE.IA</h1>
             </div>
 
             {/* Card de Login */}
@@ -257,7 +260,7 @@ export default function Login() {
     );
   }
 
-  // ✅ TELA DE REGISTRO (continua no próximo artefato...)
+  // ✅ TELA DE REGISTRO
   return (
     <div className="flex h-screen bg-gradient-to-br from-blue-600 to-blue-900">
       <div className="w-full flex items-center justify-center p-6">
