@@ -1,34 +1,43 @@
-// src/services/api/schoolsApi.ts - ✅ CORRIGIDO
+// src/services/api/schoolsApi.ts - ✅ VERSÃO CORRIGIDA
 import { baseApi } from './baseApi';
 
 // ============================================
-// TYPES
+// TYPES - PADRONIZADO EM INGLÊS
 // ============================================
 
+export interface TeachingLevels {
+  elementary?: boolean;
+  high_school?: boolean;
+  preschool?: boolean;
+}
+
 export interface School {
+  // ✅ IDs e Metadados
   id: number;
-  usuario_id: number;
-  usuario_username: string;
-  nome_escola: string;
-  cnpj: string;
-  telefone: string;
+  created_at: string;
+  updated_at: string;
+  
+  // ✅ Informações Básicas (INGLÊS)
+  school_name: string;        // era: nome_escola
+  tax_id: string;             // era: cnpj
+  messaging_token: string;    // era: token_mensagens
+  
+  // ✅ Contato (INGLÊS)
+  phone: string;              // era: telefone
   email: string;
   website: string;
   logo: string | null;
-  cep: string;
-  endereco: string;
-  cidade: string;
-  estado: string;
-  complemento: string;
-  sobre: string;
-  niveis_ensino: {
-    infantil?: boolean;
-    fundamental?: boolean;
-    medio?: boolean;
-  };
-  token_mensagens: string;
-  criado_em: string;
-  atualizado_em: string;
+  
+  // ✅ Endereço (INGLÊS)
+  postal_code: string;        // era: cep
+  street_address: string;     // era: endereco
+  city: string;               // era: cidade
+  state: string;              // era: estado
+  address_complement: string; // era: complemento
+  
+  // ✅ Informações Adicionais (INGLÊS)
+  about: string;              // era: sobre
+  teaching_levels: TeachingLevels; // era: niveis_ensino
 }
 
 export interface SchoolsResponse {
@@ -38,16 +47,9 @@ export interface SchoolsResponse {
   results: School[];
 }
 
-export interface Perfil {
-  id: number;
-  usuario: number;
-  escola: number;
-  escola_nome: string;
-  tipo: 'gestor' | 'operador';
-  tipo_display: string;
-  ativo: boolean;
-  criado_em: string;
-  atualizado_em: string;
+export interface SchoolFilters {
+  search?: string;
+  page?: number;
 }
 
 // ============================================
@@ -58,8 +60,8 @@ export const schoolsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     
     // Listar escolas do usuário
-    getSchools: builder.query<SchoolsResponse, { search?: string; page?: number }>({
-      query: (params) => {
+    getSchools: builder.query<SchoolsResponse, SchoolFilters>({
+      query: (params = {}) => {
         const searchParams = new URLSearchParams();
         if (params.search) searchParams.append('search', params.search);
         if (params.page) searchParams.append('page', params.page.toString());
@@ -108,12 +110,16 @@ export const schoolsApi = baseApi.injectEndpoints({
       invalidatesTags: ['School'],
     }),
     
-    // Listar usuários da escola
-    getSchoolUsers: builder.query<Perfil[], number>({
-      query: (schoolId) => `/schools/${schoolId}/usuarios/`,
-      providesTags: (_result, _error, schoolId) => [
-        { type: 'School', id: schoolId },
-      ],
+    // Estatísticas da escola
+    getSchoolStats: builder.query<any, number>({
+      query: (id) => `/schools/${id}/statistics/`,
+      providesTags: (_result, _error, id) => [{ type: 'School', id }],
+    }),
+    
+    // Minha escola
+    getMySchool: builder.query<School, void>({
+      query: () => '/schools/my_school/',
+      providesTags: ['School'],
     }),
     
   }),
@@ -129,5 +135,6 @@ export const {
   useCreateSchoolMutation,
   useUpdateSchoolMutation,
   useDeleteSchoolMutation,
-  useGetSchoolUsersQuery,
+  useGetSchoolStatsQuery,
+  useGetMySchoolQuery,
 } = schoolsApi;

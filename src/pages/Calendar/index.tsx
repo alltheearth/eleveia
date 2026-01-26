@@ -1,28 +1,29 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, Calendar as Cal, ChevronLeft, ChevronRight, AlertCircle, X, Save } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Calendar as CalendarIcon, X, Save, AlertCircle } from 'lucide-react';
 import Calendar from '../../components/common/Calendar';
+import { 
+  useGetEventsQuery,
+  useCreateEventMutation,
+  useUpdateEventMutation,
+  useDeleteEventMutation,
+  extractErrorMessage,
+  type Event 
+} from '../../services';
+import { useCurrentSchool } from '../../hooks/useCurrentSchool';
+import { 
+  MessageAlert, 
+  EmptyState, 
+  FormModal, 
+  ConfirmDialog,
+  LoadingState,
+  Badge,
+  DataTable,
+  FilterBar
+} from '../../components/common';
 
 // ============================================
 // TYPES
 // ============================================
-
-interface Event {
-  id: number;
-  school: number;
-  school_name: string;
-  start_date: string;
-  end_date: string;
-  title: string;
-  description: string;
-  event_type: 'holiday' | 'exam' | 'graduation' | 'cultural';
-  event_type_display: string;
-  duration_days: number;
-  is_single_day: boolean;
-  created_by: number | null;
-  created_by_name: string | null;
-  created_at: string;
-  updated_at: string;
-}
 
 interface FormData {
   start_date: string;
@@ -38,69 +39,43 @@ interface Message {
   text: string;
 }
 
-// Mock hooks (replace with real ones)
-const useCurrentSchool = () => ({
-  currentSchool: { id: 1, school_name: 'School ABC' },
-  currentSchoolId: '1',
-  schools: [{ id: 1, school_name: 'School ABC' }],
-  hasMultipleSchools: false,
-  isLoading: false,
-  isError: false,
-  error: null,
-  setCurrentSchoolById: (_id: string) => {},
-  refetch: () => {},
-});
+// ============================================
+// CONSTANTS
+// ============================================
 
-const mockEvents: Event[] = [
-  {
-    id: 1,
-    school: 1,
-    school_name: 'School ABC',
-    start_date: '2026-02-01',
-    end_date: '2026-02-01',
-    title: 'Winter Break',
-    description: 'School holiday',
-    event_type: 'holiday',
-    event_type_display: '📌 Holiday',
-    duration_days: 1,
-    is_single_day: true,
-    created_by: 1,
-    created_by_name: 'admin',
-    created_at: '2026-01-20T10:00:00Z',
-    updated_at: '2026-01-20T10:00:00Z',
-  },
-  {
-    id: 2,
-    school: 1,
-    school_name: 'School ABC',
-    start_date: '2026-02-15',
-    end_date: '2026-02-17',
-    title: 'Final Exams',
-    description: 'Math, Science, English',
-    event_type: 'exam',
-    event_type_display: '📝 Exam',
-    duration_days: 3,
-    is_single_day: false,
-    created_by: 1,
-    created_by_name: 'admin',
-    created_at: '2026-01-20T11:00:00Z',
-    updated_at: '2026-01-20T11:00:00Z',
-  },
-];
+const EVENT_TYPES = {
+  holiday: { label: 'Holiday', emoji: '📌', color: 'red' as const },
+  exam: { label: 'Exam', emoji: '📝', color: 'blue' as const },
+  graduation: { label: 'Graduation', emoji: '🎓', color: 'purple' as const },
+  cultural: { label: 'Cultural', emoji: '🎉', color: 'orange' as const },
+};
+
+const EVENT_COLORS = {
+  holiday: 'bg-red-500',
+  exam: 'bg-blue-500',
+  graduation: 'bg-purple-500',
+  cultural: 'bg-orange-500',
+};
+
+// ============================================
+// COMPONENT
+// ============================================
 
 export default function EventsPage() {
-  const { currentSchool, currentSchoolId, hasMultipleSchools, schools } = useCurrentSchool();
+  const { currentSchool, currentSchoolId, hasMultipleSchools, schools, isLoading: schoolsLoading } = useCurrentSchool();
 
-  // State
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [startDateFilter, setStartDateFilter] = useState<string>('');
-  const [endDateFilter, setEndDateFilter] = useState<string>('');
-  const [showForm, setShowForm] = useState<boolean>(false);
+  // ============================================
+  // STATE
+  // ============================================
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+  const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Event | null>(null);
   const [message, setMessage] = useState<Message | null>(null);
-  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
   const [formData, setFormData] = useState<FormData>({
     start_date: '',
@@ -111,28 +86,57 @@ export default function EventsPage() {
     school: parseInt(currentSchoolId),
   });
 
-  // Mock data (replace with real API calls)
-  const events: Event[] = mockEvents;
-  const isLoading = false;
+  // ============================================
+  // API
+  // ============================================
 
-  const calendarEvents = events.filter(e => {
-    const eventStart = new Date(e.start_date);
-    const eventEnd = new Date(e.end_date);
-    const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-    const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-    return eventStart <= monthEnd && eventEnd >= monthStart;
+  const { 
+    data: eventsData, 
+    isLoading: eventsLoading, 
+    error: eventsError,
+    refetch 
+  } = useGetEventsQuery({
+    event_type: typeFilter !== 'all' ? typeFilter as any : undefined,
+    start_date: startDateFilter || undefined,
+    end_date: endDateFilter || undefined,
+    search: searchTerm || undefined,
   });
+
+  const [createEvent, { isLoading: isCreating }] = useCreateEventMutation();
+  const [updateEvent, { isLoading: isUpdating }] = useUpdateEventMutation();
+  const [deleteEvent, { isLoading: isDeleting }] = useDeleteEventMutation();
+
+  // ============================================
+  // DERIVED STATE
+  // ============================================
+
+  const events = eventsData?.results || [];
+  const isLoading = eventsLoading || schoolsLoading;
+  
+  // Filter events for current school
+  const filteredEvents = events.filter(e => e.school.toString() === currentSchoolId);
 
   // Stats
   const stats = {
-    total: events.length,
-    holiday: events.filter(e => e.event_type === 'holiday').length,
-    exam: events.filter(e => e.event_type === 'exam').length,
-    graduation: events.filter(e => e.event_type === 'graduation').length,
-    cultural: events.filter(e => e.event_type === 'cultural').length,
+    total: filteredEvents.length,
+    holiday: filteredEvents.filter(e => e.event_type === 'holiday').length,
+    exam: filteredEvents.filter(e => e.event_type === 'exam').length,
+    graduation: filteredEvents.filter(e => e.event_type === 'graduation').length,
+    cultural: filteredEvents.filter(e => e.event_type === 'cultural').length,
   };
 
-  // Clear message after 5s
+  // ============================================
+  // EFFECTS
+  // ============================================
+
+  // Update school in form when it changes
+  useEffect(() => {
+    if (currentSchoolId && !editingEvent) {
+      setFormData(prev => ({ ...prev, school: parseInt(currentSchoolId) }));
+    }
+  }, [currentSchoolId, editingEvent]);
+
+  // Auto-dismiss messages
   useEffect(() => {
     if (message) {
       const timer = setTimeout(() => setMessage(null), 5000);
@@ -140,7 +144,10 @@ export default function EventsPage() {
     }
   }, [message]);
 
-  // Reset form
+  // ============================================
+  // HANDLERS
+  // ============================================
+
   const resetForm = () => {
     setFormData({
       start_date: '',
@@ -154,7 +161,6 @@ export default function EventsPage() {
     setShowForm(false);
   };
 
-  // Validate
   const validate = (): string | null => {
     if (!formData.start_date) return 'Start date is required';
     if (!formData.end_date) return 'End date is required';
@@ -166,24 +172,29 @@ export default function EventsPage() {
     return null;
   };
 
-  // Submit
-  const handleSubmit = (): void => {
+  const handleSubmit = async () => {
     const error = validate();
     if (error) {
       setMessage({ type: 'error', text: error });
       return;
     }
 
-    if (editingEvent) {
-      setMessage({ type: 'success', text: '✅ Event updated successfully!' });
-    } else {
-      setMessage({ type: 'success', text: '✅ Event created successfully!' });
+    try {
+      if (editingEvent) {
+        await updateEvent({ id: editingEvent.id, data: formData }).unwrap();
+        setMessage({ type: 'success', text: '✅ Event updated successfully!' });
+      } else {
+        await createEvent(formData).unwrap();
+        setMessage({ type: 'success', text: '✅ Event created successfully!' });
+      }
+      resetForm();
+      refetch();
+    } catch (err: any) {
+      setMessage({ type: 'error', text: `❌ ${extractErrorMessage(err)}` });
     }
-    resetForm();
   };
 
-  // Edit
-  const handleEdit = (event: Event): void => {
+  const handleEdit = (event: Event) => {
     setFormData({
       start_date: event.start_date,
       end_date: event.end_date,
@@ -194,15 +205,42 @@ export default function EventsPage() {
     });
     setEditingEvent(event);
     setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Delete
-  const handleDelete = (): void => {
-    setMessage({ type: 'success', text: '✅ Event deleted successfully!' });
-    setDeleteConfirm(null);
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+
+    try {
+      await deleteEvent(deleteConfirm.id).unwrap();
+      setMessage({ type: 'success', text: '✅ Event deleted successfully!' });
+      setDeleteConfirm(null);
+      refetch();
+    } catch (err: any) {
+      setMessage({ type: 'error', text: `❌ ${extractErrorMessage(err)}` });
+    }
   };
 
-  // Format date
+  const handleDayClick = (date: string) => {
+    setFormData(prev => ({
+      ...prev,
+      start_date: date,
+      end_date: date,
+    }));
+    setShowForm(true);
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setTypeFilter('all');
+    setStartDateFilter('');
+    setEndDateFilter('');
+  };
+
+  // ============================================
+  // HELPERS
+  // ============================================
+
   const formatDate = (date: string): string => {
     return new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
       day: '2-digit',
@@ -211,62 +249,47 @@ export default function EventsPage() {
     });
   };
 
-   {/* Calendar */}
-      <Calendar 
-        events={calendarEvents}
-        onDayClick={handleDayClick}
-      />
-
-  // Handle day click on calendar
-  function handleDayClick(date: string) {
-    // Example: open the form modal with the selected date pre-filled
-    setFormData(prev => ({
-      ...prev,
-      start_date: date,
-      end_date: date,
-    }));
-    setShowForm(true);
-  }
-
-  // Filter events
-  const filteredEvents: Event[] = events.filter(e => {
-    const matchSearch = e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       e.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchType = typeFilter === 'all' || e.event_type === typeFilter;
+  const getEventBadge = (type: string) => {
+    const config = EVENT_TYPES[type as keyof typeof EVENT_TYPES];
+    if (!config) return null;
     
-    let matchDateRange = true;
-    if (startDateFilter) {
-      matchDateRange = matchDateRange && e.end_date >= startDateFilter;
-    }
-    if (endDateFilter) {
-      matchDateRange = matchDateRange && e.start_date <= endDateFilter;
-    }
-    
-    return matchSearch && matchType && matchDateRange;
-  });
-
-  // Calendar
-  const monthNames: string[] = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  
-  const getEventsOnDate = (date: number): Event[] => {
-    const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
-    return events.filter(e => {
-      return dateStr >= e.start_date && dateStr <= e.end_date;
-    });
+    return (
+      <Badge variant={config.color} icon={<span>{config.emoji}</span>}>
+        {config.label}
+      </Badge>
+    );
   };
 
-
+  // ============================================
+  // LOADING STATE
+  // ============================================
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <Cal className="mx-auto mb-4 h-12 w-12 animate-pulse text-blue-600" />
-          <p className="text-gray-600 font-semibold">Loading events...</p>
-        </div>
-      </div>
+      <LoadingState 
+        icon={<CalendarIcon className="h-12 w-12 text-blue-600" />}
+        message="Loading events..."
+      />
     );
   }
+
+  // ============================================
+  // NO SCHOOL STATE
+  // ============================================
+
+  if (!currentSchool) {
+    return (
+      <EmptyState
+        icon={<CalendarIcon className="h-16 w-16 text-yellow-600" />}
+        title="No School Registered"
+        description="Please contact the administrator to set up your school."
+      />
+    );
+  }
+
+  // ============================================
+  // RENDER
+  // ============================================
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -276,18 +299,19 @@ export default function EventsPage() {
             
             {/* Messages */}
             {message && (
-              <div className={`p-4 rounded-lg border-l-4 ${
-                message.type === 'success' 
-                  ? 'bg-green-50 border-green-500 text-green-700' 
-                  : 'bg-red-50 border-red-500 text-red-700'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold">{message.text}</span>
-                  <button onClick={() => setMessage(null)}>
-                    <X size={18} />
-                  </button>
-                </div>
-              </div>
+              <MessageAlert
+                type={message.type}
+                message={message.text}
+                onClose={() => setMessage(null)}
+              />
+            )}
+
+            {/* Error */}
+            {eventsError && (
+              <MessageAlert
+                type="error"
+                message={extractErrorMessage(eventsError)}
+              />
             )}
 
             {/* Stats */}
@@ -315,245 +339,250 @@ export default function EventsPage() {
             </div>
 
             {/* Filters */}
-            <div className="bg-white p-4 rounded-lg shadow-md">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Search events..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                  />
-                </div>
-                
-                <select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                >
-                  <option value="all">All Types</option>
-                  <option value="holiday">Holiday</option>
-                  <option value="exam">Exam</option>
-                  <option value="graduation">Graduation</option>
-                  <option value="cultural">Cultural</option>
-                </select>
+            <FilterBar
+              fields={[
+                {
+                  type: 'search',
+                  name: 'search',
+                  placeholder: 'Search events...',
+                  value: searchTerm,
+                  onChange: setSearchTerm,
+                  icon: <Search className="absolute left-3 top-3 text-gray-400" size={20} />,
+                },
+                {
+                  type: 'select',
+                  name: 'type',
+                  value: typeFilter,
+                  onChange: setTypeFilter,
+                  options: [
+                    { label: 'All Types', value: 'all' },
+                    { label: '📌 Holiday', value: 'holiday' },
+                    { label: '📝 Exam', value: 'exam' },
+                    { label: '🎓 Graduation', value: 'graduation' },
+                    { label: '🎉 Cultural', value: 'cultural' },
+                  ],
+                },
+                {
+                  type: 'date',
+                  name: 'start_date',
+                  value: startDateFilter,
+                  onChange: setStartDateFilter,
+                },
+                {
+                  type: 'date',
+                  name: 'end_date',
+                  value: endDateFilter,
+                  onChange: setEndDateFilter,
+                },
+              ]}
+              actions={[
+                {
+                  label: 'New Event',
+                  onClick: () => setShowForm(true),
+                  icon: <Plus size={18} />,
+                  variant: 'primary',
+                },
+              ]}
+              onClear={handleClearFilters}
+            />
 
-                <input
-                  type="date"
-                  value={startDateFilter}
-                  onChange={(e) => setStartDateFilter(e.target.value)}
-                  placeholder="Start Date"
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                />
-
-                <input
-                  type="date"
-                  value={endDateFilter}
-                  onChange={(e) => setEndDateFilter(e.target.value)}
-                  placeholder="End Date"
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                />
-
-                <button
-                  onClick={() => setShowForm(true)}
-                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
-                >
-                  <Plus size={18} />
-                  New Event
-                </button>
-              </div>
-            </div>
-
-            {/* Form Modal */}
-            {showForm && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-lg max-w-2xl w-full shadow-xl max-h-[90vh] overflow-y-auto">
-                  <div className="flex justify-between items-center p-6 border-b border-gray-200">
-                    <h3 className="text-xl font-bold text-gray-900">
-                      {editingEvent ? '✏️ Edit Event' : '➕ New Event'}
-                    </h3>
-                    <button onClick={resetForm}>
-                      <X size={24} />
-                    </button>
-                  </div>
-
-                  <div className="p-6 space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-gray-700 font-semibold mb-2">Start Date *</label>
-                        <input
-                          type="date"
-                          value={formData.start_date}
-                          onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-gray-700 font-semibold mb-2">End Date *</label>
-                        <input
-                          type="date"
-                          value={formData.end_date}
-                          onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-2">Title *</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Final Exams"
-                        value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-2">Description</label>
-                      <textarea
-                        placeholder="Event details..."
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        rows={3}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-2">Type *</label>
-                      <select
-                        value={formData.event_type}
-                        onChange={(e) => setFormData({ ...formData, event_type: e.target.value as 'holiday' | 'exam' | 'graduation' | 'cultural' })}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                      >
-                        <option value="holiday">📌 Holiday</option>
-                        <option value="exam">📝 Exam</option>
-                        <option value="graduation">🎓 Graduation</option>
-                        <option value="cultural">🎉 Cultural Event</option>
-                      </select>
-                    </div>
-
-                    <div className="flex gap-3 pt-4">
-                      <button
-                        onClick={handleSubmit}
-                        className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
-                      >
-                        <Save size={20} />
-                        {editingEvent ? 'Update Event' : 'Create Event'}
-                      </button>
-                      <button
-                        onClick={resetForm}
-                        className="px-6 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition font-semibold"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Calendar Component */}
+            <Calendar
+              events={filteredEvents.map(e => ({
+                id: e.id,
+                start_date: e.start_date,
+                end_date: e.end_date,
+                title: e.title,
+                event_type: e.event_type,
+              }))}
+              onDayClick={handleDayClick}
+              eventColors={EVENT_COLORS}
+            />
 
             {/* Table */}
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-100 border-b-2 border-gray-300">
-                    <th className="p-4 text-left font-bold text-gray-900">Start Date</th>
-                    <th className="p-4 text-left font-bold text-gray-900">End Date</th>
-                    <th className="p-4 text-left font-bold text-gray-900">Title</th>
-                    <th className="p-4 text-left font-bold text-gray-900">Type</th>
-                    <th className="p-4 text-left font-bold text-gray-900">Duration</th>
-                    <th className="p-4 text-left font-bold text-gray-900">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredEvents.length > 0 ? (
-                    filteredEvents.map((event) => (
-                      <tr key={event.id} className="border-b hover:bg-gray-50">
-                        <td className="p-4 font-medium">{formatDate(event.start_date)}</td>
-                        <td className="p-4 font-medium">{formatDate(event.end_date)}</td>
-                        <td className="p-4">
-                          <div>
-                            <p className="font-semibold">{event.title}</p>
-                            {event.description && (
-                              <p className="text-sm text-gray-600">{event.description}</p>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <span className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
-                            {event.event_type_display}
-                          </span>
-                        </td>
-                        <td className="p-4">
-                          {event.duration_days} {event.duration_days === 1 ? 'day' : 'days'}
-                        </td>
-                        <td className="p-4 flex gap-2">
-                          <button
-                            onClick={() => handleEdit(event)}
-                            className="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-semibold text-sm"
-                          >
-                            <Edit2 size={16} />
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => setDeleteConfirm(event)}
-                            className="flex items-center gap-1 text-red-600 hover:text-red-800 font-semibold text-sm"
-                          >
-                            <Trash2 size={16} />
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={6} className="p-8 text-center text-gray-500">
-                        <Cal className="mx-auto mb-2 h-12 w-12 text-gray-400" />
-                        <p className="font-semibold">No events found</p>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Delete Confirmation */}
-            {deleteConfirm && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-                  <div className="flex items-center gap-3 mb-4">
-                    <AlertCircle className="text-red-600" size={24} />
-                    <h3 className="text-xl font-bold text-gray-900">Confirm Deletion</h3>
-                  </div>
-                  <p className="text-gray-700 mb-6">
-                    Are you sure you want to delete "{deleteConfirm.title}"? This action cannot be undone.
-                  </p>
-                  <div className="flex gap-3 justify-end">
-                    <button
-                      onClick={() => setDeleteConfirm(null)}
-                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            <DataTable
+              columns={[
+                { 
+                  key: 'start_date', 
+                  label: 'Start Date',
+                  render: (val) => formatDate(val),
+                  sortable: true,
+                },
+                { 
+                  key: 'end_date', 
+                  label: 'End Date',
+                  render: (val) => formatDate(val),
+                  sortable: true,
+                },
+                { 
+                  key: 'title', 
+                  label: 'Title',
+                  render: (val, row) => (
+                    <div>
+                      <p className="font-semibold">{val}</p>
+                      {row.description && (
+                        <p className="text-sm text-gray-600">{row.description}</p>
+                      )}
+                    </div>
+                  ),
+                  sortable: true,
+                },
+                { 
+                  key: 'event_type', 
+                  label: 'Type',
+                  render: (val) => getEventBadge(val),
+                },
+                { 
+                  key: 'duration_days', 
+                  label: 'Duration',
+                  render: (val) => `${val} ${val === 1 ? 'day' : 'days'}`,
+                },
+              ]}
+              data={filteredEvents}
+              keyExtractor={(row) => row.id.toString()}
+              actions={[
+                {
+                  label: 'Edit',
+                  icon: <Edit2 size={16} />,
+                  onClick: handleEdit,
+                  variant: 'primary',
+                },
+                {
+                  label: 'Delete',
+                  icon: <Trash2 size={16} />,
+                  onClick: (row) => setDeleteConfirm(row),
+                  variant: 'danger',
+                },
+              ]}
+              emptyMessage="No events found"
+              emptyIcon={<CalendarIcon className="h-12 w-12 text-gray-400" />}
+            />
           </div>
         </main>
       </div>
+
+      {/* Form Modal */}
+      {showForm && (
+        <FormModal
+          isOpen={showForm}
+          title={editingEvent ? '✏️ Edit Event' : '➕ New Event'}
+          onClose={resetForm}
+          size="lg"
+        >
+          <div className="space-y-4">
+            {/* School Selection (if multiple) */}
+            {hasMultipleSchools && (
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">School *</label>
+                <select
+                  value={formData.school}
+                  onChange={(e) => setFormData({ ...formData, school: parseInt(e.target.value) })}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                >
+                  {schools.map(school => (
+                    <option key={school.id} value={school.id}>
+                      {school.nome_escola}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Dates */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Start Date *</label>
+                <input
+                  type="date"
+                  value={formData.start_date}
+                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">End Date *</label>
+                <input
+                  type="date"
+                  value={formData.end_date}
+                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                />
+              </div>
+            </div>
+
+            {/* Title */}
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Title *</label>
+              <input
+                type="text"
+                placeholder="Ex: Final Exams"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+              />
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Description</label>
+              <textarea
+                placeholder="Event details..."
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={3}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+              />
+            </div>
+
+            {/* Type */}
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Type *</label>
+              <select
+                value={formData.event_type}
+                onChange={(e) => setFormData({ ...formData, event_type: e.target.value as any })}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+              >
+                <option value="holiday">📌 Holiday</option>
+                <option value="exam">📝 Exam</option>
+                <option value="graduation">🎓 Graduation</option>
+                <option value="cultural">🎉 Cultural Event</option>
+              </select>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={handleSubmit}
+                disabled={isCreating || isUpdating}
+                className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50"
+              >
+                <Save size={20} />
+                {isCreating || isUpdating ? 'Saving...' : editingEvent ? 'Update Event' : 'Create Event'}
+              </button>
+              <button
+                onClick={resetForm}
+                className="px-6 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition font-semibold"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </FormModal>
+      )}
+
+      {/* Delete Confirmation */}
+      {deleteConfirm && (
+        <ConfirmDialog
+          isOpen={!!deleteConfirm}
+          title="Confirm Deletion"
+          message={`Are you sure you want to delete "${deleteConfirm.title}"? This action cannot be undone.`}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteConfirm(null)}
+          isLoading={isDeleting}
+          variant="danger"
+        />
+      )}
     </div>
   );
 }

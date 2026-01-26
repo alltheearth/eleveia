@@ -1,4 +1,4 @@
-// src/services/api/authApi.ts - ✅ CORRIGIDO
+// src/services/api/authApi.ts - ✅ CORRIGIDO COM ENDPOINTS DJANGO
 import { baseApi } from './baseApi';
 
 // ============================================
@@ -17,6 +17,8 @@ export interface RegisterRequest {
   password2: string;
   first_name?: string;
   last_name?: string;
+  school_id?: number;
+  role?: 'manager' | 'operator' | 'end_user';
 }
 
 export interface User {
@@ -63,7 +65,7 @@ export const authApi = baseApi.injectEndpoints({
     // Registro
     register: builder.mutation<AuthResponse, RegisterRequest>({
       query: (userData) => ({
-        url: '/auth/registro/',
+        url: '/auth/register/',
         method: 'POST',
         body: userData,
       }),
@@ -79,16 +81,20 @@ export const authApi = baseApi.injectEndpoints({
       invalidatesTags: ['Auth'],
     }),
     
-    // Obter perfil
+    // ✅ CORRIGIDO: Obter perfil (endpoint correto do Django)
     getProfile: builder.query<User, void>({
-      query: () => '/auth/perfil/',
+      query: () => '/auth/profile/',  // Endpoint correto
       providesTags: ['Auth'],
+      transformErrorResponse: (response: any) => {
+        console.error('❌ [AUTH API] Erro ao buscar perfil:', response);
+        return response;
+      },
     }),
     
     // Atualizar perfil
     updateProfile: builder.mutation<{ message: string; user: User }, Partial<User>>({
       query: (data) => ({
-        url: '/auth/atualizar-perfil/',
+        url: '/auth/profile/update/',
         method: 'PUT',
         body: data,
       }),
