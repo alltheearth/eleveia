@@ -18,14 +18,14 @@ const Sidebar = () => {
 
   const menuItems = [
     { icon: Home, label: 'Dashboard', path: '/dashboard' },
-    { icon: Users, label: 'Leads', path: '/leads' },
-    { icon: UserPlus, label: 'Contatos', path: '/contatos' },
-    { icon: Calendar, label: 'Eventos', path: '/eventos' },
+    // { icon: UserPlus, label: 'Contatos', path: '/contatos' },
+    { icon: Calendar, label: 'Calendário', path: '/eventos' },
     { icon: BookOpen, label: 'FAQs', path: '/faqs' },
-    { icon: Ticket, label: 'Tickets', path: '/tickets'},
+    // { icon: Ticket, label: 'Tickets', path: '/tickets'},
     { icon: FileText, label: 'Documentos', path: '/documentos' },
-    { icon: BarChart3, label: 'Relatórios', path: '/relatorios' },
-    { icon: Settings, label: 'Configurações', path: '/configuracoes' },
+    // { icon: BarChart3, label: 'Relatórios', path: '/relatorios' },
+    // { icon: Settings, label: 'Configurações', path: '/configuracoes' },
+    { icon: Users, label: 'Leads', path: '/leads' },
   ];
 
   return (

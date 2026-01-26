@@ -2,14 +2,14 @@ import { baseApi } from "./baseApi";
 
 export interface FAQ {
   id: number;
-  escola: number;
-  escola_nome: string;
-  pergunta: string;
-  resposta: string;
-  categoria: 'Admissão' | 'Valores' | 'Uniforme' | 'Horários' | 'Documentação' | 'Atividades' | 'Alimentação' | 'Transporte' | 'Pedagógico' | 'Geral';
-  status: 'ativa' | 'inativa';
-  criado_em: string;
-  atualizado_em: string;
+  school: number;
+  school_name: string;
+  question: string;
+  answer: string;
+  category: 'Admission' | 'Pricing' | 'Uniform' | 'Schedule' | 'Documentation' | 'Activities' | 'Meals' | 'Transport' | 'Pedagogical' | 'General';
+  status: 'active' | 'inactive';
+  created_at: string;
+  updated_at: string;
 }
 
 export interface FAQsResponse {

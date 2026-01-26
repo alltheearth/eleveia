@@ -1,616 +1,559 @@
-// src/pages/Eventos/index.tsx
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Calendar as Cal, ChevronLeft, ChevronRight, AlertCircle, X, Save } from 'lucide-react';
+import Calendar from '../../components/common/Calendar';
 
-// Componentes de Layout
-import PageModel from '../../components/layout/PageModel';
+// ============================================
+// TYPES
+// ============================================
 
-// Componentes Comuns
-import StatCard from '../../components/common/Statistics/StatCard';
-import FilterBar from '../../components/common/FilterBar';
-import DataTable from '../../components/common/DataTable';
-import MessageAlert from '../../components/common/MessageAlert';
-import LoadingState from '../../components/common/LoadingState';
-import EmptyState from '../../components/common/EmptyState';
-import ConfirmDialog from '../../components/common/ConfirmDialog';
-import FormModal from '../../components/common/FormModal';
-import Badge from '../../components/common/Badge';
-
-// Hooks e Services
-import { useCurrentSchool } from '../../hooks/useCurrentSchool';
-import {
-  useGetEventsQuery,
-  useCreateEventMutation,
-  useUpdateEventMutation,
-  useDeleteEventMutation,
-  extractErrorMessage,
-  type Event
-} from '../../services';
-
-// Componente EventForm
-interface EventFormProps {
-  formData: {
-    data: string;
-    evento: string;
-    tipo: Event['tipo'];
-  };
-  onChange: (field: string, value: string) => void;
-  onSubmit: () => void;
-  onCancel: () => void;
-  isLoading?: boolean;
-  isEditing?: boolean;
+interface Event {
+  id: number;
+  school: number;
+  school_name: string;
+  start_date: string;
+  end_date: string;
+  title: string;
+  description: string;
+  event_type: 'holiday' | 'exam' | 'graduation' | 'cultural';
+  event_type_display: string;
+  duration_days: number;
+  is_single_day: boolean;
+  created_by: number | null;
+  created_by_name: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-function EventForm({
-  formData,
-  onChange,
-  onSubmit,
-  onCancel,
-  isLoading = false,
-  isEditing = false,
-}: EventFormProps) {
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-gray-700 font-semibold mb-2">
-            Data do Evento *
-          </label>
-          <input
-            type="date"
-            value={formData.data}
-            onChange={(e) => onChange('data', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
-          />
-        </div>
-
-        <div>
-          <label className="block text-gray-700 font-semibold mb-2">
-            Tipo de Evento *
-          </label>
-          <select
-            value={formData.tipo}
-            onChange={(e) => onChange('tipo', e.target.value)}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-          >
-            <option value="feriado">📌 Feriado</option>
-            <option value="prova">📝 Prova/Avaliação</option>
-            <option value="formatura">🎓 Formatura</option>
-            <option value="evento_cultural">🎉 Evento Cultural</option>
-          </select>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-gray-700 font-semibold mb-2">
-          Descrição do Evento * (mín. 3 caracteres)
-        </label>
-        <input
-          type="text"
-          placeholder="Ex: Prova Bimestral de Matemática"
-          value={formData.evento}
-          onChange={(e) => onChange('evento', e.target.value)}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
-        />
-        <p className="text-sm text-gray-500 mt-1">
-          {formData.evento.length} caracteres
-        </p>
-      </div>
-
-      <div className="flex gap-3 pt-4">
-        <button
-          onClick={onSubmit}
-          disabled={isLoading}
-          className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50"
-        >
-          <Plus size={20} />
-          {isLoading 
-            ? (isEditing ? 'Atualizando...' : 'Criando...')
-            : (isEditing ? 'Atualizar Evento' : 'Criar Evento')
-          }
-        </button>
-
-        <button
-          onClick={onCancel}
-          disabled={isLoading}
-          className="px-6 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition font-semibold disabled:opacity-50"
-        >
-          Cancelar
-        </button>
-      </div>
-    </div>
-  );
+interface FormData {
+  start_date: string;
+  end_date: string;
+  title: string;
+  description: string;
+  event_type: 'holiday' | 'exam' | 'graduation' | 'cultural';
+  school: number;
 }
 
-// Componente TipoBadge
-interface TipoBadgeProps {
-  tipo: Event['tipo'];
+interface Message {
+  type: 'success' | 'error';
+  text: string;
 }
 
-function TipoBadge({ tipo }: TipoBadgeProps) {
-  const CONFIG = {
-    feriado: { variant: 'red' as const, label: '📌 Feriado' },
-    prova: { variant: 'blue' as const, label: '📝 Prova' },
-    formatura: { variant: 'purple' as const, label: '🎓 Formatura' },
-    evento_cultural: { variant: 'orange' as const, label: '🎉 Evento Cultural' },
-  };
+// Mock hooks (replace with real ones)
+const useCurrentSchool = () => ({
+  currentSchool: { id: 1, school_name: 'School ABC' },
+  currentSchoolId: '1',
+  schools: [{ id: 1, school_name: 'School ABC' }],
+  hasMultipleSchools: false,
+  isLoading: false,
+  isError: false,
+  error: null,
+  setCurrentSchoolById: (_id: string) => {},
+  refetch: () => {},
+});
 
-  const config = CONFIG[tipo];
-  return <Badge variant={config.variant}>{config.label}</Badge>;
-}
+const mockEvents: Event[] = [
+  {
+    id: 1,
+    school: 1,
+    school_name: 'School ABC',
+    start_date: '2026-02-01',
+    end_date: '2026-02-01',
+    title: 'Winter Break',
+    description: 'School holiday',
+    event_type: 'holiday',
+    event_type_display: '📌 Holiday',
+    duration_days: 1,
+    is_single_day: true,
+    created_by: 1,
+    created_by_name: 'admin',
+    created_at: '2026-01-20T10:00:00Z',
+    updated_at: '2026-01-20T10:00:00Z',
+  },
+  {
+    id: 2,
+    school: 1,
+    school_name: 'School ABC',
+    start_date: '2026-02-15',
+    end_date: '2026-02-17',
+    title: 'Final Exams',
+    description: 'Math, Science, English',
+    event_type: 'exam',
+    event_type_display: '📝 Exam',
+    duration_days: 3,
+    is_single_day: false,
+    created_by: 1,
+    created_by_name: 'admin',
+    created_at: '2026-01-20T11:00:00Z',
+    updated_at: '2026-01-20T11:00:00Z',
+  },
+];
 
-// Componente Calendário
-interface CalendarioProps {
-  eventos: Event[];
-  mesAtual: Date;
-  onMesAnterior: () => void;
-  onProximoMes: () => void;
-  onDiaClick: (data: string) => void;
-}
+export default function EventsPage() {
+  const { currentSchool, currentSchoolId, hasMultipleSchools, schools } = useCurrentSchool();
 
-function Calendario({ eventos, mesAtual, onMesAnterior, onProximoMes, onDiaClick }: CalendarioProps) {
-  const diasDaSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-  
-  const primeiroDia = new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1);
-  const ultimoDia = new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0);
-  const diasNoMes = ultimoDia.getDate();
-  const primeiroDiaSemana = primeiroDia.getDay();
+  // State
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [startDateFilter, setStartDateFilter] = useState<string>('');
+  const [endDateFilter, setEndDateFilter] = useState<string>('');
+  const [showForm, setShowForm] = useState<boolean>(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<Event | null>(null);
+  const [message, setMessage] = useState<Message | null>(null);
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
-  const mesesNomes = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-  ];
-
-  const getEventosNoDia = (dia: number) => {
-    const data = `${mesAtual.getFullYear()}-${String(mesAtual.getMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-    return eventos.filter(e => e.data === data);
-  };
-
-  const renderDias = () => {
-    const dias = [];
-    
-    // Dias vazios antes do início do mês
-    for (let i = 0; i < primeiroDiaSemana; i++) {
-      dias.push(
-        <div key={`empty-${i}`} className="aspect-square p-2 bg-gray-50 rounded-lg"></div>
-      );
-    }
-
-    // Dias do mês
-    for (let dia = 1; dia <= diasNoMes; dia++) {
-      const eventosNoDia = getEventosNoDia(dia);
-      const temEventos = eventosNoDia.length > 0;
-      const dataStr = `${mesAtual.getFullYear()}-${String(mesAtual.getMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-      const isHoje = new Date().toDateString() === new Date(dataStr).toDateString();
-
-      dias.push(
-        <button
-          key={dia}
-          onClick={() => onDiaClick(dataStr)}
-          className={`aspect-square p-2 border transition-all ${
-            isHoje 
-              ? 'border-blue-500 bg-blue-50 font-bold ring-2 ring-blue-200' 
-              : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-          } ${
-            temEventos ? 'bg-gradient-to-br from-purple-50 to-pink-50' : 'bg-white'
-          } rounded-lg relative group`}
-        >
-          <div className="text-sm font-medium">{dia}</div>
-          
-          {temEventos && (
-            <div className="absolute bottom-1 left-1 right-1 flex justify-center gap-1">
-              {eventosNoDia.slice(0, 3).map((evento, idx) => (
-                <div
-                  key={idx}
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    evento.tipo === 'feriado' ? 'bg-red-500' :
-                    evento.tipo === 'prova' ? 'bg-blue-500' :
-                    evento.tipo === 'formatura' ? 'bg-purple-500' :
-                    'bg-orange-500'
-                  }`}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Tooltip */}
-          {temEventos && (
-            <div className="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block pointer-events-none">
-              <div className="bg-gray-900 text-white text-xs rounded py-2 px-3 whitespace-nowrap shadow-lg">
-                {eventosNoDia.length} evento{eventosNoDia.length > 1 ? 's' : ''}
-                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
-              </div>
-            </div>
-          )}
-        </button>
-      );
-    }
-
-    return dias;
-  };
-
-  return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      {/* Header do Calendário */}
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={onMesAnterior}
-          className="p-2 hover:bg-gray-100 rounded-lg transition"
-          aria-label="Mês anterior"
-        >
-          <ChevronLeft size={24} />
-        </button>
-
-        <h3 className="text-xl font-bold text-gray-900">
-          {mesesNomes[mesAtual.getMonth()]} {mesAtual.getFullYear()}
-        </h3>
-
-        <button
-          onClick={onProximoMes}
-          className="p-2 hover:bg-gray-100 rounded-lg transition"
-          aria-label="Próximo mês"
-        >
-          <ChevronRight size={24} />
-        </button>
-      </div>
-
-      {/* Grid do Calendário */}
-      <div className="grid grid-cols-7 gap-2">
-        {/* Dias da semana */}
-        {diasDaSemana.map(dia => (
-          <div key={dia} className="text-center font-semibold text-gray-600 text-sm py-2">
-            {dia}
-          </div>
-        ))}
-        
-        {/* Dias do mês */}
-        {renderDias()}
-      </div>
-
-      {/* Legenda */}
-      <div className="mt-6 pt-4 border-t border-gray-200 flex flex-wrap gap-4 text-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-blue-500 ring-2 ring-blue-200"></div>
-          <span className="text-gray-600">Hoje</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-red-500"></div>
-          <span className="text-gray-600">Feriado</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-          <span className="text-gray-600">Prova</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-          <span className="text-gray-600">Formatura</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-          <span className="text-gray-600">Evento Cultural</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Componente Principal
-export default function Eventos() {
-  const { 
-    currentSchool, 
-    currentSchoolId,
-    isLoading: schoolsLoading 
-  } = useCurrentSchool();
-  
-  const [searchTerm, setSearchTerm] = useState('');
-  const [tipoFilter, setTipoFilter] = useState('todos');
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [editandoEvento, setEditandoEvento] = useState<Event | null>(null);
-  const [eventoParaDeletar, setEventoParaDeletar] = useState<Event | null>(null);
-  const [mensagem, setMensagem] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
-  const [mesAtual, setMesAtual] = useState(new Date());
-  const [diaSelecionado, setDiaSelecionado] = useState<string | null>(null);
-
-  const [formData, setFormData] = useState({
-    data: '',
-    evento: '',
-    tipo: 'feriado' as Event['tipo'],
-    escola: parseInt(currentSchoolId),
+  const [formData, setFormData] = useState<FormData>({
+    start_date: '',
+    end_date: '',
+    title: '',
+    description: '',
+    event_type: 'holiday',
+    school: parseInt(currentSchoolId),
   });
 
-  const { 
-    data: eventsData, 
-    isLoading: eventsLoading, 
-    error: fetchError,
-    refetch 
-  } = useGetEventsQuery();
+  // Mock data (replace with real API calls)
+  const events: Event[] = mockEvents;
+  const isLoading = false;
 
-  const [createEvent, { isLoading: isCreating }] = useCreateEventMutation();
-  const [updateEvent, { isLoading: isUpdating }] = useUpdateEventMutation();
-  const [deleteEvent, { isLoading: isDeleting }] = useDeleteEventMutation();
+  const calendarEvents = events.filter(e => {
+    const eventStart = new Date(e.start_date);
+    const eventEnd = new Date(e.end_date);
+    const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+    const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+    return eventStart <= monthEnd && eventEnd >= monthStart;
+  });
 
-  const eventos = eventsData?.results || [];
-
-  // Estatísticas
+  // Stats
   const stats = {
-    total: eventos.length,
-    feriado: eventos.filter(e => e.tipo === 'feriado').length,
-    prova: eventos.filter(e => e.tipo === 'prova').length,
-    formatura: eventos.filter(e => e.tipo === 'formatura').length,
-    cultural: eventos.filter(e => e.tipo === 'evento_cultural').length,
+    total: events.length,
+    holiday: events.filter(e => e.event_type === 'holiday').length,
+    exam: events.filter(e => e.event_type === 'exam').length,
+    graduation: events.filter(e => e.event_type === 'graduation').length,
+    cultural: events.filter(e => e.event_type === 'cultural').length,
   };
 
+  // Clear message after 5s
   useEffect(() => {
-    if (currentSchoolId && !editandoEvento) {
-      setFormData(prev => ({ ...prev, escola: parseInt(currentSchoolId) }));
-    }
-  }, [currentSchoolId, editandoEvento]);
-
-  useEffect(() => {
-    if (mensagem) {
-      const timer = setTimeout(() => setMensagem(null), 5000);
+    if (message) {
+      const timer = setTimeout(() => setMessage(null), 5000);
       return () => clearTimeout(timer);
     }
-  }, [mensagem]);
+  }, [message]);
 
+  // Reset form
   const resetForm = () => {
     setFormData({
-      data: '',
-      evento: '',
-      tipo: 'feriado',
-      escola: parseInt(currentSchoolId),
+      start_date: '',
+      end_date: '',
+      title: '',
+      description: '',
+      event_type: 'holiday',
+      school: parseInt(currentSchoolId),
     });
-    setEditandoEvento(null);
-    setMostrarFormulario(false);
-    setDiaSelecionado(null);
+    setEditingEvent(null);
+    setShowForm(false);
   };
 
-  const validarFormulario = (): string | null => {
-    if (!formData.data) return 'Data é obrigatória';
-    if (!formData.evento.trim()) return 'Descrição do evento é obrigatória';
-    if (formData.evento.trim().length < 3) return 'Descrição deve ter no mínimo 3 caracteres';
+  // Validate
+  const validate = (): string | null => {
+    if (!formData.start_date) return 'Start date is required';
+    if (!formData.end_date) return 'End date is required';
+    if (!formData.title.trim()) return 'Title is required';
+    if (formData.title.trim().length < 3) return 'Title must be at least 3 characters';
+    if (new Date(formData.end_date) < new Date(formData.start_date)) {
+      return 'End date cannot be before start date';
+    }
     return null;
   };
 
-  const handleSubmit = async () => {
-    const erro = validarFormulario();
-    if (erro) {
-      setMensagem({ tipo: 'error', texto: erro });
+  // Submit
+  const handleSubmit = (): void => {
+    const error = validate();
+    if (error) {
+      setMessage({ type: 'error', text: error });
       return;
     }
 
-    try {
-      if (editandoEvento) {
-        await updateEvent({ id: editandoEvento.id, data: formData }).unwrap();
-        setMensagem({ tipo: 'success', texto: '✅ Evento atualizado com sucesso!' });
-      } else {
-        await createEvent(formData).unwrap();
-        setMensagem({ tipo: 'success', texto: '✅ Evento criado com sucesso!' });
-      }
-      resetForm();
-      refetch();
-    } catch (err) {
-      setMensagem({ tipo: 'error', texto: `❌ ${extractErrorMessage(err)}` });
+    if (editingEvent) {
+      setMessage({ type: 'success', text: '✅ Event updated successfully!' });
+    } else {
+      setMessage({ type: 'success', text: '✅ Event created successfully!' });
     }
+    resetForm();
   };
 
-  const handleEditar = (evento: Event) => {
+  // Edit
+  const handleEdit = (event: Event): void => {
     setFormData({
-      data: evento.data,
-      evento: evento.evento,
-      tipo: evento.tipo,
-      escola: parseInt(currentSchoolId),
+      start_date: event.start_date,
+      end_date: event.end_date,
+      title: event.title,
+      description: event.description,
+      event_type: event.event_type,
+      school: parseInt(currentSchoolId),
     });
-    setEditandoEvento(evento);
-    setMostrarFormulario(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setEditingEvent(event);
+    setShowForm(true);
   };
 
-  const handleDeletar = async () => {
-    if (!eventoParaDeletar) return;
-
-    try {
-      await deleteEvent(eventoParaDeletar.id).unwrap();
-      setMensagem({ tipo: 'success', texto: '✅ Evento deletado com sucesso!' });
-      setEventoParaDeletar(null);
-      refetch();
-    } catch (err) {
-      setMensagem({ tipo: 'error', texto: `❌ ${extractErrorMessage(err)}` });
-    }
+  // Delete
+  const handleDelete = (): void => {
+    setMessage({ type: 'success', text: '✅ Event deleted successfully!' });
+    setDeleteConfirm(null);
   };
 
-  const handleDiaClick = (data: string) => {
-    setDiaSelecionado(data);
-    setFormData(prev => ({ ...prev, data }));
-    setMostrarFormulario(true);
-  };
-
-  const handleMesAnterior = () => {
-    setMesAtual(new Date(mesAtual.getFullYear(), mesAtual.getMonth() - 1));
-  };
-
-  const handleProximoMes = () => {
-    setMesAtual(new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1));
-  };
-
-  const formatarData = (data: string) => {
-    return new Date(data + 'T00:00:00').toLocaleDateString('pt-BR', {
+  // Format date
+  const formatDate = (date: string): string => {
+    return new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
     });
   };
 
-  // Filtrar eventos
-  const eventosFiltrados = eventos.filter(e => {
-    const matchSearch = e.evento.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchTipo = tipoFilter === 'todos' || e.tipo === tipoFilter;
-    return matchSearch && matchTipo;
-  });
-
-  if (eventsLoading || schoolsLoading) {
-    return (
-      <LoadingState 
-        message="Carregando eventos..."
-        icon={<Calendar size={48} className="text-blue-600" />}
+   {/* Calendar */}
+      <Calendar 
+        events={calendarEvents}
+        onDayClick={handleDayClick}
       />
-    );
+
+  // Handle day click on calendar
+  function handleDayClick(date: string) {
+    // Example: open the form modal with the selected date pre-filled
+    setFormData(prev => ({
+      ...prev,
+      start_date: date,
+      end_date: date,
+    }));
+    setShowForm(true);
   }
 
-  if (!currentSchool) {
+  // Filter events
+  const filteredEvents: Event[] = events.filter(e => {
+    const matchSearch = e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       e.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchType = typeFilter === 'all' || e.event_type === typeFilter;
+    
+    let matchDateRange = true;
+    if (startDateFilter) {
+      matchDateRange = matchDateRange && e.end_date >= startDateFilter;
+    }
+    if (endDateFilter) {
+      matchDateRange = matchDateRange && e.start_date <= endDateFilter;
+    }
+    
+    return matchSearch && matchType && matchDateRange;
+  });
+
+  // Calendar
+  const monthNames: string[] = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  
+  const getEventsOnDate = (date: number): Event[] => {
+    const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+    return events.filter(e => {
+      return dateStr >= e.start_date && dateStr <= e.end_date;
+    });
+  };
+
+
+
+  if (isLoading) {
     return (
-      <EmptyState
-        icon={<Calendar size={64} className="text-yellow-600" />}
-        title="Nenhuma escola cadastrada"
-        description="Entre em contato com o administrador."
-      />
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Cal className="mx-auto mb-4 h-12 w-12 animate-pulse text-blue-600" />
+          <p className="text-gray-600 font-semibold">Loading events...</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <PageModel>
-      {mensagem && (
-        <MessageAlert
-          type={mensagem.tipo}
-          message={mensagem.texto}
-          onClose={() => setMensagem(null)}
-        />
-      )}
+    <div className="flex h-screen bg-gray-50">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 overflow-auto p-6">
+          <div className="max-w-7xl mx-auto space-y-6">
+            
+            {/* Messages */}
+            {message && (
+              <div className={`p-4 rounded-lg border-l-4 ${
+                message.type === 'success' 
+                  ? 'bg-green-50 border-green-500 text-green-700' 
+                  : 'bg-red-50 border-red-500 text-red-700'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">{message.text}</span>
+                  <button onClick={() => setMessage(null)}>
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
 
-      {fetchError && (
-        <MessageAlert
-          type="error"
-          message={`Erro: ${extractErrorMessage(fetchError)}`}
-          dismissible={false}
-        />
-      )}
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="bg-blue-100 text-blue-700 p-4 rounded-lg shadow-md">
+                <p className="text-sm font-semibold opacity-80">Total</p>
+                <p className="text-3xl font-bold">{stats.total}</p>
+              </div>
+              <div className="bg-red-100 text-red-700 p-4 rounded-lg shadow-md">
+                <p className="text-sm font-semibold opacity-80">Holidays</p>
+                <p className="text-3xl font-bold">{stats.holiday}</p>
+              </div>
+              <div className="bg-blue-100 text-blue-700 p-4 rounded-lg shadow-md">
+                <p className="text-sm font-semibold opacity-80">Exams</p>
+                <p className="text-3xl font-bold">{stats.exam}</p>
+              </div>
+              <div className="bg-purple-100 text-purple-700 p-4 rounded-lg shadow-md">
+                <p className="text-sm font-semibold opacity-80">Graduations</p>
+                <p className="text-3xl font-bold">{stats.graduation}</p>
+              </div>
+              <div className="bg-orange-100 text-orange-700 p-4 rounded-lg shadow-md">
+                <p className="text-sm font-semibold opacity-80">Cultural</p>
+                <p className="text-3xl font-bold">{stats.cultural}</p>
+              </div>
+            </div>
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <StatCard label="Total" value={stats.total} color="blue" icon={<Calendar size={24} />} />
-        <StatCard label="Feriados" value={stats.feriado} color="red" />
-        <StatCard label="Provas" value={stats.prova} color="blue" />
-        <StatCard label="Formaturas" value={stats.formatura} color="purple" />
-        <StatCard label="Culturais" value={stats.cultural} color="orange" />
+            {/* Filters */}
+            <div className="bg-white p-4 rounded-lg shadow-md">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Search events..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+                
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                >
+                  <option value="all">All Types</option>
+                  <option value="holiday">Holiday</option>
+                  <option value="exam">Exam</option>
+                  <option value="graduation">Graduation</option>
+                  <option value="cultural">Cultural</option>
+                </select>
+
+                <input
+                  type="date"
+                  value={startDateFilter}
+                  onChange={(e) => setStartDateFilter(e.target.value)}
+                  placeholder="Start Date"
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                />
+
+                <input
+                  type="date"
+                  value={endDateFilter}
+                  onChange={(e) => setEndDateFilter(e.target.value)}
+                  placeholder="End Date"
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                />
+
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
+                >
+                  <Plus size={18} />
+                  New Event
+                </button>
+              </div>
+            </div>
+
+            {/* Form Modal */}
+            {showForm && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg max-w-2xl w-full shadow-xl max-h-[90vh] overflow-y-auto">
+                  <div className="flex justify-between items-center p-6 border-b border-gray-200">
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {editingEvent ? '✏️ Edit Event' : '➕ New Event'}
+                    </h3>
+                    <button onClick={resetForm}>
+                      <X size={24} />
+                    </button>
+                  </div>
+
+                  <div className="p-6 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-gray-700 font-semibold mb-2">Start Date *</label>
+                        <input
+                          type="date"
+                          value={formData.start_date}
+                          onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-gray-700 font-semibold mb-2">End Date *</label>
+                        <input
+                          type="date"
+                          value={formData.end_date}
+                          onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Title *</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Final Exams"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Description</label>
+                      <textarea
+                        placeholder="Event details..."
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        rows={3}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-2">Type *</label>
+                      <select
+                        value={formData.event_type}
+                        onChange={(e) => setFormData({ ...formData, event_type: e.target.value as 'holiday' | 'exam' | 'graduation' | 'cultural' })}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                      >
+                        <option value="holiday">📌 Holiday</option>
+                        <option value="exam">📝 Exam</option>
+                        <option value="graduation">🎓 Graduation</option>
+                        <option value="cultural">🎉 Cultural Event</option>
+                      </select>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button
+                        onClick={handleSubmit}
+                        className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
+                      >
+                        <Save size={20} />
+                        {editingEvent ? 'Update Event' : 'Create Event'}
+                      </button>
+                      <button
+                        onClick={resetForm}
+                        className="px-6 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition font-semibold"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Table */}
+            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-100 border-b-2 border-gray-300">
+                    <th className="p-4 text-left font-bold text-gray-900">Start Date</th>
+                    <th className="p-4 text-left font-bold text-gray-900">End Date</th>
+                    <th className="p-4 text-left font-bold text-gray-900">Title</th>
+                    <th className="p-4 text-left font-bold text-gray-900">Type</th>
+                    <th className="p-4 text-left font-bold text-gray-900">Duration</th>
+                    <th className="p-4 text-left font-bold text-gray-900">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredEvents.length > 0 ? (
+                    filteredEvents.map((event) => (
+                      <tr key={event.id} className="border-b hover:bg-gray-50">
+                        <td className="p-4 font-medium">{formatDate(event.start_date)}</td>
+                        <td className="p-4 font-medium">{formatDate(event.end_date)}</td>
+                        <td className="p-4">
+                          <div>
+                            <p className="font-semibold">{event.title}</p>
+                            {event.description && (
+                              <p className="text-sm text-gray-600">{event.description}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
+                            {event.event_type_display}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          {event.duration_days} {event.duration_days === 1 ? 'day' : 'days'}
+                        </td>
+                        <td className="p-4 flex gap-2">
+                          <button
+                            onClick={() => handleEdit(event)}
+                            className="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-semibold text-sm"
+                          >
+                            <Edit2 size={16} />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirm(event)}
+                            className="flex items-center gap-1 text-red-600 hover:text-red-800 font-semibold text-sm"
+                          >
+                            <Trash2 size={16} />
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-gray-500">
+                        <Cal className="mx-auto mb-2 h-12 w-12 text-gray-400" />
+                        <p className="font-semibold">No events found</p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Delete Confirmation */}
+            {deleteConfirm && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+                  <div className="flex items-center gap-3 mb-4">
+                    <AlertCircle className="text-red-600" size={24} />
+                    <h3 className="text-xl font-bold text-gray-900">Confirm Deletion</h3>
+                  </div>
+                  <p className="text-gray-700 mb-6">
+                    Are you sure you want to delete "{deleteConfirm.title}"? This action cannot be undone.
+                  </p>
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={() => setDeleteConfirm(null)}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </main>
       </div>
-
-      {/* Calendário */}
-      <Calendario
-        eventos={eventos}
-        mesAtual={mesAtual}
-        onMesAnterior={handleMesAnterior}
-        onProximoMes={handleProximoMes}
-        onDiaClick={handleDiaClick}
-      />
-
-      {/* Filtros */}
-      <FilterBar
-        fields={[
-          {
-            type: 'search',
-            name: 'search',
-            placeholder: 'Buscar eventos...',
-            value: searchTerm,
-            onChange: setSearchTerm,
-          },
-          {
-            type: 'select',
-            name: 'tipo',
-            value: tipoFilter,
-            onChange: setTipoFilter,
-            options: [
-              { label: 'Todos os Tipos', value: 'todos' },
-              { label: 'Feriado', value: 'feriado' },
-              { label: 'Prova', value: 'prova' },
-              { label: 'Formatura', value: 'formatura' },
-              { label: 'Evento Cultural', value: 'evento_cultural' },
-            ],
-          },
-        ]}
-        actions={[
-          {
-            label: 'Novo Evento',
-            onClick: () => setMostrarFormulario(true),
-            icon: <Plus size={18} />,
-            variant: 'primary',
-          },
-        ]}
-        onClear={() => {
-          setSearchTerm('');
-          setTipoFilter('todos');
-        }}
-      />
-
-      {/* Tabela */}
-      <DataTable
-        columns={[
-          { key: 'id', label: '#', width: '80px' },
-          { 
-            key: 'data', 
-            label: 'Data',
-            render: (value) => <span className="font-medium">{formatarData(value)}</span>
-          },
-          { 
-            key: 'evento', 
-            label: 'Evento',
-            render: (value) => <span className="text-gray-900">{value}</span>
-          },
-          { 
-            key: 'tipo', 
-            label: 'Tipo',
-            render: (value) => <TipoBadge tipo={value} />
-          },
-        ]}
-        data={eventosFiltrados}
-        keyExtractor={(evento) => evento.id.toString()}
-        actions={[
-          {
-            icon: <Edit2 size={18} />,
-            onClick: handleEditar,
-            variant: 'primary',
-            label: 'Editar',
-          },
-          {
-            icon: <Trash2 size={18} />,
-            onClick: (evento) => setEventoParaDeletar(evento),
-            variant: 'danger',
-            label: 'Deletar',
-          },
-        ]}
-        emptyMessage="Nenhum evento encontrado"
-        emptyIcon={<Calendar size={48} className="text-gray-400" />}
-      />
-
-      {/* Modal de Formulário */}
-      <FormModal
-        isOpen={mostrarFormulario}
-        title={editandoEvento ? '✏️ Editar Evento' : '➕ Novo Evento'}
-        subtitle={diaSelecionado ? `Data selecionada: ${formatarData(diaSelecionado)}` : undefined}
-        onClose={resetForm}
-        size="md"
-      >
-        <EventForm
-          formData={formData}
-          onChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
-          onSubmit={handleSubmit}
-          onCancel={resetForm}
-          isLoading={isCreating || isUpdating}
-          isEditing={!!editandoEvento}
-        />
-      </FormModal>
-
-      {/* Modal de Confirmação */}
-      <ConfirmDialog
-        isOpen={!!eventoParaDeletar}
-        title="Confirmar Exclusão"
-        message={`Tem certeza que deseja deletar o evento "${eventoParaDeletar?.evento}"?`}
-        confirmLabel="Deletar"
-        cancelLabel="Cancelar"
-        onConfirm={handleDeletar}
-        onCancel={() => setEventoParaDeletar(null)}
-        isLoading={isDeleting}
-        variant="danger"
-      />
-    </PageModel>
+    </div>
   );
 }
