@@ -1,40 +1,41 @@
+// src/components/layout/Sidebar/index.tsx - ✅ VERSÃO CORRIGIDA
 import { NavLink } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import type { RootState } from '../../../store';
 import {
   Home,
-  Users,
-  UserPlus,
   Calendar,
   BookOpen,
   FileText,
-  BarChart3,
-  Settings,
-  Ticket,
+  Users,
 } from 'lucide-react';
+import { useCurrentSchool } from '../../../hooks/useCurrentSchool';
 
 const Sidebar = () => {
-  const { user } = useSelector((state: RootState) => state.auth);
+  // ✅ Buscar escola atual (CORRIGIDO)
+  const { currentSchool } = useCurrentSchool();
 
   const menuItems = [
     { icon: Home, label: 'Dashboard', path: '/dashboard' },
-    // { icon: UserPlus, label: 'Contatos', path: '/contatos' },
     { icon: Calendar, label: 'Calendário', path: '/eventos' },
     { icon: BookOpen, label: 'FAQs', path: '/faqs' },
-    // { icon: Ticket, label: 'Tickets', path: '/tickets'},
     { icon: FileText, label: 'Documentos', path: '/documentos' },
-    // { icon: BarChart3, label: 'Relatórios', path: '/relatorios' },
-    // { icon: Settings, label: 'Configurações', path: '/configuracoes' },
     { icon: Users, label: 'Leads', path: '/leads' },
   ];
+
+  // ✅ CORRIGIDO: Usar school_name
+  const schoolName = currentSchool?.school_name || 'Carregando...';
+
+  console.log('🏫 [SIDEBAR] Escola:', {
+    id: currentSchool?.id,
+    name: schoolName,
+  });
 
   return (
     <div className="w-64 bg-gray-900 text-white h-screen fixed left-0 top-0 flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-gray-700">
         <h1 className="text-xl font-bold">EleveAI</h1>
-        <p className="text-xs text-gray-400">
-          {user?.perfil?.escola_nome || 'Carregando...'}
+        <p className="text-xs text-gray-400 truncate" title={schoolName}>
+          {schoolName}
         </p>
       </div>
 
@@ -62,13 +63,17 @@ const Sidebar = () => {
         })}
       </nav>
 
-      {/* Footer - User Info */}
+      {/* Footer - School Info */}
       <div className="p-4 border-t border-gray-700">
         <div className="text-sm">
-          <p className="font-medium">{user?.first_name} {user?.last_name}</p>
-          <p className="text-xs text-gray-400">
-            {user?.perfil?.tipo_display || 'Usuário'}
+          <p className="font-medium text-gray-300 truncate" title={schoolName}>
+            {schoolName}
           </p>
+          {currentSchool && (
+            <p className="text-xs text-gray-500">
+              ID: {currentSchool.id}
+            </p>
+          )}
         </div>
       </div>
     </div>

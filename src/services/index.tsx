@@ -1,4 +1,4 @@
-// src/services/index.tsx - ✅ CORRIGIDO E COMPLETO
+// src/services/index.tsx - ✅ VERSÃO CORRIGIDA
 // Export central de todos os serviços da API
 
 // ============================================
@@ -25,7 +25,7 @@ export type {
 } from './api/authApi';
 
 // ============================================
-// SCHOOLS API
+// SCHOOLS API - ✅ CORRIGIDO
 // ============================================
 export { schoolsApi } from './api/schoolsApi';
 export {
@@ -34,33 +34,15 @@ export {
   useCreateSchoolMutation,
   useUpdateSchoolMutation,
   useDeleteSchoolMutation,
-  useGetSchoolUsersQuery,
+  useGetSchoolStatsQuery,
+  useGetMySchoolQuery,
 } from './api/schoolsApi';
 export type { 
   School, 
-  SchoolsResponse, 
-  Perfil,
+  SchoolsResponse,
+  SchoolFilters,
+  TeachingLevels,
 } from './api/schoolsApi';
-
-// ============================================
-// CONTACTS API
-// ============================================
-export { contactsApi } from './api/contactsApi';
-export {
-  useGetContactsQuery,
-  useGetContactByIdQuery,
-  useCreateContactMutation,
-  useUpdateContactMutation,
-  useDeleteContactMutation,
-  useRegisterInteractionMutation,
-  useGetContactStatsQuery,
-} from './api/contactsApi';
-export type { 
-  Contact, 
-  ContactsResponse, 
-  ContactStats, 
-  ContactFilters 
-} from './api/contactsApi';
 
 // ============================================
 // LEADS API
@@ -95,10 +77,12 @@ export {
   useUpdateEventMutation,
   useDeleteEventMutation,
   useGetUpcomingEventsQuery,
+  useGetEventStatsQuery,
 } from './api/eventsApi';
 export type { 
   Event, 
-  EventsResponse 
+  EventsResponse,
+  EventFilters,
 } from './api/eventsApi';
 
 // ============================================
@@ -119,29 +103,6 @@ export type {
 } from './api/faqsApi';
 
 // ============================================
-// TICKETS API
-// ============================================
-export { ticketsApi } from './api/ticketsApi';
-export {
-  useGetTicketsQuery,
-  useGetTicketByIdQuery,
-  useCreateTicketMutation,
-  useUpdateTicketMutation,
-  useDeleteTicketMutation,
-  useChangeTicketStatusMutation,
-  useAssignTicketMutation,
-  useGetTicketStatsQuery,
-  useGetRecentTicketsQuery,
-  useExportTicketsCSVMutation,
-} from './api/ticketsApi';
-export type { 
-  Ticket, 
-  TicketsResponse, 
-  TicketStats,
-  TicketFilters 
-} from './api/ticketsApi';
-
-// ============================================
 // DOCUMENTS API
 // ============================================
 export { documentsApi } from './api/documentsApi';
@@ -158,17 +119,3 @@ export type {
   DocumentsResponse, 
   DocumentFilters 
 } from './api/documentsApi';
-
-// ============================================
-// DASHBOARD API
-// ============================================
-export { dashboardApi } from './api/dashboardApi';
-export {
-  useGetDashboardQuery,
-  useGetDashboardByIdQuery,
-  useUpdateDashboardMutation,
-} from './api/dashboardApi';
-export type { 
-  Dashboard, 
-  DashboardResponse 
-} from './api/dashboardApi';

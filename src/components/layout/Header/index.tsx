@@ -1,72 +1,81 @@
-// src/components/layout/Header/index.tsx
-/**
- * ✅ HEADER REFATORADO E PROFISSIONAL
- * 
- * Melhorias implementadas:
- * 1. Hook customizado para gerenciar dados (useHeaderData)
- * 2. Componente UserDropdown separado
- * 3. Estados de loading e erro tratados adequadamente
- * 4. Código limpo e organizado
- * 5. Dados da escola exibidos corretamente
- * 6. Skeleton loading para melhor UX
- */
-
+// src/components/layout/Header/index.tsx - ✅ VERSÃO CORRIGIDA
 import { Bell, Building2 } from 'lucide-react';
-import { useHeaderData } from '../../../hooks/useHeaderData';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../store';
+import { useGetProfileQuery } from '../../../services';
+import { useCurrentSchool } from '../../../hooks/useCurrentSchool';
 import UserDropdown from './UserDropdown';
 import HeaderSkeleton from './HeaderSkeleton';
 import HeaderError from './HeaderError';
 
 const Header = () => {
-  // ============================================
-  // 1. BUSCAR DADOS USANDO HOOK CUSTOMIZADO
-  // ============================================
-  
-  const {
-    user,
-    profile,
-    school,
-    isLoading,
-    isError,
-    error,
-    permissions,
-  } = useHeaderData();
+  const { user: userFromState, isAuthenticated, token } = useSelector(
+    (state: RootState) => state.auth
+  );
+
+  // ✅ Buscar perfil do usuário
+  const { data: profile, isLoading: isLoadingProfile, isError: isErrorProfile, error: errorProfile } = useGetProfileQuery(undefined, {
+    skip: !isAuthenticated || !token,
+  });
+
+  // ✅ Buscar escola atual (CORRIGIDO)
+  const { currentSchool, isLoading: isLoadingSchool } = useCurrentSchool();
+
+  const user = profile || userFromState;
 
   // ============================================
-  // 2. ESTADOS DE LOADING E ERRO
+  // LOADING
   // ============================================
-
-  // Loading state
-  if (isLoading) {
+  if (isLoadingProfile || isLoadingSchool) {
     return <HeaderSkeleton />;
   }
 
-  // Error state
-  if (isError || !user || !profile) {
-    return <HeaderError error={error} />;
+  // ============================================
+  // ERROR
+  // ============================================
+  if (isErrorProfile || !user) {
+    return <HeaderError error={errorProfile} />;
   }
 
   // ============================================
-  // 3. DADOS FORMATADOS
+  // DADOS FORMATADOS
   // ============================================
+  const firstName = user.first_name || user.username?.split('.')[0] || 'Usuário';
+  const fullName = user.first_name && user.last_name
+    ? `${user.first_name} ${user.last_name}`
+    : user.username || 'Usuário';
 
-  const welcomeMessage = `Bem-vindo, ${user.firstName || user.username}!`;
-  const schoolName = school?.name || 'Carregando escola...';
+  const initials = user.first_name && user.last_name
+    ? `${user.first_name[0]}${user.last_name[0]}`.toUpperCase()
+    : user.username?.[0]?.toUpperCase() || 'U';
+
+  const roleDisplay = user.perfil?.tipo_display || 'Usuário';
+  const isActive = user.perfil?.ativo || false;
+  const isSuperuser = user.is_superuser || user.is_staff || false;
+
+  // ✅ CORRIGIDO: Usar school_name
+  const schoolName = currentSchool?.school_name || 'Carregando escola...';
+  const schoolId = currentSchool?.id || 0;
+
+  console.log('🏫 [HEADER] Escola atual:', {
+    id: schoolId,
+    name: schoolName,
+    currentSchool
+  });
 
   // ============================================
-  // 4. RENDER DO HEADER
+  // RENDER
   // ============================================
-
   return (
     <header className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
       
       {/* ========== LADO ESQUERDO: Boas-vindas ========== */}
       <div className="flex-1">
         <h2 className="text-lg font-semibold text-gray-900">
-          {welcomeMessage} 👋
+          Bem-vindo, {firstName}! 👋
         </h2>
         
-        {school && (
+        {currentSchool && (
           <div className="flex items-center gap-2 mt-1">
             <Building2 size={16} className="text-gray-500" />
             <p className="text-sm text-gray-600">{schoolName}</p>
@@ -84,7 +93,6 @@ const Header = () => {
           aria-label="Notifications"
         >
           <Bell size={20} className="text-gray-600" />
-          {/* Badge de notificações */}
           <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
         </button>
 
@@ -94,19 +102,19 @@ const Header = () => {
         {/* User Dropdown */}
         <UserDropdown
           user={{
-            fullName: user.fullName,
-            initials: user.initials,
+            fullName,
+            initials,
             email: user.email,
           }}
           profile={{
-            roleDisplay: profile.roleDisplay,
-            isActive: profile.isActive,
+            roleDisplay,
+            isActive,
           }}
           school={{
-            id: school?.id || 0,
-            name: school?.name || 'N/A',
+            id: schoolId,
+            name: schoolName,
           }}
-          isSuperuser={permissions.canManageUsers}
+          isSuperuser={isSuperuser}
         />
       </div>
     </header>
