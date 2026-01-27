@@ -301,7 +301,23 @@ export default function Leads() {
           dismissible={false}
         />
       )}
-
+      {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
+                      <p className="text-gray-600 mt-1">Gerencie Leads</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      {/* <button
+                        onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition"
+                        title={viewMode === 'grid' ? 'Visualização em lista' : 'Visualização em grade'}
+                      >
+                        {viewMode === 'grid' ? <List size={20} /> : <Grid size={20} />}
+                      </button>*/}
+                    </div> 
+                  </div>
       {/* Estatísticas */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">

@@ -323,6 +323,24 @@ const FAQs = () => {
         />
       )}
 
+        {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-2xl font-bold text-gray-900">Documentos</h1>
+                      <p className="text-gray-600 mt-1">Gerencie seus arquivos e pastas</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      {/* <button
+                        onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition"
+                        title={viewMode === 'grid' ? 'Visualização em lista' : 'Visualização em grade'}
+                      >
+                        {viewMode === 'grid' ? <List size={20} /> : <Grid size={20} />}
+                      </button>*/}
+                    </div> 
+                  </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard label="Total" value={stats.total} color="blue" icon={<HelpCircle size={24} />} />
         <StatCard label="Active" value={stats.active} color="green" />

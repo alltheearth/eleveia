@@ -1,4 +1,4 @@
-// src/components/common/Calendar/index.tsx
+// src/components/common/Calendar/index.tsx - VERSÃO OTIMIZADA
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 
@@ -31,7 +31,7 @@ interface DayInfo {
 }
 
 // ============================================
-// CALENDAR COMPONENT
+// CALENDAR COMPONENT - OTIMIZADO
 // ============================================
 
 export default function Calendar({
@@ -177,22 +177,22 @@ export default function Calendar({
   return (
     <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <button
           onClick={goToPreviousMonth}
           className="p-2 hover:bg-gray-100 rounded-lg transition"
           aria-label="Previous month"
         >
-          <ChevronLeft size={24} />
+          <ChevronLeft size={20} />
         </button>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <h3 className="text-xl font-bold text-gray-900">
             {MONTH_NAMES[currentMonth.getMonth()]} {currentMonth.getFullYear()}
           </h3>
           <button
             onClick={goToToday}
-            className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition font-semibold"
+            className="px-2.5 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition font-semibold"
           >
             Today
           </button>
@@ -203,23 +203,23 @@ export default function Calendar({
           className="p-2 hover:bg-gray-100 rounded-lg transition"
           aria-label="Next month"
         >
-          <ChevronRight size={24} />
+          <ChevronRight size={20} />
         </button>
       </div>
 
       {/* Days of week */}
-      <div className="grid grid-cols-7 gap-2 mb-2">
+      <div className="grid grid-cols-7 gap-1.5 mb-1.5">
         {DAYS_OF_WEEK.map(day => (
           <div
             key={day}
-            className="text-center font-semibold text-gray-600 text-sm py-2"
+            className="text-center font-semibold text-gray-600 text-sm py-1.5"
           >
             {day}
           </div>
         ))}
       </div>
 
-      {/* Calendar grid */}
+      {/* Calendar grid - ✅ OTIMIZADO: altura fixa reduzida */}
       <div className="grid grid-cols-7 gap-2">
         {calendarDays.map((dayInfo, index) => {
           const hasEvents = dayInfo.events.length > 0;
@@ -230,14 +230,14 @@ export default function Calendar({
               onClick={() => onDayClick?.(dayInfo.dateString)}
               disabled={!dayInfo.isCurrentMonth}
               className={`
-                aspect-square p-2 border transition-all relative group
+                h-20 p-2 border transition-all relative group
                 ${dayInfo.isToday 
                   ? 'border-blue-500 bg-blue-50 font-bold ring-2 ring-blue-200' 
                   : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                 }
                 ${hasEvents ? 'bg-gradient-to-br from-purple-50 to-pink-50' : 'bg-white'}
                 ${!dayInfo.isCurrentMonth ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}
-                rounded-lg
+                rounded-md
               `}
             >
               {/* Day number */}
@@ -247,13 +247,13 @@ export default function Calendar({
                 {dayInfo.date}
               </div>
 
-              {/* Event indicators */}
+              {/* Event indicators - ✅ OTIMIZADO: menores */}
               {hasEvents && (
-                <div className="absolute bottom-1 left-1 right-1 flex justify-center gap-1">
+                <div className="absolute bottom-0.5 left-0.5 right-0.5 flex justify-center gap-0.5">
                   {dayInfo.events.slice(0, 3).map((event, idx) => (
                     <div
                       key={idx}
-                      className={`w-1.5 h-1.5 rounded-full ${
+                      className={`w-1 h-1 rounded-full ${
                         eventColors[event.event_type] || 'bg-gray-500'
                       }`}
                     />
@@ -261,10 +261,10 @@ export default function Calendar({
                 </div>
               )}
 
-              {/* Tooltip */}
+              {/* Tooltip - ✅ OTIMIZADO: menor */}
               {hasEvents && (
-                <div className="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block pointer-events-none">
-                  <div className="bg-gray-900 text-white text-xs rounded py-2 px-3 whitespace-nowrap shadow-lg">
+                <div className="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-1 hidden group-hover:block pointer-events-none">
+                  <div className="bg-gray-900 text-white text-xs rounded py-1.5 px-2.5 whitespace-nowrap shadow-lg">
                     {dayInfo.events.length} event{dayInfo.events.length > 1 ? 's' : ''}
                     <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                   </div>
@@ -275,14 +275,14 @@ export default function Calendar({
         })}
       </div>
 
-      {/* Legend */}
-      <div className="mt-6 pt-4 border-t border-gray-200 flex flex-wrap gap-4 text-sm">
-        <div className="flex items-center gap-2">
+      {/* Legend - ✅ OTIMIZADO: mais compacta */}
+      <div className="mt-4 pt-3 border-t border-gray-200 flex flex-wrap gap-3 text-sm">
+        <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-blue-500 ring-2 ring-blue-200"></div>
           <span className="text-gray-600">Today</span>
         </div>
         {Object.entries(eventColors).map(([type, color]) => (
-          <div key={type} className="flex items-center gap-2">
+          <div key={type} className="flex items-center gap-1.5">
             <div className={`w-3 h-3 rounded-full ${color}`}></div>
             <span className="text-gray-600 capitalize">{type}</span>
           </div>

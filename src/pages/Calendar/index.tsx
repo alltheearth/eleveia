@@ -314,6 +314,24 @@ export default function EventsPage() {
               />
             )}
 
+          {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
+                      <p className="text-gray-600 mt-1">Gerencie seus eventos e programações</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      {/* <button
+                        onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition"
+                        title={viewMode === 'grid' ? 'Visualização em lista' : 'Visualização em grade'}
+                      >
+                        {viewMode === 'grid' ? <List size={20} /> : <Grid size={20} />}
+                      </button>*/}
+                    </div> 
+                  </div>
+
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="bg-blue-100 text-blue-700 p-4 rounded-lg shadow-md">
@@ -338,53 +356,6 @@ export default function EventsPage() {
               </div>
             </div>
 
-            {/* Filters */}
-            <FilterBar
-              fields={[
-                {
-                  type: 'search',
-                  name: 'search',
-                  placeholder: 'Search events...',
-                  value: searchTerm,
-                  onChange: setSearchTerm,
-                  icon: <Search className="absolute left-3 top-3 text-gray-400" size={20} />,
-                },
-                {
-                  type: 'select',
-                  name: 'type',
-                  value: typeFilter,
-                  onChange: setTypeFilter,
-                  options: [
-                    { label: 'All Types', value: 'all' },
-                    { label: '📌 Holiday', value: 'holiday' },
-                    { label: '📝 Exam', value: 'exam' },
-                    { label: '🎓 Graduation', value: 'graduation' },
-                    { label: '🎉 Cultural', value: 'cultural' },
-                  ],
-                },
-                {
-                  type: 'date',
-                  name: 'start_date',
-                  value: startDateFilter,
-                  onChange: setStartDateFilter,
-                },
-                {
-                  type: 'date',
-                  name: 'end_date',
-                  value: endDateFilter,
-                  onChange: setEndDateFilter,
-                },
-              ]}
-              actions={[
-                {
-                  label: 'New Event',
-                  onClick: () => setShowForm(true),
-                  icon: <Plus size={18} />,
-                  variant: 'primary',
-                },
-              ]}
-              onClear={handleClearFilters}
-            />
 
             {/* Calendar Component */}
             <Calendar
@@ -399,6 +370,53 @@ export default function EventsPage() {
               eventColors={EVENT_COLORS}
             />
 
+              {/* Filters */}
+              <FilterBar
+                fields={[
+                  {
+                    type: 'search',
+                    name: 'search',
+                    placeholder: 'Search events...',
+                    value: searchTerm,
+                    onChange: setSearchTerm,
+                    icon: <Search className="absolute left-3 top-3 text-gray-400" size={20} />,
+                  },
+                  {
+                    type: 'select',
+                    name: 'type',
+                    value: typeFilter,
+                    onChange: setTypeFilter,
+                    options: [
+                      { label: 'All Types', value: 'all' },
+                      { label: '📌 Holiday', value: 'holiday' },
+                      { label: '📝 Exam', value: 'exam' },
+                      { label: '🎓 Graduation', value: 'graduation' },
+                      { label: '🎉 Cultural', value: 'cultural' },
+                    ],
+                  },
+                  {
+                    type: 'date',
+                    name: 'start_date',
+                    value: startDateFilter,
+                    onChange: setStartDateFilter,
+                  },
+                  {
+                    type: 'date',
+                    name: 'end_date',
+                    value: endDateFilter,
+                    onChange: setEndDateFilter,
+                  },
+                ]}
+                actions={[
+                  {
+                    label: 'New Event',
+                    onClick: () => setShowForm(true),
+                    icon: <Plus size={18} />,
+                    variant: 'primary',
+                  },
+                ]}
+                onClear={handleClearFilters}
+              />
             {/* Table */}
             <DataTable
               columns={[
@@ -481,7 +499,7 @@ export default function EventsPage() {
                 >
                   {schools.map(school => (
                     <option key={school.id} value={school.id}>
-                      {school.nome_escola}
+                      {school.name}
                     </option>
                   ))}
                 </select>
