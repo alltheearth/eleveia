@@ -15,6 +15,7 @@ import FAQs from '../pages/FAQs';
 import Tickets from '../pages/Tickets';
 import Perfil from '../pages/Perfil';
 import InformacoesEscola from '../components/Information';
+import DocumentsPage from '../pages/Documents';
 
 const AppRoutes = () => {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
@@ -38,6 +39,7 @@ const AppRoutes = () => {
           <Route path="/tickets" element={<Tickets />} />
           <Route path="/perfil" element={<Perfil />} />
           <Route path="/configuracoes" element={<InformacoesEscola />} />
+          <Route path="/documentos" element={<DocumentsPage />} />
         </Route>
       </Route>
 

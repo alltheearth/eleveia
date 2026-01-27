@@ -1,5 +1,4 @@
-// src/services/index.tsx - ✅ VERSÃO CORRIGIDA
-// Export central de todos os serviços da API
+// src/services/index.ts - ✅ EXPORT CENTRAL ORGANIZADO
 
 // ============================================
 // BASE API
@@ -25,7 +24,7 @@ export type {
 } from './api/authApi';
 
 // ============================================
-// SCHOOLS API - ✅ CORRIGIDO
+// SCHOOLS API
 // ============================================
 export { schoolsApi } from './api/schoolsApi';
 export {
@@ -43,6 +42,22 @@ export type {
   SchoolFilters,
   TeachingLevels,
 } from './api/schoolsApi';
+
+// ============================================
+// MESSAGING API (WhatsApp/Uazapi) - ✅ NOVO
+// ============================================
+// export { messagingApi } from './api/messagingApi';
+// export {
+//   useGetInstanceStatusQuery,
+//   useConnectInstanceMutation,
+//   useDisconnectInstanceMutation,
+// } from './api/messagingApi';
+// export type {
+//   InstanceData,
+//   ConnectResponse,
+//   DisconnectResponse,
+//   StatusResponse,
+// } from './api/messagingApi';
 
 // ============================================
 // LEADS API
@@ -119,3 +134,65 @@ export type {
   DocumentsResponse, 
   DocumentFilters 
 } from './api/documentsApi';
+
+// ============================================
+// CONTACTS API
+// ============================================
+export { contactsApi } from './api/contactsApi';
+export {
+  useGetContactsQuery,
+  useGetContactByIdQuery,
+  useCreateContactMutation,
+  useUpdateContactMutation,
+  useDeleteContactMutation,
+  useRegisterInteractionMutation,
+  useGetContactStatsQuery,
+} from './api/contactsApi';
+export type {
+  Contact,
+  ContactsResponse,
+  ContactStats,
+  ContactFilters,
+} from './api/contactsApi';
+
+// ============================================
+// TICKETS API
+// ============================================
+export { ticketsApi } from './api/ticketsApi';
+export {
+  useGetTicketsQuery,
+  useGetTicketByIdQuery,
+  useCreateTicketMutation,
+  useUpdateTicketMutation,
+  useDeleteTicketMutation,
+  useChangeTicketStatusMutation,
+  useAssignTicketMutation,
+  useGetTicketStatsQuery,
+  useGetRecentTicketsQuery,
+  useExportTicketsCSVMutation,
+} from './api/ticketsApi';
+export type {
+  Ticket,
+  TicketsResponse,
+  TicketStats,
+  TicketFilters,
+} from './api/ticketsApi';
+
+// ============================================
+// DASHBOARD API
+// ============================================
+export { dashboardApi } from './api/dashboardApi';
+export {
+  useGetDashboardQuery,
+  useGetDashboardByIdQuery,
+  useUpdateDashboardMutation,
+} from './api/dashboardApi';
+export type {
+  Dashboard,
+  DashboardResponse,
+} from './api/dashboardApi';
+
+// ============================================
+// HOOKS CUSTOMIZADOS
+// ============================================
+// export { useMessaging } from './hooks/useMessaging';
