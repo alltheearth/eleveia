@@ -1,22 +1,26 @@
-// src/pages/Leads/index.tsx - ✅ REFATORADO
+// src/pages/Leads/index.tsx - ✅ REFATORADO COM VIEW TOGGLE
 import { useState, useEffect } from 'react';
 import { Edit2, Trash2, Plus, Users as UsersIcon, Download, TrendingUp } from 'lucide-react';
 
 // Componentes de Layout
 import PageModel from '../../components/layout/PageModel';
 
-// Componentes Comuns (reutilizáveis)
+// Componentes Comuns
 import { 
   StatCard,
   FilterBar,
-  DataTable,
   MessageAlert,
   LoadingState,
   EmptyState,
   ConfirmDialog,
   FormModal,
-  Badge
+  ViewToggle,
+  type ViewMode,
 } from '../../components/common';
+
+// Componentes Locais
+import LeadsKanbanView from './components/LeadsKanbanView';
+import LeadsListView from './components/LeadsListView';
 
 // Hooks e Services
 import { useCurrentSchool } from '../../hooks/useCurrentSchool';
@@ -32,7 +36,10 @@ import {
   type Lead,
   type LeadFilters
 } from '../../services';
-import LeadsKanbanView from './components/LeadsKanbanView';
+
+// ============================================
+// TYPES
+// ============================================
 
 interface LeadFormData {
   nome: string;
@@ -43,6 +50,15 @@ interface LeadFormData {
   observacoes: string;
   interesses: Record<string, any>;
 }
+
+interface Message {
+  type: 'success' | 'error';
+  text: string;
+}
+
+// ============================================
+// COMPONENT
+// ============================================
 
 export default function Leads() {
   // ============================================
@@ -56,15 +72,16 @@ export default function Leads() {
   } = useCurrentSchool();
 
   // ============================================
-  // ESTADOS
+  // STATE
   // ============================================
   
+  const [viewMode, setViewMode] = useState<ViewMode>('grid'); // ✅ NOVO - 'grid' = Kanban, 'list' = List
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editandoLead, setEditandoLead] = useState<Lead | null>(null);
   const [leadParaDeletar, setLeadParaDeletar] = useState<Lead | null>(null);
-  const [mensagem, setMensagem] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
+  const [mensagem, setMensagem] = useState<Message | null>(null);
 
   const [formData, setFormData] = useState<LeadFormData>({
     nome: '',
@@ -117,6 +134,10 @@ export default function Leads() {
   // HANDLERS
   // ============================================
   
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'grid' ? 'list' : 'grid');
+  };
+
   const resetForm = () => {
     setFormData({
       nome: '',
@@ -199,9 +220,9 @@ export default function Leads() {
     }
   };
 
-  const handleMudarStatus = async (id: number, novoStatus: Lead['status']) => {
+  const handleMudarStatus = async (id: number, fromStatus: string, toStatus: string) => {
     try {
-      await changeStatus({ id, status: novoStatus }).unwrap();
+      await changeStatus({ id, status: toStatus as Lead['status'] }).unwrap();
       setMensagem({ tipo: 'success', texto: '✅ Status atualizado!' });
       refetch();
     } catch (err) {
@@ -232,28 +253,6 @@ export default function Leads() {
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
-
-  const getStatusColor = (status: Lead['status']) => {
-    const colors: Record<Lead['status'], 'blue' | 'yellow' | 'purple' | 'green' | 'red'> = {
-      novo: 'blue',
-      contato: 'yellow',
-      qualificado: 'purple',
-      conversao: 'green',
-      perdido: 'red',
-    };
-    return colors[status];
-  };
-
-  const getStatusLabel = (status: Lead['status']) => {
-    const labels: Record<Lead['status'], string> = {
-      novo: '🆕 Novo',
-      contato: '📞 Em Contato',
-      qualificado: '⭐ Qualificado',
-      conversao: '✅ Conversão',
-      perdido: '❌ Perdido',
-    };
-    return labels[status];
   };
 
   // ============================================
@@ -302,25 +301,25 @@ export default function Leads() {
           dismissible={false}
         />
       )}
+
       {/* Header */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
-                      <p className="text-gray-600 mt-1">Gerencie Leads</p>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {/* <button
-                        onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition"
-                        title={viewMode === 'grid' ? 'Visualização em lista' : 'Visualização em grade'}
-                      >
-                        {viewMode === 'grid' ? <List size={20} /> : <Grid size={20} />}
-                      </button>*/}
-                    </div> 
-                  </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
+          <p className="text-gray-600 mt-1">Manage your lead pipeline</p>
+        </div>
+        
+        {/* ✅ View Toggle Button */}
+        <ViewToggle
+          viewMode={viewMode}
+          onToggle={toggleViewMode}
+          gridLabel="Kanban view"
+          listLabel="List view"
+        />
+      </div>
+
       {/* Estatísticas */}
-      
+        
       {stats ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
           <StatCard 
@@ -402,7 +401,7 @@ export default function Leads() {
         </div>
       )}
 
-      <LeadsKanbanView />
+
       {/* Taxa de Conversão */}
       {stats && stats.taxa_conversao > 0 && (
         <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
@@ -422,139 +421,82 @@ export default function Leads() {
         </div>
       )}
 
-      {/* Filtros */}
-      <FilterBar
-        fields={[
-          {
-            type: 'search',
-            name: 'search',
-            placeholder: 'Buscar por nome ou email...',
-            value: searchTerm,
-            onChange: setSearchTerm,
-          },
-          {
-            type: 'select',
-            name: 'status',
-            value: statusFilter,
-            onChange: setStatusFilter,
-            options: [
-              { label: 'Todos os Status', value: 'todos' },
-              { label: 'Novo', value: 'novo' },
-              { label: 'Em Contato', value: 'contato' },
-              { label: 'Qualificado', value: 'qualificado' },
-              { label: 'Conversão', value: 'conversao' },
-              { label: 'Perdido', value: 'perdido' },
-            ],
-          },
-        ]}
-        actions={[
-          {
-            label: 'Exportar',
-            onClick: handleExportar,
-            icon: <Download size={18} />,
-            variant: 'success',
-            loading: isExporting,
-          },
-          {
-            label: 'Novo Lead',
-            onClick: () => setMostrarFormulario(true),
-            icon: <Plus size={18} />,
-            variant: 'primary',
-          },
-        ]}
-        onClear={() => {
-          setSearchTerm('');
-          setStatusFilter('todos');
-        }}
-      />
+      {/* ✅ Conditional Rendering: Kanban OR List */}
+      {viewMode === 'grid' ? (
+        /* Kanban View */
+        <LeadsKanbanView
+          leads={leads}
+          onLeadClick={handleEditar}
+          onChangeStatus={handleMudarStatus}
+        />
+      ) : (
+        /* List View */
+        <>
+          {/* Filtros - Only show in list view */}
+          <FilterBar
+            fields={[
+              {
+                type: 'search',
+                name: 'search',
+                placeholder: 'Buscar por nome ou email...',
+                value: searchTerm,
+                onChange: setSearchTerm,
+              },
+              {
+                type: 'select',
+                name: 'status',
+                value: statusFilter,
+                onChange: setStatusFilter,
+                options: [
+                  { label: 'Todos os Status', value: 'todos' },
+                  { label: 'Novo', value: 'novo' },
+                  { label: 'Em Contato', value: 'contato' },
+                  { label: 'Qualificado', value: 'qualificado' },
+                  { label: 'Conversão', value: 'conversao' },
+                  { label: 'Perdido', value: 'perdido' },
+                ],
+              },
+            ]}
+            actions={[
+              {
+                label: 'Exportar',
+                onClick: handleExportar,
+                icon: <Download size={18} />,
+                variant: 'success',
+                loading: isExporting,
+              },
+              {
+                label: 'Novo Lead',
+                onClick: () => setMostrarFormulario(true),
+                icon: <Plus size={18} />,
+                variant: 'primary',
+              },
+            ]}
+            onClear={() => {
+              setSearchTerm('');
+              setStatusFilter('todos');
+            }}
+          />
 
-      {/* Tabela */}
-      <DataTable
-        columns={[
-          { key: 'id', label: '#', width: '80px', sortable: true },
-          { 
-            key: 'nome', 
-            label: 'Nome', 
-            sortable: true,
-            render: (value) => <span className="font-medium text-gray-900">{value}</span>
-          },
-          { 
-            key: 'email', 
-            label: 'Email',
-            render: (value) => <span className="text-sm text-gray-600">{value}</span>
-          },
-          { 
-            key: 'telefone', 
-            label: 'Telefone',
-            render: (value) => <span className="text-sm text-gray-600">{value}</span>
-          },
-          { 
-            key: 'status', 
-            label: 'Status',
-            render: (value, row) => (
-              <select
-                value={value}
-                onChange={(e) => handleMudarStatus(row.id, e.target.value as Lead['status'])}
-                className={`px-3 py-1 rounded-full font-semibold text-sm border-0 cursor-pointer focus:outline-none ${
-                  value === 'novo' ? 'bg-blue-100 text-blue-700' :
-                  value === 'contato' ? 'bg-yellow-100 text-yellow-700' :
-                  value === 'qualificado' ? 'bg-purple-100 text-purple-700' :
-                  value === 'conversao' ? 'bg-green-100 text-green-700' :
-                  'bg-red-100 text-red-700'
-                }`}
-              >
-                <option value="novo">🆕 Novo</option>
-                <option value="contato">📞 Em Contato</option>
-                <option value="qualificado">⭐ Qualificado</option>
-                <option value="conversao">✅ Conversão</option>
-                <option value="perdido">❌ Perdido</option>
-              </select>
-            )
-          },
-          { 
-            key: 'origem', 
-            label: 'Origem',
-            render: (_value, row) => (
-              <Badge variant="blue">
-                {row.origem_display}
-              </Badge>
-            )
-          },
-          { 
-            key: 'criado_em', 
-            label: 'Criado em',
-            sortable: true,
-            render: (value) => <span className="text-sm">{formatarData(value)}</span>
-          },
-        ]}
-        data={leads}
-        keyExtractor={(lead) => lead.id.toString()}
-        actions={[
-          {
-            icon: <Edit2 size={18} />,
-            onClick: handleEditar,
-            variant: 'primary',
-            label: 'Editar',
-          },
-          {
-            icon: <Trash2 size={18} />,
-            onClick: (lead) => setLeadParaDeletar(lead),
-            variant: 'danger',
-            label: 'Deletar',
-          },
-        ]}
-        emptyMessage="Nenhum lead encontrado"
-        emptyIcon={<UsersIcon size={48} className="text-gray-400" />}
-      />
+          {/* Lista de Leads */}
+          <LeadsListView
+            leads={leads}
+            onEdit={handleEditar}
+            onDelete={setLeadParaDeletar}
+            onChangeStatus={(id, status) => handleMudarStatus(id, '', status)}
+            formatDate={formatarData}
+          />
 
-      {/* Info de Resultados */}
-      {leads.length > 0 && (
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <p className="text-gray-700 font-semibold">
-            Mostrando <span className="text-blue-600 font-bold">{leads.length}</span> de{' '}
-            <span className="text-blue-600 font-bold">{stats?.total || 0}</span> leads
-          </p>
-        </div>
+          {/* Info de Resultados */}
+          {leads.length > 0 && (
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <p className="text-gray-700 font-semibold">
+                Mostrando <span className="text-blue-600 font-bold">{leads.length}</span> de{' '}
+                <span className="text-blue-600 font-bold">{stats?.total || 0}</span> leads
+              </p>
+            </div>
+          )}
+        </>
       )}
 
       {/* Modal de Formulário */}

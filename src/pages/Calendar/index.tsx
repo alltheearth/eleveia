@@ -1,15 +1,11 @@
+// src/pages/Calendar/index.tsx
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, Calendar as CalendarIcon, X, Save, AlertCircle } from 'lucide-react';
-import Calendar from '../../components/common/Calendar';
-import { 
-  useGetEventsQuery,
-  useCreateEventMutation,
-  useUpdateEventMutation,
-  useDeleteEventMutation,
-  extractErrorMessage,
-  type Event 
-} from '../../services';
-import { useCurrentSchool } from '../../hooks/useCurrentSchool';
+import { Search, Plus, Calendar as CalendarIcon } from 'lucide-react';
+
+// Componentes de Layout
+import PageModel from '../../components/layout/PageModel';
+
+// Componentes Comuns
 import { 
   MessageAlert, 
   EmptyState, 
@@ -17,9 +13,25 @@ import {
   ConfirmDialog,
   LoadingState,
   Badge,
-  DataTable,
-  FilterBar
+  FilterBar,
+  ViewToggle,
+  type ViewMode, // ✅ NOVO
 } from '../../components/common';
+
+// Componentes Locais
+import CalendarView from './components/CalendarView';
+import EventsList from './components/EventsList';
+
+// Hooks e Services
+import { useCurrentSchool } from '../../hooks/useCurrentSchool';
+import {
+  useGetEventsQuery,
+  useCreateEventMutation,
+  useUpdateEventMutation,
+  useDeleteEventMutation,
+  extractErrorMessage,
+  type Event 
+} from '../../services';
 
 // ============================================
 // TYPES
@@ -62,12 +74,19 @@ const EVENT_COLORS = {
 // ============================================
 
 export default function EventsPage() {
-  const { currentSchool, currentSchoolId, hasMultipleSchools, schools, isLoading: schoolsLoading } = useCurrentSchool();
+  const { 
+    currentSchool, 
+    currentSchoolId, 
+    hasMultipleSchools, 
+    schools, 
+    isLoading: schoolsLoading 
+  } = useCurrentSchool();
 
   // ============================================
   // STATE
   // ============================================
 
+  const [viewMode, setViewMode] = useState<ViewMode>('grid'); // ✅ NOVO
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [startDateFilter, setStartDateFilter] = useState('');
@@ -147,6 +166,10 @@ export default function EventsPage() {
   // ============================================
   // HANDLERS
   // ============================================
+
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'grid' ? 'list' : 'grid');
+  };
 
   const resetForm = () => {
     setFormData({
@@ -292,192 +315,131 @@ export default function EventsPage() {
   // ============================================
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-auto p-6">
-          <div className="max-w-7xl mx-auto space-y-6">
-            
-            {/* Messages */}
-            {message && (
-              <MessageAlert
-                type={message.type}
-                message={message.text}
-                onClose={() => setMessage(null)}
-              />
-            )}
+    <PageModel>
+      {/* Messages */}
+      {message && (
+        <MessageAlert
+          type={message.type}
+          message={message.text}
+          onClose={() => setMessage(null)}
+        />
+      )}
 
-            {/* Error */}
-            {eventsError && (
-              <MessageAlert
-                type="error"
-                message={extractErrorMessage(eventsError)}
-              />
-            )}
+      {/* Error */}
+      {eventsError && (
+        <MessageAlert
+          type="error"
+          message={extractErrorMessage(eventsError)}
+        />
+      )}
 
-          {/* Header */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h1 className="text-2xl font-bold text-gray-900">Agenda</h1>
-                      <p className="text-gray-600 mt-1">Gerencie seus eventos e programações</p>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {/* <button
-                        onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition"
-                        title={viewMode === 'grid' ? 'Visualização em lista' : 'Visualização em grade'}
-                      >
-                        {viewMode === 'grid' ? <List size={20} /> : <Grid size={20} />}
-                      </button>*/}
-                    </div> 
-                  </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="bg-blue-100 text-blue-700 p-4 rounded-lg shadow-md">
-                <p className="text-sm font-semibold opacity-80">Total</p>
-                <p className="text-3xl font-bold">{stats.total}</p>
-              </div>
-              <div className="bg-red-100 text-red-700 p-4 rounded-lg shadow-md">
-                <p className="text-sm font-semibold opacity-80">Holidays</p>
-                <p className="text-3xl font-bold">{stats.holiday}</p>
-              </div>
-              <div className="bg-blue-100 text-blue-700 p-4 rounded-lg shadow-md">
-                <p className="text-sm font-semibold opacity-80">Exams</p>
-                <p className="text-3xl font-bold">{stats.exam}</p>
-              </div>
-              <div className="bg-purple-100 text-purple-700 p-4 rounded-lg shadow-md">
-                <p className="text-sm font-semibold opacity-80">Graduations</p>
-                <p className="text-3xl font-bold">{stats.graduation}</p>
-              </div>
-              <div className="bg-orange-100 text-orange-700 p-4 rounded-lg shadow-md">
-                <p className="text-sm font-semibold opacity-80">Cultural</p>
-                <p className="text-3xl font-bold">{stats.cultural}</p>
-              </div>
-            </div>
-
-
-            {/* Calendar Component */}
-            <Calendar
-              events={filteredEvents.map(e => ({
-                id: e.id,
-                start_date: e.start_date,
-                end_date: e.end_date,
-                title: e.title,
-                event_type: e.event_type,
-              }))}
-              onDayClick={handleDayClick}
-              eventColors={EVENT_COLORS}
-            />
-
-              {/* Filters */}
-              <FilterBar
-                fields={[
-                  {
-                    type: 'search',
-                    name: 'search',
-                    placeholder: 'Search events...',
-                    value: searchTerm,
-                    onChange: setSearchTerm,
-                    icon: <Search className="absolute left-3 top-3 text-gray-400" size={20} />,
-                  },
-                  {
-                    type: 'select',
-                    name: 'type',
-                    value: typeFilter,
-                    onChange: setTypeFilter,
-                    options: [
-                      { label: 'All Types', value: 'all' },
-                      { label: '📌 Holiday', value: 'holiday' },
-                      { label: '📝 Exam', value: 'exam' },
-                      { label: '🎓 Graduation', value: 'graduation' },
-                      { label: '🎉 Cultural', value: 'cultural' },
-                    ],
-                  },
-                  {
-                    type: 'date',
-                    name: 'start_date',
-                    value: startDateFilter,
-                    onChange: setStartDateFilter,
-                  },
-                  {
-                    type: 'date',
-                    name: 'end_date',
-                    value: endDateFilter,
-                    onChange: setEndDateFilter,
-                  },
-                ]}
-                actions={[
-                  {
-                    label: 'New Event',
-                    onClick: () => setShowForm(true),
-                    icon: <Plus size={18} />,
-                    variant: 'primary',
-                  },
-                ]}
-                onClear={handleClearFilters}
-              />
-            {/* Table */}
-            <DataTable
-              columns={[
-                { 
-                  key: 'start_date', 
-                  label: 'Start Date',
-                  render: (val) => formatDate(val),
-                  sortable: true,
-                },
-                { 
-                  key: 'end_date', 
-                  label: 'End Date',
-                  render: (val) => formatDate(val),
-                  sortable: true,
-                },
-                { 
-                  key: 'title', 
-                  label: 'Title',
-                  render: (val, row) => (
-                    <div>
-                      <p className="font-semibold">{val}</p>
-                      {row.description && (
-                        <p className="text-sm text-gray-600">{row.description}</p>
-                      )}
-                    </div>
-                  ),
-                  sortable: true,
-                },
-                { 
-                  key: 'event_type', 
-                  label: 'Type',
-                  render: (val) => getEventBadge(val),
-                },
-                { 
-                  key: 'duration_days', 
-                  label: 'Duration',
-                  render: (val) => `${val} ${val === 1 ? 'day' : 'days'}`,
-                },
-              ]}
-              data={filteredEvents}
-              keyExtractor={(row) => row.id.toString()}
-              actions={[
-                {
-                  label: 'Edit',
-                  icon: <Edit2 size={16} />,
-                  onClick: handleEdit,
-                  variant: 'primary',
-                },
-                {
-                  label: 'Delete',
-                  icon: <Trash2 size={16} />,
-                  onClick: (row) => setDeleteConfirm(row),
-                  variant: 'danger',
-                },
-              ]}
-              emptyMessage="No events found"
-              emptyIcon={<CalendarIcon className="h-12 w-12 text-gray-400" />}
-            />
-          </div>
-        </main>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Calendar & Events</h1>
+          <p className="text-gray-600 mt-1">Manage your schedule and events</p>
+        </div>
+        
+        {/* ✅ View Toggle Button */}
+        <ViewToggle
+          viewMode={viewMode}
+          onToggle={toggleViewMode}
+          gridLabel="Calendar view"
+          listLabel="List view"
+        />
       </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="bg-blue-100 text-blue-700 p-4 rounded-lg shadow-md">
+          <p className="text-sm font-semibold opacity-80">Total</p>
+          <p className="text-3xl font-bold">{stats.total}</p>
+        </div>
+        <div className="bg-red-100 text-red-700 p-4 rounded-lg shadow-md">
+          <p className="text-sm font-semibold opacity-80">Holidays</p>
+          <p className="text-3xl font-bold">{stats.holiday}</p>
+        </div>
+        <div className="bg-blue-100 text-blue-700 p-4 rounded-lg shadow-md">
+          <p className="text-sm font-semibold opacity-80">Exams</p>
+          <p className="text-3xl font-bold">{stats.exam}</p>
+        </div>
+        <div className="bg-purple-100 text-purple-700 p-4 rounded-lg shadow-md">
+          <p className="text-sm font-semibold opacity-80">Graduations</p>
+          <p className="text-3xl font-bold">{stats.graduation}</p>
+        </div>
+        <div className="bg-orange-100 text-orange-700 p-4 rounded-lg shadow-md">
+          <p className="text-sm font-semibold opacity-80">Cultural</p>
+          <p className="text-3xl font-bold">{stats.cultural}</p>
+        </div>
+      </div>
+
+      {/* ✅ Conditional Rendering: Calendar OR List */}
+      {viewMode === 'grid' ? (
+        <CalendarView
+          events={filteredEvents}
+          onDayClick={handleDayClick}
+          eventColors={EVENT_COLORS}
+        />
+      ) : (
+        <>
+          {/* Filters - Only show in list view */}
+          <FilterBar
+            fields={[
+              {
+                type: 'search',
+                name: 'search',
+                placeholder: 'Search events...',
+                value: searchTerm,
+                onChange: setSearchTerm,
+                icon: <Search className="absolute left-3 top-3 text-gray-400" size={20} />,
+              },
+              {
+                type: 'select',
+                name: 'type',
+                value: typeFilter,
+                onChange: setTypeFilter,
+                options: [
+                  { label: 'All Types', value: 'all' },
+                  { label: '📌 Holiday', value: 'holiday' },
+                  { label: '📝 Exam', value: 'exam' },
+                  { label: '🎓 Graduation', value: 'graduation' },
+                  { label: '🎉 Cultural', value: 'cultural' },
+                ],
+              },
+              {
+                type: 'date',
+                name: 'start_date',
+                value: startDateFilter,
+                onChange: setStartDateFilter,
+              },
+              {
+                type: 'date',
+                name: 'end_date',
+                value: endDateFilter,
+                onChange: setEndDateFilter,
+              },
+            ]}
+            actions={[
+              {
+                label: 'New Event',
+                onClick: () => setShowForm(true),
+                icon: <Plus size={18} />,
+                variant: 'primary',
+              },
+            ]}
+            onClear={handleClearFilters}
+          />
+
+          {/* Events List */}
+          <EventsList
+            events={filteredEvents}
+            onEdit={handleEdit}
+            onDelete={setDeleteConfirm}
+            formatDate={formatDate}
+            getEventBadge={getEventBadge}
+          />
+        </>
+      )}
 
       {/* Form Modal */}
       {showForm && (
@@ -487,105 +449,16 @@ export default function EventsPage() {
           onClose={resetForm}
           size="lg"
         >
-          <div className="space-y-4">
-            {/* School Selection (if multiple) */}
-            {hasMultipleSchools && (
-              <div>
-                <label className="block text-gray-700 font-semibold mb-2">School *</label>
-                <select
-                  value={formData.school}
-                  onChange={(e) => setFormData({ ...formData, school: parseInt(e.target.value) })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                >
-                  {schools.map(school => (
-                    <option key={school.id} value={school.id}>
-                      {school.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Dates */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-700 font-semibold mb-2">Start Date *</label>
-                <input
-                  type="date"
-                  value={formData.start_date}
-                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-700 font-semibold mb-2">End Date *</label>
-                <input
-                  type="date"
-                  value={formData.end_date}
-                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-                />
-              </div>
-            </div>
-
-            {/* Title */}
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Title *</label>
-              <input
-                type="text"
-                placeholder="Ex: Final Exams"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-              />
-            </div>
-
-            {/* Description */}
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Description</label>
-              <textarea
-                placeholder="Event details..."
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-              />
-            </div>
-
-            {/* Type */}
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Type *</label>
-              <select
-                value={formData.event_type}
-                onChange={(e) => setFormData({ ...formData, event_type: e.target.value as any })}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-              >
-                <option value="holiday">📌 Holiday</option>
-                <option value="exam">📝 Exam</option>
-                <option value="graduation">🎓 Graduation</option>
-                <option value="cultural">🎉 Cultural Event</option>
-              </select>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3 pt-4">
-              <button
-                onClick={handleSubmit}
-                disabled={isCreating || isUpdating}
-                className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50"
-              >
-                <Save size={20} />
-                {isCreating || isUpdating ? 'Saving...' : editingEvent ? 'Update Event' : 'Create Event'}
-              </button>
-              <button
-                onClick={resetForm}
-                className="px-6 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition font-semibold"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
+          <EventForm
+            formData={formData}
+            setFormData={setFormData}
+            hasMultipleSchools={hasMultipleSchools}
+            schools={schools}
+            onSubmit={handleSubmit}
+            onCancel={resetForm}
+            isLoading={isCreating || isUpdating}
+            isEditing={!!editingEvent}
+          />
         </FormModal>
       )}
 
@@ -601,6 +474,133 @@ export default function EventsPage() {
           variant="danger"
         />
       )}
+    </PageModel>
+  );
+}
+
+// ============================================
+// EVENT FORM COMPONENT
+// ============================================
+
+interface EventFormProps {
+  formData: FormData;
+  setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+  hasMultipleSchools: boolean;
+  schools: any[];
+  onSubmit: () => void;
+  onCancel: () => void;
+  isLoading: boolean;
+  isEditing: boolean;
+}
+
+function EventForm({
+  formData,
+  setFormData,
+  hasMultipleSchools,
+  schools,
+  onSubmit,
+  onCancel,
+  isLoading,
+  isEditing,
+}: EventFormProps) {
+  return (
+    <div className="space-y-4">
+      {/* School Selection (if multiple) */}
+      {hasMultipleSchools && (
+        <div>
+          <label className="block text-gray-700 font-semibold mb-2">School *</label>
+          <select
+            value={formData.school}
+            onChange={(e) => setFormData({ ...formData, school: parseInt(e.target.value) })}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+          >
+            {schools.map(school => (
+              <option key={school.id} value={school.id}>
+                {school.school_name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Dates */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-gray-700 font-semibold mb-2">Start Date *</label>
+          <input
+            type="date"
+            value={formData.start_date}
+            onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+          />
+        </div>
+
+        <div>
+          <label className="block text-gray-700 font-semibold mb-2">End Date *</label>
+          <input
+            type="date"
+            value={formData.end_date}
+            onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+          />
+        </div>
+      </div>
+
+      {/* Title */}
+      <div>
+        <label className="block text-gray-700 font-semibold mb-2">Title *</label>
+        <input
+          type="text"
+          placeholder="Ex: Final Exams"
+          value={formData.title}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+        />
+      </div>
+
+      {/* Description */}
+      <div>
+        <label className="block text-gray-700 font-semibold mb-2">Description</label>
+        <textarea
+          placeholder="Event details..."
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          rows={3}
+          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+        />
+      </div>
+
+      {/* Type */}
+      <div>
+        <label className="block text-gray-700 font-semibold mb-2">Type *</label>
+        <select
+          value={formData.event_type}
+          onChange={(e) => setFormData({ ...formData, event_type: e.target.value as any })}
+          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+        >
+          <option value="holiday">📌 Holiday</option>
+          <option value="exam">📝 Exam</option>
+          <option value="graduation">🎓 Graduation</option>
+          <option value="cultural">🎉 Cultural Event</option>
+        </select>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3 pt-4">
+        <button
+          onClick={onSubmit}
+          disabled={isLoading}
+          className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50"
+        >
+          {isLoading ? 'Saving...' : isEditing ? 'Update Event' : 'Create Event'}
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-6 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition font-semibold"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }

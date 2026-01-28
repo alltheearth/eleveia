@@ -1,43 +1,30 @@
 // src/pages/Leads/components/LeadsKanbanView.tsx
 import { useMemo } from 'react';
-import { Mail, Phone, Calendar, TrendingUp } from 'lucide-react';
+import { Mail, Phone, Calendar } from 'lucide-react';
 import Kanban from '../../../components/common/Kanban';
 import { Badge } from '../../../components/common';
-import { 
-  useGetLeadsQuery, 
-  useChangeLeadStatusMutation,
-  type Lead 
-} from '../../../services';
+import type { Lead } from '../../../services';
 import type { KanbanColumn, KanbanCard } from '../../../components/common/Kanban/types';
 
-/**
- * Visualização Kanban para Leads
- */
-
 interface LeadsKanbanViewProps {
-  filters?: { search?: string; origem?: string };
+  leads: Lead[];
   onLeadClick?: (lead: Lead) => void;
-  onAddLead?: (status: string) => void;
+  onChangeStatus: (cardId: number, fromStatus: string, toStatus: string) => void;
 }
 
 export default function LeadsKanbanView({
-  filters,
+  leads,
   onLeadClick,
-  onAddLead,
+  onChangeStatus,
 }: LeadsKanbanViewProps) {
   
-  const { data: leadsData, isLoading } = useGetLeadsQuery(filters || {});
-  const [changeStatus] = useChangeLeadStatusMutation();
-
-  const leads = leadsData?.results || [];
-
   // Configuração dos status
   const LEAD_STATUS_CONFIG = [
-    { id: 'novo', title: 'Novos', color: 'bg-blue-100 text-blue-700', icon: <span>🆕</span> },
-    { id: 'contato', title: 'Em Contato', color: 'bg-yellow-100 text-yellow-700', icon: <span>📞</span> },
-    { id: 'qualificado', title: 'Qualificados', color: 'bg-purple-100 text-purple-700', icon: <span>⭐</span> },
-    { id: 'conversao', title: 'Conversão', color: 'bg-green-100 text-green-700', icon: <span>✅</span> },
-    { id: 'perdido', title: 'Perdidos', color: 'bg-red-100 text-red-700', icon: <span>❌</span> },
+    { id: 'novo', title: 'New', color: 'bg-blue-100 text-blue-700', icon: <span>🆕</span> },
+    { id: 'contato', title: 'In Contact', color: 'bg-yellow-100 text-yellow-700', icon: <span>📞</span> },
+    { id: 'qualificado', title: 'Qualified', color: 'bg-purple-100 text-purple-700', icon: <span>⭐</span> },
+    { id: 'conversao', title: 'Conversion', color: 'bg-green-100 text-green-700', icon: <span>✅</span> },
+    { id: 'perdido', title: 'Lost', color: 'bg-red-100 text-red-700', icon: <span>❌</span> },
   ];
 
   // Transformar leads em colunas Kanban
@@ -52,7 +39,7 @@ export default function LeadsKanbanView({
         .map(lead => ({
           id: lead.id,
           title: lead.nome,
-          description: lead.observacoes || 'Sem observações',
+          description: lead.observacoes || 'No notes',
           columnId: lead.status,
           metadata: {
             email: lead.email,
@@ -65,15 +52,12 @@ export default function LeadsKanbanView({
     }));
   }, [leads]);
 
-  // Handlers
+  // Handler para movimento de cards
   const handleCardMove = async (cardId: string | number, fromColumnId: string, toColumnId: string) => {
-    try {
-      await changeStatus({ id: Number(cardId), status: toColumnId as Lead['status'] }).unwrap();
-    } catch (err) {
-      alert('Erro ao mover o lead.');
-    }
+    onChangeStatus(Number(cardId), fromColumnId, toColumnId);
   };
 
+  // Handler para clique no card
   const handleCardClick = (card: KanbanCard) => {
     const lead = card.metadata?.lead as Lead;
     if (lead && onLeadClick) onLeadClick(lead);
@@ -84,20 +68,20 @@ export default function LeadsKanbanView({
     const { email, telefone, origem, criadoEm } = card.metadata || {};
 
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer">
         <h4 className="font-bold text-gray-900 text-sm mb-2 line-clamp-1">{card.title}</h4>
         <p className="text-sm text-gray-600 mb-3 line-clamp-2">{card.description}</p>
         
         <div className="space-y-2 mb-3">
           {email && (
             <div className="flex items-center gap-2 text-xs text-gray-600">
-              <Mail size={14} className="text-gray-400" />
+              <Mail size={14} className="text-gray-400 flex-shrink-0" />
               <span className="truncate">{email}</span>
             </div>
           )}
           {telefone && (
             <div className="flex items-center gap-2 text-xs text-gray-600">
-              <Phone size={14} className="text-gray-400" />
+              <Phone size={14} className="text-gray-400 flex-shrink-0" />
               <span>{telefone}</span>
             </div>
           )}
@@ -108,7 +92,12 @@ export default function LeadsKanbanView({
           {criadoEm && (
             <div className="flex items-center gap-1 text-xs text-gray-500">
               <Calendar size={12} />
-              <span>{new Date(criadoEm).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+              <span>
+                {new Date(criadoEm).toLocaleDateString('pt-BR', { 
+                  day: '2-digit', 
+                  month: 'short' 
+                })}
+              </span>
             </div>
           )}
         </div>
@@ -116,23 +105,15 @@ export default function LeadsKanbanView({
     );
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
-      {/* Stats */}
+      {/* Stats Summary */}
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-200">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
-            <TrendingUp className="text-blue-600" size={24} />
+            <div className="text-2xl">📊</div>
             <div>
-              <p className="text-sm text-gray-600 font-medium">Pipeline de Leads</p>
+              <p className="text-sm text-gray-600 font-medium">Lead Pipeline</p>
               <p className="text-2xl font-bold text-gray-900">{leads.length} leads</p>
             </div>
           </div>
@@ -140,21 +121,23 @@ export default function LeadsKanbanView({
             {kanbanColumns.map(col => (
               <div key={col.id} className="text-center">
                 <p className="text-xs text-gray-600">{col.title}</p>
-                <p className={`text-lg font-bold ${col.color.split(' ')[1]}`}>{col.cards.length}</p>
+                <p className={`text-lg font-bold ${col.color.split(' ')[1]}`}>
+                  {col.cards.length}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Kanban */}
+      {/* Kanban Board */}
       <Kanban
         columns={kanbanColumns}
         onCardMove={handleCardMove}
         onCardClick={handleCardClick}
-        onAddCard={onAddLead}
         renderCard={renderLeadCard}
-        emptyColumnMessage="Nenhum lead neste status"
+        emptyColumnMessage="No leads in this status"
+        allowDragAndDrop={true}
       />
     </div>
   );
