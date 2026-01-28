@@ -1,486 +1,293 @@
-// src/components/Calendar/index.tsx - ✅ CORRIGIDO
-import { useState, useEffect } from "react";
-import { 
-  useGetEventsQuery, 
-  useCreateEventMutation, 
-  useUpdateEventMutation, 
-  useDeleteEventMutation,
-  extractErrorMessage,
-  type Event
-} from "../../services";
-import { Trash2, Edit2, Plus, Save, X, Calendar as CalendarIcon, AlertCircle } from 'lucide-react';
-import { useCurrentSchool } from "../../hooks/useCurrentSchool";
+// src/components/common/Calendar/index.tsx - ✅ TIPOS CORRIGIDOS
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
 
-interface EventFormData {
-  escola: number;
-  data: string;
-  evento: string;
-  tipo: 'feriado' | 'prova' | 'formatura' | 'evento_cultural';
+// ============================================
+// TYPES
+// ============================================
+
+export interface CalendarEvent {
+  id: number;
+  start_date: string; // YYYY-MM-DD
+  end_date: string;   // YYYY-MM-DD
+  title: string;
+  event_type: string;
 }
 
-export default function Calendar() {
-  const { 
-    currentSchoolId, 
-    currentSchool,
-    hasMultipleSchools,
-    schools,
-    isLoading: schoolsLoading
-  } = useCurrentSchool();
+export interface CalendarProps {
+  events: CalendarEvent[];
+  onDayClick?: (date: string) => void;
+  highlightToday?: boolean;
+  eventColors?: Record<string, string>;
+  className?: string;
+}
 
-  // ✅ RTK Query Hooks
-  const { data: eventsData, isLoading: eventsIsLoading, error: eventsError, refetch } = useGetEventsQuery();
-  const [createEvent, { isLoading: isCreating }] = useCreateEventMutation();
-  const [updateEvent, { isLoading: isUpdating }] = useUpdateEventMutation();
-  const [deleteEvent, { isLoading: isDeleting }] = useDeleteEventMutation();
+interface DayInfo {
+  date: number;
+  dateString: string;
+  events: CalendarEvent[];
+  isToday: boolean;
+  isCurrentMonth: boolean;
+}
 
-  // ✅ Estados
-  const [mostrarFormulario, setMostrarFormulario] = useState(false);
-  const [editandoEvento, setEditandoEvento] = useState<Event | null>(null);
-  const [mensagem, setMensagem] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
-  const [eventoParaDeletar, setEventoParaDeletar] = useState<number | null>(null);
+// ============================================
+// CALENDAR COMPONENT
+// ============================================
 
-  const [formData, setFormData] = useState<EventFormData>({
-    escola: parseInt(currentSchoolId),
-    data: '',
-    evento: '',
-    tipo: 'feriado',
-  });
+export default function Calendar({
+  events = [],
+  onDayClick,
+  highlightToday = true,
+  eventColors = {
+    holiday: 'bg-red-500',
+    exam: 'bg-blue-500',
+    graduation: 'bg-purple-500',
+    cultural: 'bg-orange-500',
+  },
+  className = '',
+}: CalendarProps) {
+  
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
-  // ✅ Atualizar escola quando mudar
-  useEffect(() => {
-    if (currentSchoolId && !editandoEvento) {
-      setFormData(prev => ({ 
-        ...prev, 
-        escola: parseInt(currentSchoolId)
-      }));
-    }
-  }, [currentSchoolId, editandoEvento]);
+  // ============================================
+  // CONSTANTS
+  // ============================================
 
-  // ✅ Limpar mensagens automaticamente
-  useEffect(() => {
-    if (mensagem) {
-      const timer = setTimeout(() => setMensagem(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [mensagem]);
+  const DAYS_OF_WEEK: readonly string[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const MONTH_NAMES: readonly string[] = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
 
-  // ✅ Reset form
-  const resetForm = () => {
-    setFormData({
-      escola: parseInt(currentSchoolId),
-      data: '',
-      evento: '',
-      tipo: 'feriado',
+  // ============================================
+  // HELPERS
+  // ============================================
+
+  const getFirstDayOfMonth = (): number => {
+    return new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+  };
+
+  const getDaysInMonth = (): number => {
+    return new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+  };
+
+  const getDaysInPrevMonth = (): number => {
+    return new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 0).getDate();
+  };
+
+  const formatDateString = (year: number, month: number, day: number): string => {
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
+  const isToday = (dateString: string): boolean => {
+    const today = new Date();
+    const todayString = formatDateString(today.getFullYear(), today.getMonth(), today.getDate());
+    return dateString === todayString;
+  };
+
+  const getEventsForDate = (dateString: string): CalendarEvent[] => {
+    return events.filter(event => {
+      return dateString >= event.start_date && dateString <= event.end_date;
     });
-    setEditandoEvento(null);
-    setMostrarFormulario(false);
   };
 
-  // ✅ Carregar dados para edição
-  const iniciarEdicao = (evento: Event) => {
-    setFormData({
-      escola: evento.escola,
-      data: evento.data,
-      evento: evento.evento,
-      tipo: evento.tipo,
-    });
-    setEditandoEvento(evento);
-    setMostrarFormulario(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  // ============================================
+  // NAVIGATION
+  // ============================================
+
+  const goToPreviousMonth = (): void => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
   };
 
-  // ✅ Validação
-  const validarFormulario = (): string | null => {
-    if (!formData.data) return 'A data é obrigatória';
-    if (!formData.evento.trim()) return 'O nome do evento é obrigatório';
-    if (formData.evento.trim().length < 3) return 'O nome do evento deve ter no mínimo 3 caracteres';
-    return null;
+  const goToNextMonth = (): void => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
   };
 
-  // ✅ CRIAR novo evento
-  const adicionarEvento = async () => {
-    const erro = validarFormulario();
-    if (erro) {
-      setMensagem({ tipo: 'erro', texto: erro });
-      return;
-    }
-
-    try {
-      await createEvent(formData).unwrap();
-      setMensagem({ tipo: 'sucesso', texto: '✅ Evento adicionado com sucesso!' });
-      resetForm();
-      refetch();
-    } catch (error: any) {
-      console.error('Erro ao adicionar evento:', error);
-      setMensagem({ 
-        tipo: 'erro', 
-        texto: `❌ ${extractErrorMessage(error)}` 
-      });
-    }
+  const goToToday = (): void => {
+    setCurrentMonth(new Date());
   };
 
-  // ✅ ATUALIZAR evento
-  const atualizarEvento = async () => {
-    if (!editandoEvento) return;
+  // ============================================
+  // GENERATE CALENDAR DAYS
+  // ============================================
 
-    const erro = validarFormulario();
-    if (erro) {
-      setMensagem({ tipo: 'erro', texto: erro });
-      return;
-    }
+  const generateCalendarDays = (): DayInfo[] => {
+    const days: DayInfo[] = [];
+    const firstDay = getFirstDayOfMonth();
+    const daysInMonth = getDaysInMonth();
+    const daysInPrevMonth = getDaysInPrevMonth();
+    
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
 
-    try {
-      await updateEvent({ 
-        id: editandoEvento.id, 
-        data: formData 
-      }).unwrap();
+    // Previous month days
+    for (let i = firstDay - 1; i >= 0; i--) {
+      const day = daysInPrevMonth - i;
+      const prevMonth = month === 0 ? 11 : month - 1;
+      const prevYear = month === 0 ? year - 1 : year;
+      const dateString = formatDateString(prevYear, prevMonth, day);
       
-      setMensagem({ tipo: 'sucesso', texto: '✅ Evento atualizado com sucesso!' });
-      resetForm();
-      refetch();
-    } catch (error: any) {
-      console.error('Erro ao atualizar evento:', error);
-      setMensagem({ 
-        tipo: 'erro', 
-        texto: `❌ ${extractErrorMessage(error)}` 
+      days.push({
+        date: day,
+        dateString,
+        events: getEventsForDate(dateString),
+        isToday: highlightToday && isToday(dateString),
+        isCurrentMonth: false,
       });
     }
-  };
 
-  // ✅ DELETAR evento
-  const confirmarDelecao = (id: number) => {
-    setEventoParaDeletar(id);
-  };
-
-  const deletarEvento = async () => {
-    if (!eventoParaDeletar) return;
-
-    try {
-      await deleteEvent(eventoParaDeletar).unwrap();
-      setMensagem({ tipo: 'sucesso', texto: '✅ Evento deletado com sucesso!' });
-      setEventoParaDeletar(null);
-      refetch();
-    } catch (error: any) {
-      console.error('Erro ao deletar evento:', error);
-      setMensagem({ 
-        tipo: 'erro', 
-        texto: `❌ ${extractErrorMessage(error)}` 
+    // Current month days
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateString = formatDateString(year, month, day);
+      
+      days.push({
+        date: day,
+        dateString,
+        events: getEventsForDate(dateString),
+        isToday: highlightToday && isToday(dateString),
+        isCurrentMonth: true,
       });
     }
+
+    // Next month days (to complete the grid)
+    const remainingDays = 42 - days.length; // 6 rows * 7 days
+    for (let day = 1; day <= remainingDays; day++) {
+      const nextMonth = month === 11 ? 0 : month + 1;
+      const nextYear = month === 11 ? year + 1 : year;
+      const dateString = formatDateString(nextYear, nextMonth, day);
+      
+      days.push({
+        date: day,
+        dateString,
+        events: getEventsForDate(dateString),
+        isToday: highlightToday && isToday(dateString),
+        isCurrentMonth: false,
+      });
+    }
+
+    return days;
   };
 
-  // ✅ Formatar data brasileira
-  const formatarDataBrasileira = (data: string): string => {
-    const [ano, mes, dia] = data.split('-');
-    return `${dia}/${mes}/${ano}`;
-  };
+  const calendarDays = generateCalendarDays();
 
-  // ✅ Get emoji do tipo
-  const getEmojiTipo = (tipo: string): string => {
-    const emojis: Record<string, string> = {
-      'feriado': '📌',
-      'prova': '📝',
-      'formatura': '🎓',
-      'evento_cultural': '🎉',
-    };
-    return emojis[tipo] || '📌';
-  };
-
-  // ✅ Get label do tipo
-  const getLabelTipo = (tipo: string): string => {
-    const labels: Record<string, string> = {
-      'feriado': 'Feriado',
-      'prova': 'Prova/Avaliação',
-      'formatura': 'Formatura',
-      'evento_cultural': 'Evento Cultural',
-    };
-    return labels[tipo] || tipo;
-  };
-
-  // ✅ Filtrar eventos da escola atual
-  const eventosFiltrados = eventsData?.results.filter(
-    e => e.escola.toString() === currentSchoolId
-  ) || [];
-
-  // ✅ LOADING STATE
-  if (eventsIsLoading || schoolsLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <CalendarIcon className="mx-auto mb-4 h-12 w-12 animate-pulse text-blue-600" />
-          <p className="text-gray-600 font-semibold">Carregando eventos...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ✅ Sem escola cadastrada
-  if (!currentSchool) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
-        <div className="text-center max-w-md mx-4">
-          <CalendarIcon className="mx-auto mb-4 h-16 w-16 text-yellow-600" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Nenhuma escola cadastrada</h2>
-          <p className="text-gray-600 mb-6">
-            Entre em contato com o administrador.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // ============================================
+  // RENDER
+  // ============================================
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <div className="flex-1 flex flex-col overflow-hidden">
-        
-        {/* Content */}
-        <main className="flex-1 overflow-auto p-6">
-          <div className="max-w-6xl mx-auto space-y-6">
+    <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={goToPreviousMonth}
+          className="p-2 hover:bg-gray-100 rounded-lg transition"
+          aria-label="Previous month"
+        >
+          <ChevronLeft size={20} />
+        </button>
 
-            {/* Mensagens de Sucesso/Erro */}
-            {mensagem && (
-              <div className={`p-4 rounded-lg border-l-4 ${
-                mensagem.tipo === 'sucesso' 
-                  ? 'bg-green-50 border-green-500 text-green-700' 
-                  : 'bg-red-50 border-red-500 text-red-700'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold">{mensagem.texto}</span>
-                  <button onClick={() => setMensagem(null)} className="text-gray-500 hover:text-gray-700">
-                    <X size={18} />
-                  </button>
-                </div>
-              </div>
-            )}
+        <div className="flex items-center gap-3">
+          <h3 className="text-xl font-bold text-gray-900">
+            {MONTH_NAMES[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+          </h3>
+          <button
+            onClick={goToToday}
+            className="px-2.5 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition font-semibold"
+          >
+            Today
+          </button>
+        </div>
 
-            {/* Erro ao carregar */}
-            {eventsError && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-                <div className="flex items-center gap-2 text-red-700">
-                  <AlertCircle size={20} />
-                  <span className="font-semibold">Erro: {extractErrorMessage(eventsError)}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Botão para adicionar evento */}
-            {!mostrarFormulario && (
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setMostrarFormulario(true)}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold shadow-md"
-                >
-                  <Plus size={20} />
-                  Adicionar Evento
-                </button>
-              </div>
-            )}
-
-            {/* Formulário de Adicionar/Editar */}
-            {mostrarFormulario && (
-              <div className="bg-white p-6 rounded-lg shadow-md border-2 border-blue-200">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold text-gray-900">
-                    {editandoEvento ? '✏️ Editar Evento' : '➕ Adicionar Novo Evento'}
-                  </h3>
-                  <button
-                    onClick={resetForm}
-                    className="text-gray-500 hover:text-gray-700 transition"
-                  >
-                    <X size={24} />
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  {/* Campo Escola - só mostra se tiver múltiplas */}
-                  {hasMultipleSchools && (
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-2">Escola *</label>
-                      <select
-                        value={formData.escola}
-                        onChange={(e) => setFormData({ 
-                          ...formData, 
-                          escola: parseInt(e.target.value)
-                        })}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
-                      >
-                        {schools.map(escola => (
-                          <option key={escola.id} value={escola.id}>
-                            {escola.nome_escola}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-2">Data *</label>
-                      <input
-                        type="date"
-                        value={formData.data}
-                        onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-2">Evento *</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Prova Bimestral"
-                        value={formData.evento}
-                        onChange={(e) => setFormData({ ...formData, evento: e.target.value })}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-2">Tipo *</label>
-                      <select
-                        value={formData.tipo}
-                        onChange={(e) => setFormData({ ...formData, tipo: e.target.value as any })}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
-                      >
-                        <option value="feriado">📌 Feriado</option>
-                        <option value="prova">📝 Prova/Avaliação</option>
-                        <option value="formatura">🎓 Formatura</option>
-                        <option value="evento_cultural">🎉 Evento Cultural</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    {editandoEvento ? (
-                      <button
-                        onClick={atualizarEvento}
-                        disabled={isUpdating}
-                        className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Save size={20} />
-                        {isUpdating ? 'Atualizando...' : 'Atualizar Evento'}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={adicionarEvento}
-                        disabled={isCreating}
-                        className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allow"
-                      >
-                        <Plus size={20} />
-                        {isCreating ? 'Adicionando...' : 'Adicionar Evento'}
-                      </button>
-                    )}
-
-                    <button
-                      onClick={resetForm}
-                      className="bg-gray-400 text-white px-6 py-3 rounded-lg hover:bg-gray-500 transition font-semibold"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Tabela de Eventos */}
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gray-100 border-b-2 border-gray-300">
-                      <th className="p-4 text-left font-bold text-gray-900">Data</th>
-                      <th className="p-4 text-left font-bold text-gray-900">Evento</th>
-                      <th className="p-4 text-left font-bold text-gray-900">Tipo</th>
-                      <th className="p-4 text-left font-bold text-gray-900">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {eventosFiltrados.length > 0 ? (
-                      eventosFiltrados.map((evento) => (
-                        <tr key={evento.id} className="border-b hover:bg-gray-50 transition">
-                          <td className="p-4 font-medium text-gray-900">
-                            {formatarDataBrasileira(evento.data)}
-                          </td>
-                          <td className="p-4 text-gray-700">{evento.evento}</td>
-                          <td className="p-4">
-                            <span className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
-                              {getEmojiTipo(evento.tipo)} {getLabelTipo(evento.tipo)}
-                            </span>
-                          </td>
-                          <td className="p-4 flex gap-2">
-                            <button
-                              onClick={() => iniciarEdicao(evento)}
-                              className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline font-semibold text-sm transition"
-                            >
-                              <Edit2 size={16} />
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => confirmarDelecao(evento.id)}
-                              disabled={isDeleting}
-                              className="flex items-center gap-1 text-red-600 hover:text-red-800 hover:underline font-semibold text-sm transition disabled:opacity-50"
-                            >
-                              <Trash2 size={16} />
-                              Deletar
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={4} className="p-8 text-center text-gray-500">
-                          <CalendarIcon className="mx-auto mb-2 h-12 w-12 text-gray-400" />
-                          <p className="font-semibold">Nenhum evento cadastrado</p>
-                          <p className="text-sm">Adicione o primeiro evento ao calendário</p>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Info */}
-            {eventosFiltrados.length > 0 && (
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <p className="text-gray-700 font-semibold">
-                  Total de eventos: <span className="text-blue-600 font-bold">{eventosFiltrados.length}</span>
-                </p>
-              </div>
-            )}
-          </div>
-        </main>
+        <button
+          onClick={goToNextMonth}
+          className="p-2 hover:bg-gray-100 rounded-lg transition"
+          aria-label="Next month"
+        >
+          <ChevronRight size={20} />
+        </button>
       </div>
 
-      {/* Modal de Confirmação de Deleção */}
-      {eventoParaDeletar && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <AlertCircle className="text-red-600" size={24} />
-              <h3 className="text-xl font-bold text-gray-900">Confirmar Exclusão</h3>
-            </div>
-            <p className="text-gray-700 mb-6">
-              Tem certeza que deseja deletar este evento? Esta ação não pode ser desfeita.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setEventoParaDeletar(null)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={deletarEvento}
-                disabled={isDeleting}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold disabled:opacity-50"
-              >
-                {isDeleting ? 'Deletando...' : 'Deletar'}
-              </button>
-            </div>
+      {/* Days of week */}
+      <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+        {DAYS_OF_WEEK.map(day => (
+          <div
+            key={day}
+            className="text-center font-semibold text-gray-600 text-sm py-1.5"
+          >
+            {day}
           </div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-2">
+        {calendarDays.map((dayInfo, index) => {
+          const hasEvents = dayInfo.events.length > 0;
+          
+          return (
+            <button
+              key={index}
+              onClick={() => onDayClick?.(dayInfo.dateString)}
+              disabled={!dayInfo.isCurrentMonth}
+              className={`
+                h-20 p-2 border transition-all relative group
+                ${dayInfo.isToday 
+                  ? 'border-blue-500 bg-blue-50 font-bold ring-2 ring-blue-200' 
+                  : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                }
+                ${hasEvents ? 'bg-gradient-to-br from-purple-50 to-pink-50' : 'bg-white'}
+                ${!dayInfo.isCurrentMonth ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}
+                rounded-md
+              `}
+            >
+              {/* Day number */}
+              <div className={`text-sm font-medium ${
+                dayInfo.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
+              }`}>
+                {dayInfo.date}
+              </div>
+
+              {/* Event indicators */}
+              {hasEvents && (
+                <div className="absolute bottom-0.5 left-0.5 right-0.5 flex justify-center gap-0.5">
+                  {dayInfo.events.slice(0, 3).map((event, idx) => (
+                    <div
+                      key={idx}
+                      className={`w-1 h-1 rounded-full ${
+                        eventColors[event.event_type] || 'bg-gray-500'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Tooltip */}
+              {hasEvents && (
+                <div className="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-1 hidden group-hover:block pointer-events-none">
+                  <div className="bg-gray-900 text-white text-xs rounded py-1.5 px-2.5 whitespace-nowrap shadow-lg">
+                    {dayInfo.events.length} event{dayInfo.events.length > 1 ? 's' : ''}
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                  </div>
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Legend */}
+      <div className="mt-4 pt-3 border-t border-gray-200 flex flex-wrap gap-3 text-sm">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded-full bg-blue-500 ring-2 ring-blue-200"></div>
+          <span className="text-gray-600">Today</span>
         </div>
-      )}
+        {Object.entries(eventColors).map(([type, color]) => (
+          <div key={type} className="flex items-center gap-1.5">
+            <div className={`w-3 h-3 rounded-full ${color}`}></div>
+            <span className="text-gray-600 capitalize">{type}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

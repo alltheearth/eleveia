@@ -220,14 +220,14 @@ export default function Contacts() {
     }
   };
 
-  // Formatar data
-  const formatarData = (data: string): string => {
-    return new Date(data).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
+  // // Formatar data
+  // const formatarData = (data: string): string => {
+  //   return new Date(data).toLocaleDateString('pt-BR', {
+  //     day: '2-digit',
+  //     month: '2-digit',
+  //     year: 'numeric',
+  //   });
+  // };
 
   const formatarDataHora = (data: string): string => {
     return new Date(data).toLocaleDateString('pt-BR', {
