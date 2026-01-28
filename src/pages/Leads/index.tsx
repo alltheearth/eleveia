@@ -1,7 +1,7 @@
 // src/pages/Leads/index.tsx - ✅ CORRIGIDO
 
 import { useState, useEffect } from 'react';
-import { Edit2, Trash2, Plus, Users as UsersIcon, Download, TrendingUp } from 'lucide-react';
+import { Plus, Users as UsersIcon, Download, TrendingUp } from 'lucide-react';
 
 // Componentes de Layout
 import PageModel from '../../components/layout/PageModel';
