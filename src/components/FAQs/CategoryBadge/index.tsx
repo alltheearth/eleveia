@@ -1,31 +1,56 @@
-// src/components/tickets/PriorityBadge/index.tsx
-import Badge from '../../common/Badge';
+// src/components/FAQs/CategoryBadge/index.tsx - ✅ CORRIGIDO
+import React from 'react';
 import type { FAQ } from '../../../services';
+import Badge from '../../common/Badge';
+
+// ============================================
+// TYPES
+// ============================================
 
 interface CategoryBadgeProps {
-  category: FAQ['categoria'];
+  category: FAQ['category'];
   size?: 'sm' | 'md' | 'lg';
 }
 
-const CATEGORY_CONFIG = {
-  'Admissão': { variant: 'blue' as const, label: '📋 Admissão' },
-  'Valores': { variant: 'orange' as const, label: '💰 Valores' },
-  'Uniforme': { variant: 'blue' as const, label: '👔 Uniforme' },
-  'Horários': { variant: 'blue' as const, label: '⏰ Horários' },
-  'Documentação': { variant: 'orange' as const, label: '📄 Documentação' },
-  'Atividades': { variant: 'blue' as const, label: '🎯 Atividades' },
-  'Alimentação': { variant: 'blue' as const, label: '🍽️ Alimentação' },
-  'Transporte': { variant: 'blue' as const, label: '🚌 Transporte' },
-  'Pedagógico': { variant: 'orange' as const, label: '📚 Pedagógico' },
-  'Geral': { variant: 'red' as const, label: '❓ Geral' },
-} as const;
+// ============================================
+// CATEGORY CONFIG
+// ============================================
 
-export default function CategoryBadge({ category, size = 'md' }: CategoryBadgeProps) {
-  const config = CATEGORY_CONFIG[category];
+const CATEGORY_CONFIG: Record<FAQ['category'], {
+  color: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'gray' | 'orange';
+  icon?: string;
+}> = {
+  General: { color: 'gray', icon: '📋' },
+  Admission: { color: 'blue', icon: '🎓' },
+  Pricing: { color: 'green', icon: '💰' },
+  Uniform: { color: 'purple', icon: '👔' },
+  Schedule: { color: 'orange', icon: '📅' },
+  Documentation: { color: 'blue', icon: '📄' },
+  Activities: { color: 'yellow', icon: '🎨' },
+  Meals: { color: 'orange', icon: '🍽️' },
+  Transport: { color: 'purple', icon: '🚌' },
+  Pedagogical: { color: 'red', icon: '📚' },
+};
+
+// ============================================
+// COMPONENT
+// ============================================
+
+const CategoryBadge: React.FC<CategoryBadgeProps> = ({ 
+  category,
+  size = 'md' 
+}) => {
+  const config = CATEGORY_CONFIG[category] || CATEGORY_CONFIG.General;
   
   return (
-    <Badge variant={config.variant} size={size}>
-      {config.label}
+    <Badge 
+      variant={config.color} 
+      size={size}
+      icon={config.icon ? <span>{config.icon}</span> : undefined}
+    >
+      {category}
     </Badge>
   );
-}
+};
+
+export default CategoryBadge;

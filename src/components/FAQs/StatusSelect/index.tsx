@@ -1,32 +1,74 @@
-// src/components/FAQs/StatusSelect/index.tsx
+// src/components/FAQs/StatusSelect/index.tsx - ✅ VERSÃO FINAL CORRIGIDA
+import React from 'react';
+import type { FAQ } from '../../../services';
+import { 
+  FAQ_STATUS_STYLES, 
+  FAQ_STATUS_LABELS,
+  normalizeStatus,
+  getStatusIcon 
+} from '../../../utils/faqStatusMapper';
 
-import type { FAQ,} from '../../../services';
+// ============================================
+// TYPES
+// ============================================
 
 interface StatusSelectProps {
   value: FAQ['status'];
   onChange: (status: FAQ['status']) => void;
   disabled?: boolean;
+  variant?: 'default' | 'compact';
 }
 
-const STATUS_STYLES = {
-  inativa: 'bg-orange-100 text-orange-700',
-  ativa: 'bg-green-100 text-green-700',
-};
+// ============================================
+// COMPONENT
+// ============================================
 
-export default function StatusSelect({ 
+const StatusSelect: React.FC<StatusSelectProps> = ({ 
   value, 
   onChange, 
-  disabled = false 
-}: StatusSelectProps) {
+  disabled = false,
+  variant = 'default' 
+}) => {
+  // ✅ Normalizar valor para garantir compatibilidade
+  const normalizedValue = normalizeStatus(value);
+  
+  // ✅ Garantir que temos um estilo válido
+  const styleClass = FAQ_STATUS_STYLES[normalizedValue] || FAQ_STATUS_STYLES.active;
+  
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStatus = normalizeStatus(e.target.value);
+    onChange(newStatus);
+  };
+
+  const baseClasses = `
+    ${styleClass}
+    rounded-full font-semibold 
+    border-2
+    cursor-pointer 
+    focus:outline-none focus:ring-2 focus:ring-blue-300 
+    disabled:opacity-50 disabled:cursor-not-allowed
+    transition-all hover:brightness-95
+  `;
+
+  const sizeClasses = variant === 'compact' 
+    ? 'px-2 py-0.5 text-xs'
+    : 'px-3 py-1 text-sm';
+
   return (
     <select
-      value={value}
-      onChange={(e) => onChange(e.target.value as FAQ['status'])}
+      value={normalizedValue}
+      onChange={handleChange}
       disabled={disabled}
-      className={`${STATUS_STYLES[value]} px-3 py-1 rounded-full font-semibold text-sm border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed`}
+      className={`${baseClasses} ${sizeClasses}`}
     >
-      <option value="ativa"> Ativa</option>
-      <option value="inativa"> Inativa</option>
+      <option value="active">
+        {getStatusIcon('active')} {FAQ_STATUS_LABELS.active}
+      </option>
+      <option value="inactive">
+        {getStatusIcon('inactive')} {FAQ_STATUS_LABELS.inactive}
+      </option>
     </select>
   );
-}
+};
+
+export default StatusSelect;

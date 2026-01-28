@@ -1,111 +1,190 @@
-import PageModel from "../../components/layout/PageModel"
-import { Edit2, HelpCircle, Plus, Trash2 } from "lucide-react"
-import { Badge, ConfirmDialog, DataTable, EmptyState, FilterBar, FormModal, LoadingState, MessageAlert, StatCard } from "../../components/common"
+// src/pages/FAQs/index.tsx - ✅ VERSÃO FINAL COM TIPOS CORRIGIDOS
+import { Edit2, HelpCircle, Plus, Trash2 } from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { 
-  useGetFAQsQuery,
-  useCreateFAQMutation,
-  useUpdateFAQMutation,
-  useDeleteFAQMutation,
-  extractErrorMessage,
-  type FAQ, 
-  type FAQFilters,
-} from '../../services';
+  ConfirmDialog, 
+  DataTable, 
+  EmptyState, 
+  FilterBar, 
+  FormModal, 
+  LoadingState, 
+  MessageAlert 
+} from "../../components/common";
+import StatCard from "../../components/common/Statistics/StatCard";
+import PageModel from "../../components/layout/PageModel";
 import { useCurrentSchool } from "../../hooks/useCurrentSchool";
-import { useEffect, useState } from "react";
+import { 
+  extractErrorMessage,
+  useCreateFAQMutation,
+  useDeleteFAQMutation,
+  useGetFAQsQuery,
+  useUpdateFAQMutation,
+  type FAQ, 
+} from '../../services';
 
-// Componentes locais
-const StatusSelect = ({ value, onChange, disabled = false }: { 
-  value: FAQ['status']; 
+// ============================================
+// UTILS
+// ============================================
+
+const FAQ_STATUS_STYLES: Record<FAQ['status'], string> = {
+  active: 'bg-green-100 text-green-700 border-green-300',
+  inactive: 'bg-orange-100 text-orange-700 border-orange-300',
+};
+
+const FAQ_STATUS_LABELS: Record<FAQ['status'], string> = {
+  active: 'Ativa',
+  inactive: 'Inativa',
+};
+
+const CATEGORY_COLORS: Record<FAQ['category'], 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'gray' | 'orange'> = {
+  General: 'gray',
+  Admission: 'blue',
+  Pricing: 'green',
+  Uniform: 'purple',
+  Schedule: 'orange',
+  Documentation: 'blue',
+  Activities: 'yellow',
+  Meals: 'orange',
+  Transport: 'purple',
+  Pedagogical: 'red',
+};
+
+// ============================================
+// TYPES
+// ============================================
+
+interface FAQFormData {
+  question: string;
+  answer: string;
+  category: FAQ['category'];
+  status: FAQ['status'];
+  school: number;
+}
+
+interface StatusSelectProps {
+  value: FAQ['status'];
   onChange: (status: FAQ['status']) => void;
   disabled?: boolean;
-}) => {
-  const styles = {
-    active: 'bg-green-100 text-green-700',
-    inactive: 'bg-orange-100 text-orange-700',
-  };
+}
 
+interface CategoryBadgeProps {
+  category: FAQ['category'];
+}
+
+interface FAQFormProps {
+  formData: FAQFormData;
+  onChange: (field: keyof FAQFormData, value: any) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  isLoading?: boolean;
+  isEditing?: boolean;
+}
+
+// ============================================
+// SUB-COMPONENTS
+// ============================================
+
+const StatusSelect: React.FC<StatusSelectProps> = ({ 
+  value, 
+  onChange, 
+  disabled = false 
+}) => {
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as FAQ['status'])}
       disabled={disabled}
-      className={`${styles[value]} px-3 py-1 rounded-full font-semibold text-sm border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50`}
+      className={`
+        ${FAQ_STATUS_STYLES[value]}
+        px-3 py-1 rounded-full font-semibold text-sm 
+        border-2 cursor-pointer 
+        focus:outline-none focus:ring-2 focus:ring-blue-300 
+        disabled:opacity-50 disabled:cursor-not-allowed
+        transition-all
+      `}
     >
-      <option value="active">Active</option>
-      <option value="inactive">Inactive</option>
+      <option value="active">✅ {FAQ_STATUS_LABELS.active}</option>
+      <option value="inactive">⛔ {FAQ_STATUS_LABELS.inactive}</option>
     </select>
   );
 };
 
-const CategoryBadge = ({ category }: { category: FAQ['category'] }) => {
+const CategoryBadge: React.FC<CategoryBadgeProps> = ({ category }) => {
+  const color = CATEGORY_COLORS[category];
+  
+  const colorClasses: Record<typeof color, string> = {
+    blue: 'bg-blue-100 text-blue-700',
+    green: 'bg-green-100 text-green-700',
+    yellow: 'bg-yellow-100 text-yellow-700',
+    red: 'bg-red-100 text-red-700',
+    purple: 'bg-purple-100 text-purple-700',
+    gray: 'bg-gray-100 text-gray-700',
+    orange: 'bg-orange-100 text-orange-700',
+  };
+
   return (
-    <Badge variant="blue" size="md">
+    <span className={`inline-flex items-center gap-1.5 rounded-full font-semibold px-3 py-1 text-sm ${colorClasses[color]}`}>
       {category}
-    </Badge>
+    </span>
   );
 };
 
-const FAQForm = ({ formData, onChange, onSubmit, onCancel, isLoading, isEditing }: {
-  formData: {
-    question: string;
-    answer: string;
-    category: FAQ['category'];
-    status: FAQ['status'];
-  };
-  onChange: (field: string, value: any) => void;
-  onSubmit: () => void;
-  onCancel: () => void;
-  isLoading?: boolean;
-  isEditing?: boolean;
+const FAQForm: React.FC<FAQFormProps> = ({ 
+  formData, 
+  onChange, 
+  onSubmit, 
+  onCancel, 
+  isLoading = false,
+  isEditing = false 
 }) => {
   return (
     <div className="space-y-4">
       <div>
         <label className="block text-gray-700 font-semibold mb-2">
-          Question * (min. 10 characters)
+          Pergunta * (mín. 10 caracteres)
         </label>
         <input
           type="text"
-          placeholder="Ex: How does admission work?"
+          placeholder="Ex: Como funciona a matrícula?"
           value={formData.question}
           onChange={(e) => onChange('question', e.target.value)}
           className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
         />
-        <p className="text-sm text-gray-500 mt-1">{formData.question.length} characters</p>
+        <p className="text-sm text-gray-500 mt-1">{formData.question.length} caracteres</p>
       </div>
 
       <div>
         <label className="block text-gray-700 font-semibold mb-2">
-          Answer * (min. 20 characters)
+          Resposta * (mín. 20 caracteres)
         </label>
         <textarea
-          placeholder="Enter the complete answer..."
+          placeholder="Digite a resposta completa..."
           value={formData.answer}
           onChange={(e) => onChange('answer', e.target.value)}
           rows={5}
           className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
         />
-        <p className="text-sm text-gray-500 mt-1">{formData.answer.length} characters</p>
+        <p className="text-sm text-gray-500 mt-1">{formData.answer.length} caracteres</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-gray-700 font-semibold mb-2">Category</label>
+          <label className="block text-gray-700 font-semibold mb-2">Categoria</label>
           <select
             value={formData.category}
-            onChange={(e) => onChange('category', e.target.value)}
+            onChange={(e) => onChange('category', e.target.value as FAQ['category'])}
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
           >
-            <option value="General">General</option>
-            <option value="Admission">Admission</option>
-            <option value="Pricing">Pricing</option>
-            <option value="Uniform">Uniform</option>
-            <option value="Schedule">Schedule</option>
-            <option value="Documentation">Documentation</option>
-            <option value="Activities">Activities</option>
-            <option value="Meals">Meals</option>
-            <option value="Transport">Transport</option>
-            <option value="Pedagogical">Pedagogical</option>
+            <option value="General">Geral</option>
+            <option value="Admission">Matrícula</option>
+            <option value="Pricing">Mensalidade</option>
+            <option value="Uniform">Uniforme</option>
+            <option value="Schedule">Horários</option>
+            <option value="Documentation">Documentação</option>
+            <option value="Activities">Atividades</option>
+            <option value="Meals">Alimentação</option>
+            <option value="Transport">Transporte</option>
+            <option value="Pedagogical">Pedagógico</option>
           </select>
         </div>
 
@@ -113,11 +192,11 @@ const FAQForm = ({ formData, onChange, onSubmit, onCancel, isLoading, isEditing 
           <label className="block text-gray-700 font-semibold mb-2">Status</label>
           <select
             value={formData.status}
-            onChange={(e) => onChange('status', e.target.value)}
+            onChange={(e) => onChange('status', e.target.value as FAQ['status'])}
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
           >
-            <option value="active">✅ Active</option>
-            <option value="inactive">⛔ Inactive</option>
+            <option value="active">✅ Ativa</option>
+            <option value="inactive">⛔ Inativa</option>
           </select>
         </div>
       </div>
@@ -130,8 +209,8 @@ const FAQForm = ({ formData, onChange, onSubmit, onCancel, isLoading, isEditing 
         >
           {isEditing ? <Edit2 size={20} /> : <Plus size={20} />}
           {isLoading 
-            ? (isEditing ? 'Updating...' : 'Creating...')
-            : (isEditing ? 'Update' : 'Create FAQ')
+            ? (isEditing ? 'Atualizando...' : 'Criando...')
+            : (isEditing ? 'Atualizar' : 'Criar FAQ')
           }
         </button>
 
@@ -140,60 +219,80 @@ const FAQForm = ({ formData, onChange, onSubmit, onCancel, isLoading, isEditing 
           disabled={isLoading}
           className="px-6 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition font-semibold disabled:opacity-50"
         >
-          Cancel
+          Cancelar
         </button>
       </div>
     </div>
   );
 };
 
-// Componente Principal
-const FAQs = () => {
+// ============================================
+// MAIN COMPONENT
+// ============================================
+
+const FAQsPage: React.FC = () => {
+  // ============================================
+  // HOOKS
+  // ============================================
+  
   const { 
     currentSchool, 
     currentSchoolId,
     isLoading: schoolsLoading 
   } = useCurrentSchool();
   
+  // ============================================
+  // STATE
+  // ============================================
+  
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | FAQ['status']>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [editingFAQ, setEditingFAQ] = useState<FAQ | null>(null);
   const [faqToDelete, setFaqToDelete] = useState<FAQ | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FAQFormData>({
     question: "",
     answer: "",
-    category: "General" as FAQ['category'],
-    status: 'active' as FAQ['status'],
-    school: parseInt(currentSchoolId),
-  });    
+    category: "General",
+    status: 'active',
+    school: parseInt(currentSchoolId) || 0,
+  });
 
-  const filters: FAQFilters = {
-    search: searchTerm || undefined,
-    status: statusFilter === 'active' ? 'active' : statusFilter === 'inactive' ? 'inactive' : undefined,
-  };
-  
+  // ============================================
+  // API
+  // ============================================
+
   const { 
     data: faqsData, 
     isLoading: faqsLoading, 
     error: fetchError,
     refetch 
-  } = useGetFAQsQuery(filters);
-
-  const stats = {
-    total: faqsData?.results.length || 0,
-    active: faqsData?.results.filter(f => f.status === 'active').length || 0,
-    inactive: faqsData?.results.filter(f => f.status === 'inactive').length || 0,
-  };
+  } = useGetFAQsQuery({
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+  });
 
   const [createFAQ, { isLoading: isCreating }] = useCreateFAQMutation();
   const [updateFAQ, { isLoading: isUpdating }] = useUpdateFAQMutation();
   const [deleteFAQ, { isLoading: isDeleting }] = useDeleteFAQMutation();
   
+  // ============================================
+  // COMPUTED
+  // ============================================
+
   const faqs = faqsData?.results || [];
+
+  const stats = {
+    total: faqs.length,
+    active: faqs.filter(f => f.status === 'active').length,
+    inactive: faqs.filter(f => f.status === 'inactive').length,
+  };
+
+  // ============================================
+  // EFFECTS
+  // ============================================
 
   useEffect(() => {
     if (currentSchoolId && !editingFAQ) {
@@ -208,27 +307,31 @@ const FAQs = () => {
     }
   }, [message]);
 
-  const resetForm = () => {
+  // ============================================
+  // HANDLERS
+  // ============================================
+
+  const resetForm = (): void => {
     setFormData({
       question: "",
       answer: "",
       category: "General",
       status: 'active',
-      school: parseInt(currentSchoolId),
+      school: parseInt(currentSchoolId) || 0,
     });
     setEditingFAQ(null);
     setShowForm(false);
   };
 
   const validate = (): string | null => {
-    if (!formData.question.trim()) return 'Question is required';
-    if (formData.question.trim().length < 10) return 'Question must be at least 10 characters';
-    if (!formData.answer.trim()) return 'Answer is required';
-    if (formData.answer.trim().length < 20) return 'Answer must be at least 20 characters';
+    if (!formData.question.trim()) return 'Pergunta é obrigatória';
+    if (formData.question.trim().length < 10) return 'Pergunta deve ter no mínimo 10 caracteres';
+    if (!formData.answer.trim()) return 'Resposta é obrigatória';
+    if (formData.answer.trim().length < 20) return 'Resposta deve ter no mínimo 20 caracteres';
     return null;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (): Promise<void> => {
     const error = validate();
     if (error) {
       setMessage({ type: 'error', text: error });
@@ -238,10 +341,10 @@ const FAQs = () => {
     try {
       if (editingFAQ) {
         await updateFAQ({ id: editingFAQ.id, data: formData }).unwrap();
-        setMessage({ type: 'success', text: '✅ FAQ updated successfully!' });
+        setMessage({ type: 'success', text: '✅ FAQ atualizada com sucesso!' });
       } else {
         await createFAQ(formData).unwrap();
-        setMessage({ type: 'success', text: '✅ FAQ created successfully!' });
+        setMessage({ type: 'success', text: '✅ FAQ criada com sucesso!' });
       }
       resetForm();
       refetch();
@@ -250,7 +353,7 @@ const FAQs = () => {
     }
   };
 
-  const handleEdit = (faq: FAQ) => {
+  const handleEdit = (faq: FAQ): void => {
     setFormData({
       question: faq.question,
       answer: faq.answer,
@@ -263,12 +366,12 @@ const FAQs = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (): Promise<void> => {
     if (!faqToDelete) return;
 
     try {
       await deleteFAQ(faqToDelete.id).unwrap();
-      setMessage({ type: 'success', text: '✅ FAQ deleted successfully!' });
+      setMessage({ type: 'success', text: '✅ FAQ deletada com sucesso!' });
       setFaqToDelete(null);
       refetch();
     } catch (err) {
@@ -276,8 +379,21 @@ const FAQs = () => {
     }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleString('en-US', {
+  const handleStatusChange = async (faq: FAQ, newStatus: FAQ['status']): Promise<void> => {
+    try {
+      await updateFAQ({ 
+        id: faq.id, 
+        data: { status: newStatus } 
+      }).unwrap();
+      setMessage({ type: 'success', text: '✅ Status atualizado!' });
+      refetch();
+    } catch (err) {
+      setMessage({ type: 'error', text: `❌ ${extractErrorMessage(err)}` });
+    }
+  };
+
+  const formatDate = (date: string): string => {
+    return new Date(date).toLocaleString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -286,27 +402,40 @@ const FAQs = () => {
     });
   };
 
+  // ============================================
+  // RENDER - LOADING
+  // ============================================
+
   if (faqsLoading || schoolsLoading) {
     return (
       <LoadingState 
-        message="Loading FAQs..."
+        message="Carregando FAQs..."
         icon={<HelpCircle size={48} className="text-blue-600" />}
       />
     );
   }
 
+  // ============================================
+  // RENDER - NO SCHOOL
+  // ============================================
+
   if (!currentSchool) {
     return (
       <EmptyState
         icon={<HelpCircle size={64} className="text-yellow-600" />}
-        title="No FAQs registered"
-        description="Contact the administrator."
+        title="Nenhuma escola cadastrada"
+        description="Entre em contato com o administrador."
       />
     );
   }
 
+  // ============================================
+  // RENDER - MAIN
+  // ============================================
+
   return (
     <PageModel>
+      {/* Alerts */}
       {message && (
         <MessageAlert
           type={message.type}
@@ -318,78 +447,64 @@ const FAQs = () => {
       {fetchError && (
         <MessageAlert
           type="error"
-          message={`Error: ${extractErrorMessage(fetchError)}`}
+          message={`Erro: ${extractErrorMessage(fetchError)}`}
           dismissible={false}
         />
       )}
 
-        {/* Header */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h1 className="text-2xl font-bold text-gray-900">Documentos</h1>
-                      <p className="text-gray-600 mt-1">Gerencie seus arquivos e pastas</p>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {/* <button
-                        onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition"
-                        title={viewMode === 'grid' ? 'Visualização em lista' : 'Visualização em grade'}
-                      >
-                        {viewMode === 'grid' ? <List size={20} /> : <Grid size={20} />}
-                      </button>*/}
-                    </div> 
-                  </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Total" value={stats.total} color="blue" icon={<HelpCircle size={24} />} />
-        <StatCard label="Active" value={stats.active} color="green" />
-        <StatCard label="Inactive" value={stats.inactive} color="yellow" />
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">FAQs</h1>
+          <p className="text-gray-600 mt-1">Gerencie perguntas frequentes</p>
+        </div>
       </div>
 
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatCard 
+          label="Total" 
+          value={stats.total} 
+          color="blue" 
+          icon={<HelpCircle size={24} />} 
+        />
+        <StatCard 
+          label="Ativas" 
+          value={stats.active} 
+          color="green" 
+        />
+        <StatCard 
+          label="Inativas" 
+          value={stats.inactive} 
+          color="yellow" 
+        />
+      </div>
+
+      {/* Filters */}
       <FilterBar
         fields={[
           {
             type: 'search',
             name: 'search',
-            placeholder: 'Search by question or answer...',
+            placeholder: 'Buscar por pergunta ou resposta...',
             value: searchTerm,
             onChange: setSearchTerm,
           },
           {
             type: 'select',
-            name: 'category',
-            value: categoryFilter,
-            onChange: setCategoryFilter,
-            options: [
-              { label: 'All Categories', value: 'all' },
-              { label: 'Admission', value: 'Admission' },
-              { label: 'Pricing', value: 'Pricing' },
-              { label: 'Uniform', value: 'Uniform' },
-              { label: 'Schedule', value: 'Schedule' },
-              { label: 'Documentation', value: 'Documentation' },
-              { label: 'Activities', value: 'Activities' },
-              { label: 'Meals', value: 'Meals' },
-              { label: 'Transport', value: 'Transport' },
-              { label: 'Pedagogical', value: 'Pedagogical' },
-              { label: 'General', value: 'General' },
-            ],
-          },
-          {
-            type: 'select',
             name: 'status',
             value: statusFilter,
-            onChange: setStatusFilter,
+            onChange: (value) => setStatusFilter(value as 'all' | FAQ['status']),
             options: [
-              { label: 'All Status', value: 'all' },
-              { label: 'Active', value: 'active' },
-              { label: 'Inactive', value: 'inactive' }
+              { label: 'Todos os Status', value: 'all' },
+              { label: 'Ativas', value: 'active' },
+              { label: 'Inativas', value: 'inactive' }
             ],
           }
         ]}
         actions={[
           {
-            label: 'New FAQ',
+            label: 'Nova FAQ',
             onClick: () => setShowForm(true),
             icon: <Plus size={18} />,
             variant: 'primary',
@@ -398,52 +513,61 @@ const FAQs = () => {
         onClear={() => {
           setSearchTerm('');
           setStatusFilter('all');
-          setCategoryFilter('all');
         }}
       />
 
-      <DataTable
+      {/* Table */}
+      <DataTable<FAQ>
         columns={[
-          { key: 'id', label: '#', width: '80px', sortable: true },
+          { 
+            key: 'id', 
+            label: '#', 
+            width: '80px', 
+            sortable: true 
+          },
           { 
             key: 'question', 
-            label: 'Question', 
+            label: 'Pergunta', 
             sortable: true,
-            render: (value) => <span className="font-medium text-gray-900">{value}</span>
+            render: (value) => (
+              <span className="font-medium text-gray-900">
+                {String(value)}
+              </span>
+            )
           },
           { 
             key: 'answer', 
-            label: 'Answer',
-            render: (value) => <span className="text-sm text-gray-600 line-clamp-2">{value}</span>
+            label: 'Resposta',
+            render: (value) => (
+              <span className="text-sm text-gray-600 line-clamp-2">
+                {String(value)}
+              </span>
+            )
           },
           { 
             key: 'category', 
-            label: 'Category', 
-            render: (value) => <CategoryBadge category={value} /> 
+            label: 'Categoria', 
+            render: (value) => <CategoryBadge category={value as FAQ['category']} /> 
           },
           { 
             key: 'status', 
             label: 'Status',
             render: (value, row) => (
               <StatusSelect
-                value={value}
-                onChange={async (newStatus: FAQ['status']) => {
-                  try {
-                    await updateFAQ({ id: row.id, data: { ...row, status: newStatus } }).unwrap();
-                    setMessage({ type: 'success', text: '✅ Status updated!' });
-                    refetch();
-                  } catch (err) {
-                    setMessage({ type: 'error', text: `❌ ${extractErrorMessage(err)}` });
-                  }
-                }}            
+                value={value as FAQ['status']}
+                onChange={(newStatus) => handleStatusChange(row, newStatus)}
               />
             )
           },
           { 
             key: 'created_at', 
-            label: 'Created at',
+            label: 'Criado em',
             sortable: true,
-            render: (value) => <span className="text-sm">{formatDate(value)}</span>
+            render: (value) => (
+              <span className="text-sm">
+                {formatDate(String(value))}
+              </span>
+            )
           },
         ]}
         data={faqs}
@@ -453,38 +577,40 @@ const FAQs = () => {
             icon: <Edit2 size={18} />,
             onClick: handleEdit,
             variant: 'primary',
-            label: 'Edit',
+            label: 'Editar',
           },
           {
             icon: <Trash2 size={18} />,
             onClick: (faq) => setFaqToDelete(faq),
             variant: 'danger',
-            label: 'Delete',
+            label: 'Deletar',
           },
         ]}
-        emptyMessage="No FAQs found"
+        emptyMessage="Nenhuma FAQ encontrada"
         emptyIcon={<HelpCircle size={48} className="text-gray-400" />}
       />
 
+      {/* Results Info */}
       {faqs.length > 0 && (
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
           <p className="text-gray-700 font-semibold">
-            Showing <span className="text-blue-600 font-bold">{faqs.length}</span> of{' '}
+            Mostrando <span className="text-blue-600 font-bold">{faqs.length}</span> de{' '}
             <span className="text-blue-600 font-bold">{stats.total}</span> FAQs
           </p>
         </div>
       )}
 
+      {/* Form Modal */}
       <FormModal
         isOpen={showForm}
-        title={editingFAQ ? '✏️ Edit FAQ' : '➕ New FAQ'}
-        subtitle={editingFAQ ? 'Update FAQ information' : 'Fill in new FAQ data'}
+        title={editingFAQ ? '✏️ Editar FAQ' : '➕ Nova FAQ'}
+        subtitle={editingFAQ ? 'Atualize as informações da FAQ' : 'Preencha os dados da nova FAQ'}
         onClose={resetForm}
         size="lg"
       >
         <FAQForm
           formData={formData}
-          onChange={(field: string, value: any) => setFormData(prev => ({ ...prev, [field]: value }))}
+          onChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
           onSubmit={handleSubmit}
           onCancel={resetForm}
           isLoading={isCreating || isUpdating}
@@ -492,19 +618,20 @@ const FAQs = () => {
         />
       </FormModal>
 
+      {/* Delete Confirmation */}
       <ConfirmDialog
         isOpen={!!faqToDelete}
-        title="Confirm Deletion"
-        message={`Are you sure you want to delete the FAQ "${faqToDelete?.question}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title="Confirmar Exclusão"
+        message={`Tem certeza que deseja deletar a FAQ "${faqToDelete?.question}"? Esta ação não pode ser desfeita.`}
+        confirmLabel="Deletar"
+        cancelLabel="Cancelar"
         onConfirm={handleDelete}
         onCancel={() => setFaqToDelete(null)}
         isLoading={isDeleting}
         variant="danger"
       />
     </PageModel>
-  )
-}
+  );
+};
 
-export default FAQs;
+export default FAQsPage;
