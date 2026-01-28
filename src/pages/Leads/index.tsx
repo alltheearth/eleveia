@@ -32,6 +32,7 @@ import {
   type Lead,
   type LeadFilters
 } from '../../services';
+import LeadsKanbanView from './components/LeadsKanbanView';
 
 interface LeadFormData {
   nome: string;
@@ -319,7 +320,8 @@ export default function Leads() {
                     </div> 
                   </div>
       {/* Estatísticas */}
-      {stats && (
+      
+      {stats ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
           <StatCard 
             label="Total" 
@@ -358,8 +360,49 @@ export default function Leads() {
             description="Não convertidos" 
           />
         </div>
+      ): 
+      (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <StatCard 
+            label="Total" 
+            value={0} 
+            color="gray" 
+            icon={<UsersIcon size={24} />} 
+          />
+          <StatCard 
+            label="Novos" 
+            value={0}
+            color="blue" 
+            description="Aguardando contato" 
+          />
+          <StatCard 
+            label="Em Contato" 
+            value={0}
+            color="yellow" 
+            description="Sendo trabalhados" 
+          />
+          <StatCard 
+            label="Qualificados" 
+            value={0}
+            color="purple" 
+            description="Prontos para conversão" 
+          />
+          <StatCard 
+            label="Conversão" 
+            value={0}
+            color="green" 
+            description="Matriculados" 
+          />
+          <StatCard 
+            label="Perdidos" 
+            value={0} 
+            color="red" 
+            description="Não convertidos" 
+          />
+        </div>
       )}
 
+      <LeadsKanbanView />
       {/* Taxa de Conversão */}
       {stats && stats.taxa_conversao > 0 && (
         <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
