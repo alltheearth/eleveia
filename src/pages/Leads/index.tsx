@@ -1,4 +1,5 @@
-// src/pages/Leads/index.tsx - ✅ REFATORADO COM VIEW TOGGLE
+// src/pages/Leads/index.tsx - ✅ CORRIGIDO
+
 import { useState, useEffect } from 'react';
 import { Edit2, Trash2, Plus, Users as UsersIcon, Download, TrendingUp } from 'lucide-react';
 
@@ -38,7 +39,7 @@ import {
 } from '../../services';
 
 // ============================================
-// TYPES
+// TYPES - ✅ CORRIGIDO
 // ============================================
 
 interface LeadFormData {
@@ -53,7 +54,7 @@ interface LeadFormData {
 
 interface Message {
   type: 'success' | 'error';
-  text: string;
+  text: string; // ✅ CORRIGIDO: era 'texto'
 }
 
 // ============================================
@@ -75,7 +76,7 @@ export default function Leads() {
   // STATE
   // ============================================
   
-  const [viewMode, setViewMode] = useState<ViewMode>('grid'); // ✅ NOVO - 'grid' = Kanban, 'list' = List
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -164,7 +165,7 @@ export default function Leads() {
   const handleSubmit = async () => {
     const erro = validarFormulario();
     if (erro) {
-      setMensagem({ tipo: 'error', texto: erro });
+      setMensagem({ type: 'error', text: erro }); // ✅ CORRIGIDO
       return;
     }
 
@@ -177,18 +178,18 @@ export default function Leads() {
             escola: parseInt(currentSchoolId),
           }
         }).unwrap();
-        setMensagem({ tipo: 'success', texto: '✅ Lead atualizado com sucesso!' });
+        setMensagem({ type: 'success', text: '✅ Lead atualizado com sucesso!' }); // ✅ CORRIGIDO
       } else {
         await createLead({
           ...formData,
           escola: parseInt(currentSchoolId),
         }).unwrap();
-        setMensagem({ tipo: 'success', texto: '✅ Lead criado com sucesso!' });
+        setMensagem({ type: 'success', text: '✅ Lead criado com sucesso!' }); // ✅ CORRIGIDO
       }
       resetForm();
       refetch();
     } catch (err) {
-      setMensagem({ tipo: 'error', texto: `❌ ${extractErrorMessage(err)}` });
+      setMensagem({ type: 'error', text: `❌ ${extractErrorMessage(err)}` }); // ✅ CORRIGIDO
     }
   };
 
@@ -212,21 +213,21 @@ export default function Leads() {
 
     try {
       await deleteLead(leadParaDeletar.id).unwrap();
-      setMensagem({ tipo: 'success', texto: '✅ Lead deletado com sucesso!' });
+      setMensagem({ type: 'success', text: '✅ Lead deletado com sucesso!' }); // ✅ CORRIGIDO
       setLeadParaDeletar(null);
       refetch();
     } catch (err) {
-      setMensagem({ tipo: 'error', texto: `❌ ${extractErrorMessage(err)}` });
+      setMensagem({ type: 'error', text: `❌ ${extractErrorMessage(err)}` }); // ✅ CORRIGIDO
     }
   };
 
-  const handleMudarStatus = async (id: number, fromStatus: string, toStatus: string) => {
+  const handleMudarStatus = async (id: number, _fromStatus: string, toStatus: string) => {
     try {
       await changeStatus({ id, status: toStatus as Lead['status'] }).unwrap();
-      setMensagem({ tipo: 'success', texto: '✅ Status atualizado!' });
+      setMensagem({ type: 'success', text: '✅ Status atualizado!' }); // ✅ CORRIGIDO
       refetch();
     } catch (err) {
-      setMensagem({ tipo: 'error', texto: `❌ ${extractErrorMessage(err)}` });
+      setMensagem({ type: 'error', text: `❌ ${extractErrorMessage(err)}` }); // ✅ CORRIGIDO
     }
   };
 
@@ -236,12 +237,12 @@ export default function Leads() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `leads_${currentSchool?.nome_escola || 'escola'}_${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `leads_${currentSchool?.school_name || 'escola'}_${new Date().toISOString().split('T')[0]}.csv`; // ✅ CORRIGIDO: school_name
       a.click();
       window.URL.revokeObjectURL(url);
-      setMensagem({ tipo: 'success', texto: '✅ CSV exportado!' });
+      setMensagem({ type: 'success', text: '✅ CSV exportado!' }); // ✅ CORRIGIDO
     } catch (err) {
-      setMensagem({ tipo: 'error', texto: '❌ Erro ao exportar CSV' });
+      setMensagem({ type: 'error', text: '❌ Erro ao exportar CSV' }); // ✅ CORRIGIDO
     }
   };
 
@@ -287,8 +288,8 @@ export default function Leads() {
       {/* Mensagens */}
       {mensagem && (
         <MessageAlert
-          type={mensagem.tipo}
-          message={mensagem.texto}
+          type={mensagem.type}
+          message={mensagem.text}
           onClose={() => setMensagem(null)}
         />
       )}
@@ -306,20 +307,18 @@ export default function Leads() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
-          <p className="text-gray-600 mt-1">Manage your lead pipeline</p>
+          <p className="text-gray-600 mt-1">Gerencie seu funil de leads</p>
         </div>
         
-        {/* ✅ View Toggle Button */}
         <ViewToggle
           viewMode={viewMode}
           onToggle={toggleViewMode}
-          gridLabel="Kanban view"
-          listLabel="List view"
+          gridLabel="Visão Kanban"
+          listLabel="Visão em lista"
         />
       </div>
 
       {/* Estatísticas */}
-        
       {stats ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
           <StatCard 
@@ -359,8 +358,7 @@ export default function Leads() {
             description="Não convertidos" 
           />
         </div>
-      ): 
-      (
+      ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
           <StatCard 
             label="Total" 
@@ -401,7 +399,6 @@ export default function Leads() {
         </div>
       )}
 
-
       {/* Taxa de Conversão */}
       {stats && stats.taxa_conversao > 0 && (
         <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
@@ -421,18 +418,15 @@ export default function Leads() {
         </div>
       )}
 
-      {/* ✅ Conditional Rendering: Kanban OR List */}
+      {/* Conditional Rendering: Kanban OR List */}
       {viewMode === 'grid' ? (
-        /* Kanban View */
         <LeadsKanbanView
           leads={leads}
           onLeadClick={handleEditar}
           onChangeStatus={handleMudarStatus}
         />
       ) : (
-        /* List View */
         <>
-          {/* Filtros - Only show in list view */}
           <FilterBar
             fields={[
               {
@@ -478,7 +472,6 @@ export default function Leads() {
             }}
           />
 
-          {/* Lista de Leads */}
           <LeadsListView
             leads={leads}
             onEdit={handleEditar}
@@ -487,7 +480,6 @@ export default function Leads() {
             formatDate={formatarData}
           />
 
-          {/* Info de Resultados */}
           {leads.length > 0 && (
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
               <p className="text-gray-700 font-semibold">
@@ -534,12 +526,12 @@ export default function Leads() {
 }
 
 // ============================================
-// COMPONENTE DE FORMULÁRIO
+// COMPONENTE DE FORMULÁRIO - ✅ CORRIGIDO
 // ============================================
 
 interface LeadFormProps {
   formData: LeadFormData;
-  onChange: (field: string, value: any) => void;
+  onChange: (field: keyof LeadFormData, value: any) => void; // ✅ CORRIGIDO
   onSubmit: () => void;
   onCancel: () => void;
   isLoading?: boolean;
@@ -598,7 +590,7 @@ function LeadForm({
           <label className="block text-gray-700 font-semibold mb-2">Origem</label>
           <select
             value={formData.origem}
-            onChange={(e) => onChange('origem', e.target.value)}
+            onChange={(e) => onChange('origem', e.target.value as Lead['origem'])}
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
           >
             <option value="site">Site</option>
@@ -617,7 +609,7 @@ function LeadForm({
         <label className="block text-gray-700 font-semibold mb-2">Status</label>
         <select
           value={formData.status}
-          onChange={(e) => onChange('status', e.target.value)}
+          onChange={(e) => onChange('status', e.target.value as Lead['status'])}
           className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
         >
           <option value="novo">🆕 Novo</option>
