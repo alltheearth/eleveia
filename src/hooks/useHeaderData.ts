@@ -113,7 +113,7 @@ export function useHeaderData(): HeaderData {
 
     return {
       id: currentSchool.id,
-      name: currentSchool.nome_escola,
+      name: currentSchool.school_name,
       logo: currentSchool.logo,
     };
   }, [currentSchool]);

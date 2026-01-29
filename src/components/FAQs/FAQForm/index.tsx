@@ -6,7 +6,7 @@ interface FAQFormProps {
   formData: {
     pergunta: string;
     resposta: string;
-    categoria: FAQ['categoria'];
+    categoria: FAQ['category'];
     status: FAQ['status'];
   };
   onChange: (field: string, value: string) => void;
