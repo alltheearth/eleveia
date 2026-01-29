@@ -12,7 +12,7 @@ import Leads from '../pages/Leads';
 import Contatos from '../pages/Contacts';
 import Eventos from '../pages/Calendar';
 import FAQs from '../pages/FAQs';
-import Tickets from '../pages/Tickets';
+// import Tickets from '../pages/Tickets';
 import Perfil from '../pages/Perfil';
 import InformacoesEscola from '../components/Information';
 import DocumentsPage from '../pages/Documents';
@@ -36,7 +36,7 @@ const AppRoutes = () => {
           <Route path="/contatos" element={<Contatos />} />
           <Route path="/eventos" element={<Eventos />} />
           <Route path="/faqs" element={<FAQs />} />
-          <Route path="/tickets" element={<Tickets />} />
+          {/* <Route path="/tickets" element={<Tickets />} /> */}
           <Route path="/perfil" element={<Perfil />} />
           <Route path="/configuracoes" element={<InformacoesEscola />} />
           <Route path="/documentos" element={<DocumentsPage />} />
