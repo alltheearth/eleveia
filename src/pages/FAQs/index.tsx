@@ -1,6 +1,6 @@
-// src/pages/FAQs/index.tsx - ✅ VERSÃO FINAL COM TIPOS CORRIGIDOS
-import { Edit2, HelpCircle, Plus, Trash2 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+// src/pages/FAQs/index.tsx - ✅ COM FILTROS FUNCIONANDO
+import { Edit2, HelpCircle, Plus, Trash2, Search } from "lucide-react";
+import React, { useEffect, useState, useMemo } from "react";
 import { 
   ConfirmDialog, 
   DataTable, 
@@ -23,8 +23,21 @@ import {
 } from '../../services';
 
 // ============================================
-// UTILS
+// CONSTANTS
 // ============================================
+
+const CATEGORIES: FAQ['category'][] = [
+  'General',
+  'Admission',
+  'Pricing',
+  'Uniform',
+  'Schedule',
+  'Documentation',
+  'Activities',
+  'Meals',
+  'Transport',
+  'Pedagogical',
+];
 
 const FAQ_STATUS_STYLES: Record<FAQ['status'], string> = {
   active: 'bg-green-100 text-green-700 border-green-300',
@@ -175,16 +188,9 @@ const FAQForm: React.FC<FAQFormProps> = ({
             onChange={(e) => onChange('category', e.target.value as FAQ['category'])}
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
           >
-            <option value="General">Geral</option>
-            <option value="Admission">Matrícula</option>
-            <option value="Pricing">Mensalidade</option>
-            <option value="Uniform">Uniforme</option>
-            <option value="Schedule">Horários</option>
-            <option value="Documentation">Documentação</option>
-            <option value="Activities">Atividades</option>
-            <option value="Meals">Alimentação</option>
-            <option value="Transport">Transporte</option>
-            <option value="Pedagogical">Pedagógico</option>
+            {CATEGORIES.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
           </select>
         </div>
 
@@ -247,7 +253,7 @@ const FAQsPage: React.FC = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | FAQ['status']>('all');
-  // const [categoryFilter, setCategoryFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | FAQ['category']>('all'); // ✅ ATIVADO
   const [showForm, setShowForm] = useState(false);
   const [editingFAQ, setEditingFAQ] = useState<FAQ | null>(null);
   const [faqToDelete, setFaqToDelete] = useState<FAQ | null>(null);
@@ -279,16 +285,37 @@ const FAQsPage: React.FC = () => {
   const [deleteFAQ, { isLoading: isDeleting }] = useDeleteFAQMutation();
   
   // ============================================
-  // COMPUTED
+  // COMPUTED - ✅ FILTROS APLICADOS AQUI
   // ============================================
 
-  const faqs = faqsData?.results || [];
+  const filteredFAQs = useMemo(() => {
+    if (!faqsData?.results) return [];
 
-  const stats = {
-    total: faqs.length,
-    active: faqs.filter(f => f.status === 'active').length,
-    inactive: faqs.filter(f => f.status === 'inactive').length,
-  };
+    return faqsData.results.filter(faq => {
+      // Filtro de busca por texto
+      const matchesSearch = searchTerm === '' || 
+        faq.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        faq.answer.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Filtro de categoria
+      const matchesCategory = categoryFilter === 'all' || faq.category === categoryFilter;
+
+      // Filtro de status (já vem da API, mas garantimos aqui também)
+      const matchesStatus = statusFilter === 'all' || faq.status === statusFilter;
+
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [faqsData?.results, searchTerm, categoryFilter, statusFilter]);
+
+  const stats = useMemo(() => {
+    const allFAQs = faqsData?.results || [];
+    return {
+      total: allFAQs.length,
+      active: allFAQs.filter(f => f.status === 'active').length,
+      inactive: allFAQs.filter(f => f.status === 'inactive').length,
+      filtered: filteredFAQs.length, // ✅ NOVO: mostra quantos passaram no filtro
+    };
+  }, [faqsData?.results, filteredFAQs]);
 
   // ============================================
   // EFFECTS
@@ -392,6 +419,13 @@ const FAQsPage: React.FC = () => {
     }
   };
 
+  // ✅ NOVO: Limpar todos os filtros
+  const handleClearFilters = (): void => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setCategoryFilter('all');
+  };
+
   const formatDate = (date: string): string => {
     return new Date(date).toLocaleString('pt-BR', {
       day: '2-digit',
@@ -461,7 +495,7 @@ const FAQsPage: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
           label="Total" 
           value={stats.total} 
@@ -476,11 +510,17 @@ const FAQsPage: React.FC = () => {
         <StatCard 
           label="Inativas" 
           value={stats.inactive} 
-          color="yellow" 
+          color="orange" 
+        />
+        <StatCard 
+          label="Filtradas" 
+          value={stats.filtered} 
+          color="purple"
+          description="Resultados visíveis"
         />
       </div>
 
-      {/* Filters */}
+      {/* Filters - ✅ COM BUSCA E CATEGORIA */}
       <FilterBar
         fields={[
           {
@@ -489,6 +529,17 @@ const FAQsPage: React.FC = () => {
             placeholder: 'Buscar por pergunta ou resposta...',
             value: searchTerm,
             onChange: setSearchTerm,
+            icon: <Search className="absolute left-3 top-3 text-gray-400" size={20} />,
+          },
+          {
+            type: 'select',
+            name: 'category',
+            value: categoryFilter,
+            onChange: (value) => setCategoryFilter(value as 'all' | FAQ['category']),
+            options: [
+              { label: 'Todas as Categorias', value: 'all' },
+              ...CATEGORIES.map(cat => ({ label: cat, value: cat })),
+            ],
           },
           {
             type: 'select',
@@ -510,13 +561,11 @@ const FAQsPage: React.FC = () => {
             variant: 'primary',
           },
         ]}
-        onClear={() => {
-          setSearchTerm('');
-          setStatusFilter('all');
-        }}
+        onClear={handleClearFilters}
+        showClearButton={searchTerm !== '' || statusFilter !== 'all' || categoryFilter !== 'all'}
       />
 
-      {/* Table */}
+      {/* Table - ✅ USANDO filteredFAQs */}
       <DataTable<FAQ>
         columns={[
           { 
@@ -570,7 +619,7 @@ const FAQsPage: React.FC = () => {
             )
           },
         ]}
-        data={faqs}
+        data={filteredFAQs}
         keyExtractor={(faq) => faq.id.toString()}
         actions={[
           {
@@ -590,12 +639,34 @@ const FAQsPage: React.FC = () => {
         emptyIcon={<HelpCircle size={48} className="text-gray-400" />}
       />
 
-      {/* Results Info */}
-      {faqs.length > 0 && (
+      {/* Results Info - ✅ ATUALIZADO */}
+      {filteredFAQs.length > 0 && (
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
           <p className="text-gray-700 font-semibold">
-            Mostrando <span className="text-blue-600 font-bold">{faqs.length}</span> de{' '}
+            Mostrando <span className="text-blue-600 font-bold">{filteredFAQs.length}</span> de{' '}
             <span className="text-blue-600 font-bold">{stats.total}</span> FAQs
+            {(searchTerm || categoryFilter !== 'all' || statusFilter !== 'all') && (
+              <span className="text-gray-600 text-sm ml-2">
+                (filtrado)
+              </span>
+            )}
+          </p>
+        </div>
+      )}
+
+      {/* Empty State quando filtros não retornam resultados */}
+      {filteredFAQs.length === 0 && stats.total > 0 && (
+        <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200 text-center">
+          <HelpCircle className="mx-auto mb-2 text-yellow-600" size={48} />
+          <p className="text-gray-700 font-semibold">Nenhuma FAQ encontrada com os filtros aplicados</p>
+          <p className="text-sm text-gray-600 mt-1">
+            Tente ajustar os filtros ou{' '}
+            <button 
+              onClick={handleClearFilters}
+              className="text-blue-600 hover:text-blue-700 font-semibold underline"
+            >
+              limpar todos os filtros
+            </button>
           </p>
         </div>
       )}
