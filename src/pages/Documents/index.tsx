@@ -1,10 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { 
   FolderPlus, 
   Upload, 
   Trash2, 
-  Edit2, 
-  Download,
+  Edit2,
   Folder,
   File,
   FileText,
@@ -18,7 +17,6 @@ import {
   Search,
   Grid,
   List,
-  MoreVertical,
   Image
 } from 'lucide-react';
 
