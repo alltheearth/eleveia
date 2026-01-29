@@ -1,4 +1,4 @@
-// src/store/slices/authSlice.ts - ✅ SOLUÇÃO FINAL
+// src/store/slices/authSlice.ts - ✅ CORRIGIDO
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { authApi, type User } from '../../services';
 
@@ -110,18 +110,18 @@ const authSlice = createSlice({
       }
     );
 
-    // ✅ Login falhou
+    // ✅ Login falhou - SEM estado não usado
     builder.addMatcher(
       authApi.endpoints.login.matchRejected,
-      (state, action) => {
+      (_state, action) => { // ✅ CORRIGIDO: prefixo com _
         console.error('❌ [AUTH] Login rejected:', action);
       }
     );
 
-    // ✅ Registro falhou
+    // ✅ Registro falhou - SEM estado não usado
     builder.addMatcher(
       authApi.endpoints.register.matchRejected,
-      (state, action) => {
+      (_state, action) => { // ✅ CORRIGIDO: prefixo com _
         console.error('❌ [AUTH] Registro rejected:', action);
       }
     );

@@ -1,7 +1,7 @@
-// src/store/index.ts - ✅ CORRIGIDO COM UZAPI
+// src/store/index.ts - ✅ VERSÃO LIMPA
 import { configureStore } from '@reduxjs/toolkit';
 import { baseApi } from '../services/api/baseApi';
-import { uzapiApi } from '../services/uzapiApi'; // ✅ IMPORTAR UZAPI
+import { uzapiApi } from '../services/uzapiApi';
 import authReducer from './slices/authSlice';
 
 /**
@@ -12,7 +12,7 @@ const store = configureStore({
   reducer: {
     // API (RTK Query)
     [baseApi.reducerPath]: baseApi.reducer,
-    [uzapiApi.reducerPath]: uzapiApi.reducer, // ✅ ADICIONAR UZAPI
+    [uzapiApi.reducerPath]: uzapiApi.reducer,
     
     // Apenas estado de autenticação (user, token)
     auth: authReducer,
@@ -21,7 +21,7 @@ const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(baseApi.middleware)
-      .concat(uzapiApi.middleware), // ✅ ADICIONAR UZAPI MIDDLEWARE
+      .concat(uzapiApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

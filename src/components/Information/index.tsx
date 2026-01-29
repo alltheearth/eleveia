@@ -8,21 +8,21 @@ import {
 import { Save, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface FormData {
-  nome_escola: string;
-  cnpj: string;
-  telefone: string;
+  school_name: string;           // ✅ CORRIGIDO: era nome_escola
+  tax_id: string;                // ✅ CORRIGIDO: era cnpj
+  phone: string;                 // ✅ CORRIGIDO: era telefone
   email: string;
   website: string;
-  cep: string;
-  endereco: string;
-  cidade: string;
-  estado: string;
-  complemento: string;
-  sobre: string;
-  niveis_ensino: {
-    infantil: boolean;
-    fundamental: boolean;
-    medio: boolean;
+  postal_code: string;           // ✅ CORRIGIDO: era cep
+  street_address: string;        // ✅ CORRIGIDO: era endereco
+  city: string;                  // ✅ CORRIGIDO: era cidade
+  state: string;                 // ✅ CORRIGIDO: era estado
+  address_complement: string;    // ✅ CORRIGIDO: era complemento
+  about: string;                 // ✅ CORRIGIDO: era sobre
+  teaching_levels: {
+    elementary: boolean;
+    high_school: boolean;
+    preschool: boolean;
   };
 }
 
@@ -48,21 +48,21 @@ export default function Information() {
   const [mensagemErro, setMensagemErro] = useState<string>('');
 
   const [formData, setFormData] = useState<FormData>({
-    nome_escola: '',
-    cnpj: '',
-    telefone: '',
+    school_name: '',
+    tax_id: '',
+    phone: '',
     email: '',
     website: '',
-    cep: '',
-    endereco: '',
-    cidade: '',
-    estado: '',
-    complemento: '',
-    sobre: '',
-    niveis_ensino: {
-      infantil: false,
-      fundamental: false,
-      medio: false,
+    postal_code: '',
+    street_address: '',
+    city: '',
+    state: '',
+    address_complement: '',
+    about: '',
+    teaching_levels: {
+      elementary: false,
+      high_school: false,
+      preschool: false,
     }
   });
 
@@ -73,21 +73,21 @@ export default function Information() {
       setEscolaAtualId(escola.id);
       
       setFormData({
-        nome_escola: escola.nome_escola || '',
-        cnpj: escola.cnpj || '',
-        telefone: escola.telefone || '',
+        school_name: escola.school_name || '',           // ✅ CORRIGIDO
+        tax_id: escola.tax_id || '',                     // ✅ CORRIGIDO
+        phone: escola.phone || '',                       // ✅ CORRIGIDO
         email: escola.email || '',
         website: escola.website || '',
-        cep: escola.cep || '',
-        endereco: escola.endereco || '',
-        cidade: escola.cidade || '',
-        estado: escola.estado || '',
-        complemento: escola.complemento || '',
-        sobre: escola.sobre || '',
-        niveis_ensino: {
-          infantil: escola.niveis_ensino?.infantil || false,
-          fundamental: escola.niveis_ensino?.fundamental || false,
-          medio: escola.niveis_ensino?.medio || false,
+        postal_code: escola.postal_code || '',           // ✅ CORRIGIDO
+        street_address: escola.street_address || '',     // ✅ CORRIGIDO
+        city: escola.city || '',
+        state: escola.state || '',
+        address_complement: escola.address_complement || '', // ✅ CORRIGIDO
+        about: escola.about || '',                       // ✅ CORRIGIDO
+        teaching_levels: {
+          elementary: escola.teaching_levels?.elementary || false,
+          high_school: escola.teaching_levels?.high_school || false,
+          preschool: escola.teaching_levels?.preschool || false,
         }
       });
 
@@ -117,12 +117,12 @@ export default function Information() {
     }));
   };
 
-  const handleCheckboxChange = (field: keyof FormData['niveis_ensino']): void => {
+  const handleCheckboxChange = (field: keyof FormData['teaching_levels']): void => {
     setFormData(prev => ({
       ...prev,
-      niveis_ensino: {
-        ...prev.niveis_ensino,
-        [field]: !prev.niveis_ensino[field]
+      teaching_levels: {
+        ...prev.teaching_levels,
+        [field]: !prev.teaching_levels[field]
       }
     }));
   };
@@ -135,18 +135,18 @@ export default function Information() {
     }
 
     try {
-      // ✅ Campos que podem ser editados por gestores
+      // ✅ Campos editáveis (mantém nomes em inglês para API)
       const dataToUpdate = {
-        telefone: formData.telefone,
+        phone: formData.phone,
         email: formData.email,
         website: formData.website,
-        cep: formData.cep,
-        endereco: formData.endereco,
-        cidade: formData.cidade,
-        estado: formData.estado,
-        complemento: formData.complemento,
-        sobre: formData.sobre,
-        niveis_ensino: formData.niveis_ensino,
+        postal_code: formData.postal_code,
+        street_address: formData.street_address,
+        city: formData.city,
+        state: formData.state,
+        address_complement: formData.address_complement,
+        about: formData.about,
+        teaching_levels: formData.teaching_levels,
       };
 
       await updateSchool({
@@ -156,7 +156,7 @@ export default function Information() {
 
       setMensagemSucesso('✅ Dados salvos com sucesso!');
       setMensagemErro('');
-      refetch(); // Atualizar dados
+      refetch();
       
     } catch (err: any) {
       const errorMsg = extractErrorMessage(err);
@@ -210,8 +210,6 @@ export default function Information() {
     );
   }
 
-  const escola = schoolsData.results[0];
-
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
       <main className="flex-1 overflow-auto p-6">
@@ -260,15 +258,15 @@ export default function Information() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <InputField 
                     label="Nome da Escola" 
-                    value={formData.nome_escola}
-                    onChange={(e) => handleInputChange('nome_escola', e.target.value)}
+                    value={formData.school_name}
+                    onChange={(e) => handleInputChange('school_name', e.target.value)}
                     readOnly
                     disabled
                   />
                   <InputField 
                     label="CNPJ" 
-                    value={formData.cnpj}
-                    onChange={(e) => handleInputChange('cnpj', e.target.value)}
+                    value={formData.tax_id}
+                    onChange={(e) => handleInputChange('tax_id', e.target.value)}
                     readOnly
                     disabled
                   />
@@ -284,8 +282,8 @@ export default function Information() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <InputField 
                     label="Telefone" 
-                    value={formData.telefone}
-                    onChange={(e) => handleInputChange('telefone', e.target.value)}
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
                     placeholder="(11) 98765-4321"
                   />
                   <InputField 
@@ -313,33 +311,33 @@ export default function Information() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <InputField 
                     label="CEP" 
-                    value={formData.cep}
-                    onChange={(e) => handleInputChange('cep', e.target.value)}
+                    value={formData.postal_code}
+                    onChange={(e) => handleInputChange('postal_code', e.target.value)}
                     placeholder="12345-678"
                   />
                   <InputField 
                     label="Endereço" 
-                    value={formData.endereco}
-                    onChange={(e) => handleInputChange('endereco', e.target.value)}
+                    value={formData.street_address}
+                    onChange={(e) => handleInputChange('street_address', e.target.value)}
                     placeholder="Rua das Flores, 123"
                   />
                   <InputField 
                     label="Cidade" 
-                    value={formData.cidade}
-                    onChange={(e) => handleInputChange('cidade', e.target.value)}
+                    value={formData.city}
+                    onChange={(e) => handleInputChange('city', e.target.value)}
                     placeholder="São Paulo"
                   />
                   <InputField 
                     label="Estado" 
-                    value={formData.estado}
-                    onChange={(e) => handleInputChange('estado', e.target.value)}
+                    value={formData.state}
+                    onChange={(e) => handleInputChange('state', e.target.value)}
                     placeholder="SP"
                   />
                   <div className="md:col-span-2">
                     <InputField 
                       label="Complemento" 
-                      value={formData.complemento}
-                      onChange={(e) => handleInputChange('complemento', e.target.value)}
+                      value={formData.address_complement}
+                      onChange={(e) => handleInputChange('address_complement', e.target.value)}
                       placeholder="Sala 10"
                     />
                   </div>
@@ -355,8 +353,8 @@ export default function Information() {
                 <textarea 
                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
                   rows={4}
-                  value={formData.sobre}
-                  onChange={(e) => handleInputChange('sobre', e.target.value)}
+                  value={formData.about}
+                  onChange={(e) => handleInputChange('about', e.target.value)}
                   placeholder="Conte a história da sua escola..."
                 ></textarea>
               </div>
@@ -368,8 +366,8 @@ export default function Information() {
                   <label className="flex items-center gap-2">
                     <input 
                       type="checkbox" 
-                      checked={formData.niveis_ensino.infantil}
-                      onChange={() => handleCheckboxChange('infantil')}
+                      checked={formData.teaching_levels.preschool}
+                      onChange={() => handleCheckboxChange('preschool')}
                       className="w-4 h-4 rounded"
                     />
                     <span className="text-gray-700 font-medium">Educação Infantil</span>
@@ -377,8 +375,8 @@ export default function Information() {
                   <label className="flex items-center gap-2">
                     <input 
                       type="checkbox" 
-                      checked={formData.niveis_ensino.fundamental}
-                      onChange={() => handleCheckboxChange('fundamental')}
+                      checked={formData.teaching_levels.elementary}
+                      onChange={() => handleCheckboxChange('elementary')}
                       className="w-4 h-4 rounded"
                     />
                     <span className="text-gray-700 font-medium">Ensino Fundamental</span>
@@ -386,8 +384,8 @@ export default function Information() {
                   <label className="flex items-center gap-2">
                     <input 
                       type="checkbox" 
-                      checked={formData.niveis_ensino.medio}
-                      onChange={() => handleCheckboxChange('medio')}
+                      checked={formData.teaching_levels.high_school}
+                      onChange={() => handleCheckboxChange('high_school')}
                       className="w-4 h-4 rounded"
                     />
                     <span className="text-gray-700 font-medium">Ensino Médio</span>
