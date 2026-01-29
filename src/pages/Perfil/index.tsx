@@ -1,6 +1,6 @@
 // src/pages/Perfil/index.tsx - ✅ ARQUIVO COMPLETO
 import { useState, useEffect } from 'react';
-import { User as UserIcon, Mail, Building2, Shield, Save, AlertCircle, CheckCircle, X } from 'lucide-react';
+import {  Mail, Building2, Shield, Save, AlertCircle, CheckCircle, X } from 'lucide-react';
 import { useGetProfileQuery, useUpdateProfileMutation, extractErrorMessage } from '../../services';
 
 export default function Perfil() {

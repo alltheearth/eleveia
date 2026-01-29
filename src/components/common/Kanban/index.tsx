@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import KanbanColumn from './KanbanColumn';
-import type { KanbanConfig, DragState, KanbanCard } from './types';
+import type { KanbanConfig, DragState } from './types';
 
 /**
  * ============================================

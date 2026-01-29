@@ -1,6 +1,5 @@
 // src/components/common/MessageAlert/index.tsx
 import { CheckCircle, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
-import type { ReactNode } from 'react';
 
 interface MessageAlertProps {
   type: 'success' | 'error' | 'warning' | 'info';

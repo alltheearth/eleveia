@@ -1,6 +1,6 @@
 // src/pages/Tickets/index.tsx - ✅ REFATORADO
 import { useState, useEffect } from 'react';
-import { Search, Plus, Download, Edit2, Trash2, Ticket as TicketIcon } from 'lucide-react';
+import {  Download, Edit2, Trash2, Ticket as TicketIcon, Plus } from 'lucide-react';
 
 // Componentes de Layout
 import PageModel from '../../components/layout/PageModel';
@@ -28,7 +28,7 @@ import {
   useUpdateTicketMutation,
   useDeleteTicketMutation,
   useChangeTicketStatusMutation,
-  useGetTicketStatsQuery,
+  // useGetTicketStatsQuery,
   useExportTicketsCSVMutation,
   extractErrorMessage,
   type Ticket,
@@ -222,7 +222,7 @@ const stats = converteStats();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `tickets_${currentSchool?.nome_escola || 'escola'}_${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `tickets_${currentSchool?.school_name || 'escola'}_${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
       window.URL.revokeObjectURL(url);
       setMensagem({ tipo: 'success', texto: '✅ CSV exportado!' });

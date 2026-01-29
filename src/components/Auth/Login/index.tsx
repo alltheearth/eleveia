@@ -22,7 +22,7 @@ export default function Login() {
 
   const [telaAtual, setTelaAtual] = useState<'login' | 'registro'>('login');
   const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [mostrarSenhaConfirm, setMostrarSenhaConfirm] = useState(false);
+  const [mostrarSenhaConfirm] = useState(false);
   
   const [loginData, setLoginData] = useState({
     username: '',
