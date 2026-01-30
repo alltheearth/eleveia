@@ -1,7 +1,7 @@
 // src/components/Documents/DocumentsGrid/index.tsx
 import { Folder } from 'lucide-react';
 import type { FileSystemItem } from '../../../hooks/useFileSystem';
-import DocumentItem from '../DocumentItem';
+import DocumentGridItem from '../DocumentGridItem';
 
 interface DocumentsGridProps {
   items: FileSystemItem[];
@@ -36,11 +36,10 @@ export default function DocumentsGrid({
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
       {items.map(item => (
-        <DocumentItem
+        <DocumentGridItem
           key={item.id}
           item={item}
           isSelected={selectedItems.includes(item.id)}
-          viewMode="grid"
           onSelect={onSelect}
           onDoubleClick={onDoubleClick}
           onRename={onRename}
