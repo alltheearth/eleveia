@@ -1,7 +1,7 @@
 // src/components/Documents/DocumentsList/index.tsx
 import { Folder } from 'lucide-react';
 import type { FileSystemItem } from '../../../hooks/useFileSystem';
-import DocumentListItem from '../DocumentListItem';
+import DocumentItem from '../DocumentItem';
 
 interface DocumentsListProps {
   items: FileSystemItem[];
@@ -54,10 +54,11 @@ export default function DocumentsList({
         </thead>
         <tbody>
           {items.map(item => (
-            <DocumentListItem
+            <DocumentItem
               key={item.id}
               item={item}
               isSelected={selectedItems.includes(item.id)}
+              viewMode="list"
               onSelect={onSelect}
               onDoubleClick={onDoubleClick}
               onRename={onRename}
