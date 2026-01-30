@@ -1,7 +1,6 @@
 // src/components/Documents/DocumentItem/index.tsx
 import { Folder, Check, Edit2 } from 'lucide-react';
 import type { FileSystemItem } from '../../../hooks/useFileSystem';
-import { getFileIcon, formatFileSize } from '../../../utils/fileSystem';
 
 interface DocumentItemProps {
   item: FileSystemItem;
