@@ -1,384 +1,244 @@
-// src/components/Auth/Login/index.tsx - ✅ CORRIGIDO COM LOGS
-import { useState, useEffect } from 'react';
+// src/pages/Login/index.tsx - VERSÃO PROFISSIONAL
+
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, User, ArrowRight, CheckCircle } from 'lucide-react';
-import { 
-  useLoginMutation, 
-  useRegisterMutation,
-  extractErrorMessage 
-} from '../../../services';
-import { useSelector } from 'react-redux';
-import type { RootState } from '../../../store';
+import { Eye, EyeOff, Lock, Mail, ArrowRight, CheckCircle2, Shield, Zap, Users } from 'lucide-react';
+import { useLoginMutation } from '../../../services';
 
-export default function Login() {
+export default function LoginProfessional() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
-
-  console.log('🔐 [LOGIN] Componente renderizado, isAuthenticated:', isAuthenticated);
-
-  // ✅ RTK Query Hooks
-  const [login, { isLoading: isLoggingIn }] = useLoginMutation();
-  const [register, { isLoading: isRegistering }] = useRegisterMutation();
-
-  const [telaAtual, setTelaAtual] = useState<'login' | 'registro'>('login');
-  const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [mostrarSenhaConfirm] = useState(false);
+  const [login, { isLoading }] = useLoginMutation();
   
-  const [loginData, setLoginData] = useState({
+  const [formData, setFormData] = useState({
     username: '',
     password: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
 
-  const [registroData, setRegistroData] = useState({
-    first_name: '',
-    last_name: '',
-    username: '',
-    email: '',
-    password: '',
-    password2: '',
-    termo: false
-  });
-
-  const [erro, setErro] = useState('');
-
-  // ✅ Redirecionar quando autenticado
-  useEffect(() => {
-    console.log('🔍 [LOGIN] useEffect autenticação, isAuthenticated:', isAuthenticated);
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
     
-    if (isAuthenticated) {
-      console.log('✅ [LOGIN] Usuário autenticado, redirecionando para /dashboard...');
-      navigate('/dashboard', { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
-
-  // ✅ Handler de Login
-  const handleLogin = async () => {
-    setErro('');
-
-    // Validação
-    if (!loginData.username || !loginData.password) {
-      setErro('Preencha todos os campos');
-      return;
-    }
-
     try {
-      console.log('🔐 [LOGIN] Tentando login com:', loginData.username);
-      
-      const result = await login({
-        username: loginData.username,
-        password: loginData.password,
-      }).unwrap();
-
-      console.log('✅ [LOGIN] Login bem-sucedido!');
-      console.log('📦 [LOGIN] Dados recebidos:', result);
-      
-      // Verificar se token foi salvo
-      const tokenSalvo = localStorage.getItem('eleve_token');
-      console.log('💾 [LOGIN] Token no localStorage:', tokenSalvo ? tokenSalvo.substring(0, 20) + '...' : 'NÃO ENCONTRADO!');
-      
-      // Não precisa fazer navigate manualmente, o useEffect acima fará isso
-      
+      await login(formData).unwrap();
+      navigate('/dashboard');
     } catch (err: any) {
-      console.error('❌ [LOGIN] Erro no login:', err);
-      setErro(extractErrorMessage(err));
+      setError('Usuário ou senha incorretos');
     }
   };
 
-  // ✅ Handler de Registro
-  const handleRegistro = async () => {
-    setErro('');
-
-    // Validação
-    if (!registroData.first_name || !registroData.last_name || 
-        !registroData.username || !registroData.email || !registroData.password) {
-      setErro('Preencha todos os campos obrigatórios');
-      return;
-    }
-
-    if (registroData.password !== registroData.password2) {
-      setErro('As senhas não coincidem');
-      return;
-    }
-
-    if (registroData.password.length < 8) {
-      setErro('A senha deve ter no mínimo 8 caracteres');
-      return;
-    }
-
-    if (!registroData.termo) {
-      setErro('Você deve aceitar os termos de uso');
-      return;
-    }
-
-    try {
-      console.log('📝 [LOGIN] Tentando registro...');
+  return (
+    <div className="min-h-screen flex">
       
-      await register({
-        first_name: registroData.first_name,
-        last_name: registroData.last_name,
-        username: registroData.username,
-        email: registroData.email,
-        password: registroData.password,
-        password2: registroData.password2,
-      }).unwrap();
-
-      console.log('✅ [LOGIN] Registro bem-sucedido');
-      // Redirecionamento acontece pelo useEffect acima
-      
-    } catch (err: any) {
-      console.error('❌ [LOGIN] Erro no registro:', err);
-      setErro(extractErrorMessage(err));
-    }
-  };
-
-  // ✅ TELA DE LOGIN
-  if (telaAtual === 'login') {
-    return (
-      <div className="flex h-screen bg-gradient-to-br from-blue-600 to-blue-900">
-        {/* Lado Esquerdo - Informações */}
-        <div className="hidden lg:flex w-1/2 flex-col justify-center items-center text-white p-12">
-          <div className="max-w-md">
-            <div className="text-5xl font-bold mb-6">🎓</div>
-            <h1 className="text-4xl font-bold mb-4">ELEVE.IA</h1>
-            <p className="text-xl mb-8 opacity-90">
-              Transforme sua escola com um agente de IA inteligente
-            </p>
-
-            <div className="space-y-4">
-              <div className="flex gap-3">
-                <CheckCircle size={24} className="flex-shrink-0" />
-                <span>Responda dúvidas automaticamente 24/7</span>
+      {/* ========== LADO ESQUERDO: Hero Section ========== */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 relative overflow-hidden">
+        
+        {/* Padrão decorativo de fundo */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-300 rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20 text-white">
+          
+          {/* Logo + Nome */}
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-14 h-14 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20">
+                <span className="text-3xl">🎓</span>
               </div>
-              <div className="flex gap-3">
-                <CheckCircle size={24} className="flex-shrink-0" />
-                <span>Capture leads de interessados</span>
-              </div>
-              <div className="flex gap-3">
-                <CheckCircle size={24} className="flex-shrink-0" />
-                <span>Melhore a comunicação com pais e alunos</span>
+              <div>
+                <h1 className="text-4xl font-bold tracking-tight">ELEVE.IA</h1>
+                <p className="text-blue-200 text-sm">Gestão Escolar Inteligente</p>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Lado Direito - Formulário */}
-        <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6">
-          <div className="w-full max-w-md">
-            {/* Logo Mobile */}
-            <div className="lg:hidden text-center mb-8">
-              <div className="text-4xl mb-2">🎓</div>
-              <h1 className="text-3xl font-bold text-white">ELEVE.IA</h1>
-            </div>
+          {/* Proposta de valor */}
+          <div className="mb-12">
+            <h2 className="text-3xl xl:text-4xl font-bold mb-4 leading-tight">
+              Transforme a gestão da sua escola com inteligência artificial
+            </h2>
+            <p className="text-xl text-blue-100">
+              Automatize processos, melhore a comunicação e tome decisões baseadas em dados.
+            </p>
+          </div>
 
-            {/* Card de Login */}
-            <div className="bg-white rounded-2xl shadow-2xl p-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Bem-vindo</h2>
-              <p className="text-gray-600 mb-8">Faça login para acessar sua conta</p>
-
-              {/* Mensagem de Erro */}
-              {erro && (
-                <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
-                  ❌ {erro}
+          {/* Features visuais */}
+          <div className="space-y-4">
+            {[
+              { icon: Shield, text: 'Segurança e conformidade com LGPD' },
+              { icon: Zap, text: 'Respostas automáticas 24/7 com IA' },
+              { icon: Users, text: 'Comunicação eficiente com responsáveis' },
+              { icon: CheckCircle2, text: 'Gestão completa de leads e matrículas' },
+            ].map((feature, i) => (
+              <div key={i} className="flex items-center gap-4 group">
+                <div className="w-10 h-10 bg-white/10 backdrop-blur-sm rounded-lg flex items-center justify-center border border-white/20 group-hover:bg-white/20 transition-all">
+                  <feature.icon size={20} />
                 </div>
-              )}
-
-              <div className="space-y-4">
-                {/* Usuário */}
-                <div>
-                  <label className="block text-gray-700 font-semibold mb-2">Usuário</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 text-gray-400" size={20} />
-                    <input
-                      type="text"
-                      placeholder="seu_usuario"
-                      value={loginData.username}
-                      onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
-                      onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-                      disabled={isLoggingIn}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 disabled:opacity-50"
-                    />
-                  </div>
-                </div>
-
-                {/* Senha */}
-                <div>
-                  <label className="block text-gray-700 font-semibold mb-2">Senha</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-                    <input
-                      type={mostrarSenha ? 'text' : 'password'}
-                      placeholder="Sua senha"
-                      value={loginData.password}
-                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                      onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-                      disabled={isLoggingIn}
-                      className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 disabled:opacity-50"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setMostrarSenha(!mostrarSenha)}
-                      className="absolute right-3 top-3 text-gray-400"
-                    >
-                      {mostrarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Botão Login */}
-                <button
-                  onClick={handleLogin}
-                  disabled={isLoggingIn}
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-bold text-lg flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {isLoggingIn ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      Entrando...
-                    </>
-                  ) : (
-                    <>
-                      Entrar <ArrowRight size={20} />
-                    </>
-                  )}
-                </button>
+                <span className="text-lg font-medium">{feature.text}</span>
               </div>
+            ))}
+          </div>
 
-              {/* Link para Registro */}
-              <p className="text-center text-gray-600 mt-6">
-                Não tem conta?{' '}
-                <button
-                  onClick={() => setTelaAtual('registro')}
-                  className="text-blue-600 hover:text-blue-700 font-bold"
-                >
-                  Registre-se aqui
-                </button>
-              </p>
+          {/* Social proof */}
+          <div className="mt-12 pt-8 border-t border-white/20">
+            <div className="flex items-center gap-8">
+              <div>
+                <p className="text-3xl font-bold">500+</p>
+                <p className="text-blue-200 text-sm">Escolas conectadas</p>
+              </div>
+              <div>
+                <p className="text-3xl font-bold">98%</p>
+                <p className="text-blue-200 text-sm">Satisfação</p>
+              </div>
+              <div>
+                <p className="text-3xl font-bold">24/7</p>
+                <p className="text-blue-200 text-sm">Suporte</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    );
-  }
 
-  // ✅ TELA DE REGISTRO
-  return (
-    <div className="flex h-screen bg-gradient-to-br from-blue-600 to-blue-900">
-      <div className="w-full flex items-center justify-center p-6">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Criar Conta</h2>
-          <p className="text-gray-600 mb-6">Preencha os dados para se registrar</p>
-
-          {erro && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
-              ❌ {erro}
-            </div>
-          )}
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-700 font-semibold mb-2 text-sm">Nome *</label>
-                <input
-                  type="text"
-                  placeholder="João"
-                  value={registroData.first_name}
-                  onChange={(e) => setRegistroData({ ...registroData, first_name: e.target.value })}
-                  disabled={isRegistering}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
-                />
+      {/* ========== LADO DIREITO: Formulário ========== */}
+      <div className="flex-1 flex items-center justify-center p-8 bg-gray-50">
+        <div className="w-full max-w-md">
+          
+          {/* Logo mobile */}
+          <div className="lg:hidden text-center mb-8">
+            <div className="inline-flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
+                <span className="text-2xl">🎓</span>
               </div>
-              <div>
-                <label className="block text-gray-700 font-semibold mb-2 text-sm">Sobrenome *</label>
-                <input
-                  type="text"
-                  placeholder="Silva"
-                  value={registroData.last_name}
-                  onChange={(e) => setRegistroData({ ...registroData, last_name: e.target.value })}
-                  disabled={isRegistering}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
-                />
-              </div>
+              <h1 className="text-3xl font-bold text-gray-900">ELEVE.IA</h1>
             </div>
-
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Usuário *</label>
-              <input
-                type="text"
-                placeholder="seu_usuario"
-                value={registroData.username}
-                onChange={(e) => setRegistroData({ ...registroData, username: e.target.value })}
-                disabled={isRegistering}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Email *</label>
-              <input
-                type="email"
-                placeholder="seu@email.com"
-                value={registroData.email}
-                onChange={(e) => setRegistroData({ ...registroData, email: e.target.value })}
-                disabled={isRegistering}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Senha *</label>
-              <input
-                type={mostrarSenha ? 'text' : 'password'}
-                placeholder="Mínimo 8 caracteres"
-                value={registroData.password}
-                onChange={(e) => setRegistroData({ ...registroData, password: e.target.value })}
-                disabled={isRegistering}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">Confirmar Senha *</label>
-              <input
-                type={mostrarSenhaConfirm ? 'text' : 'password'}
-                placeholder="Confirme sua senha"
-                value={registroData.password2}
-                onChange={(e) => setRegistroData({ ...registroData, password2: e.target.value })}
-                disabled={isRegistering}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
-              />
-            </div>
-
-            <label className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                checked={registroData.termo}
-                onChange={(e) => setRegistroData({ ...registroData, termo: e.target.checked })}
-                disabled={isRegistering}
-                className="w-4 h-4 mt-1 disabled:opacity-50"
-              />
-              <span className="text-gray-700 text-sm">
-                Concordo com os Termos de Uso *
-              </span>
-            </label>
-
-            <button
-              onClick={handleRegistro}
-              disabled={isRegistering}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition font-bold text-lg disabled:opacity-50"
-            >
-              {isRegistering ? 'Criando conta...' : 'Criar Conta'}
-            </button>
           </div>
 
-          <p className="text-center text-gray-600 mt-6">
-            Já tem conta?{' '}
-            <button
-              onClick={() => setTelaAtual('login')}
-              className="text-blue-600 hover:text-blue-700 font-bold"
-            >
-              Faça login aqui
-            </button>
-          </p>
+          {/* Card de login */}
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+            
+            {/* Cabeçalho */}
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                Bem-vindo de volta
+              </h2>
+              <p className="text-gray-600">
+                Acesse sua conta para continuar
+              </p>
+            </div>
+
+            {/* Erro */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+                <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-red-600 text-xs">✕</span>
+                </div>
+                <p className="text-sm text-red-800 font-medium">{error}</p>
+              </div>
+            )}
+
+            {/* Formulário */}
+            <form onSubmit={handleLogin} className="space-y-5">
+              
+              {/* Email/Username */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Email ou Usuário
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="seu@email.com"
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    className="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900 placeholder:text-gray-400"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              {/* Senha */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Senha
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full pl-12 pr-12 py-3.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-900"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Lembrar-me + Esqueci senha */}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Lembrar-me</span>
+                </label>
+                <button
+                  type="button"
+                  className="text-sm text-blue-600 hover:text-blue-700 font-semibold"
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
+
+              {/* Botão de login */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-3.5 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Entrando...
+                  </>
+                ) : (
+                  <>
+                    Entrar
+                    <ArrowRight size={20} />
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Registro */}
+            <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+              <p className="text-gray-600">
+                Não tem uma conta?{' '}
+                <button className="text-blue-600 hover:text-blue-700 font-semibold">
+                  Solicite uma demonstração
+                </button>
+              </p>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-8 text-center">
+            <p className="text-sm text-gray-500">
+              © 2024 ELEVE.IA. Todos os direitos reservados.
+            </p>
+          </div>
         </div>
       </div>
     </div>
