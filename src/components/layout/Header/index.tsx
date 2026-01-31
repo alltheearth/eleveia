@@ -1,5 +1,5 @@
-// src/components/layout/Header/index.tsx - 🎨 VERSÃO PROFISSIONAL
-import { useState } from 'react';
+// src/components/layout/Header/index.tsx - ✅ VERSÃO CORRIGIDA (LOADING FIX)
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
@@ -12,6 +12,11 @@ import {
   Command,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../store';
+import { useGetProfileQuery, useLogoutMutation } from '../../../services';
+import HeaderSkeleton from './HeaderSkeleton';
+import HeaderError from './HeaderError';
 
 // ============================================
 // USER MENU DROPDOWN
@@ -20,16 +25,41 @@ import { useNavigate } from 'react-router-dom';
 interface UserMenuProps {
   isOpen: boolean;
   onClose: () => void;
+  user: {
+    fullName: string;
+    email: string;
+    initials: string;
+  };
+  profile: {
+    roleDisplay: string;
+  };
+  school: {
+    name: string;
+  } | null;
+  isSuperuser: boolean;
 }
 
-function UserMenu({ isOpen, onClose }: UserMenuProps) {
+function UserMenu({ isOpen, onClose, user, profile, school, isSuperuser }: UserMenuProps) {
   const navigate = useNavigate();
+  const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
+
+  const handleLogout = async () => {
+    try {
+      await logout().unwrap();
+      localStorage.removeItem('eleve_token');
+      navigate('/login');
+    } catch (err) {
+      console.error('Erro no logout:', err);
+      localStorage.removeItem('eleve_token');
+      navigate('/login');
+    }
+  };
 
   const menuItems = [
     { icon: User, label: 'Meu Perfil', action: () => navigate('/perfil') },
     { icon: Settings, label: 'Configurações', action: () => navigate('/configuracoes') },
     { icon: HelpCircle, label: 'Ajuda & Suporte', action: () => window.open('https://help.eleve.ia', '_blank') },
-    { icon: LogOut, label: 'Sair', action: () => navigate('/logout'), danger: true },
+    { icon: LogOut, label: isLoggingOut ? 'Saindo...' : 'Sair', action: handleLogout, danger: true },
   ];
 
   if (!isOpen) return null;
@@ -54,13 +84,32 @@ function UserMenu({ isOpen, onClose }: UserMenuProps) {
         <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-              <User className="text-white" size={20} />
+              <span className="text-white font-bold text-lg">{user.initials}</span>
             </div>
             <div>
-              <p className="font-bold text-gray-900">João Silva</p>
-              <p className="text-sm text-gray-600">joao@escola.com</p>
+              <p className="font-bold text-gray-900">{user.fullName}</p>
+              <p className="text-sm text-gray-600">{user.email}</p>
             </div>
           </div>
+          
+          {/* Role Badge */}
+          <div className="mt-3 flex items-center gap-2">
+            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+              {profile.roleDisplay}
+            </span>
+            {isSuperuser && (
+              <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full font-medium">
+                Admin
+              </span>
+            )}
+          </div>
+          
+          {/* School */}
+          {school && (
+            <p className="text-xs text-gray-600 mt-2">
+              🏫 {school.name}
+            </p>
+          )}
         </div>
 
         {/* Menu Items */}
@@ -72,9 +121,10 @@ function UserMenu({ isOpen, onClose }: UserMenuProps) {
                 key={index}
                 onClick={() => {
                   item.action();
-                  onClose();
+                  if (!item.danger) onClose();
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3 transition-colors ${
+                disabled={item.danger && isLoggingOut}
+                className={`w-full flex items-center gap-3 px-4 py-3 transition-colors disabled:opacity-50 ${
                   item.danger 
                     ? 'hover:bg-red-50 text-red-600' 
                     : 'hover:bg-gray-50 text-gray-700'
@@ -307,8 +357,36 @@ export default function Header() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
+  // ✅ Pegar token e isAuthenticated do Redux
+  const { token, isAuthenticated } = useSelector((state: RootState) => state.auth);
+
+  // ✅ Buscar perfil da API - só se estiver autenticado
+  const { 
+    data: apiUser, 
+    isLoading,
+    isError,
+    error 
+  } = useGetProfileQuery(undefined, {
+    skip: !isAuthenticated || !token,
+  });
+
+  // ✅ Timeout para loading infinito (fallback após 5 segundos)
+  const [showLoadingTimeout, setShowLoadingTimeout] = useState(false);
+  
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => {
+        setShowLoadingTimeout(true);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    } else {
+      setShowLoadingTimeout(false);
+    }
+  }, [isLoading]);
+
   // Keyboard shortcut for search (Cmd+K)
-  useState(() => {
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
@@ -320,7 +398,61 @@ export default function Header() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  });
+  }, []);
+
+  // ✅ Se não está autenticado, não mostra nada (ou mostra versão pública)
+  if (!isAuthenticated || !token) {
+    return null;
+  }
+
+  // ✅ Loading state (com timeout)
+  if (isLoading && !showLoadingTimeout) {
+    return <HeaderSkeleton />;
+  }
+
+  // ✅ Se passou do timeout mas ainda está loading, mostra erro
+  if (isLoading && showLoadingTimeout) {
+    return <HeaderError error={{ message: 'Timeout ao carregar dados do usuário' }} />;
+  }
+
+  // ✅ Error state
+  if (isError) {
+    return <HeaderError error={error} />;
+  }
+
+  // ✅ Se não tem dados do usuário, mostra skeleton
+  if (!apiUser) {
+    return <HeaderSkeleton />;
+  }
+
+  // ✅ Calcular dados do usuário
+  const firstName = apiUser.first_name || '';
+  const lastName = apiUser.last_name || '';
+  const username = apiUser.username || '';
+  
+  const fullName = firstName && lastName
+    ? `${firstName} ${lastName}`
+    : username;
+    
+  const initials = firstName && lastName
+    ? `${firstName[0]}${lastName[0]}`.toUpperCase()
+    : username.substring(0, 2).toUpperCase();
+
+  const roleDisplay = apiUser.perfil?.tipo_display || 'Usuário';
+  const schoolName = apiUser.perfil?.escola_nome || null;
+  const isSuperuser = apiUser.is_superuser || apiUser.is_staff || false;
+
+  const userData = {
+    fullName,
+    email: apiUser.email,
+    initials,
+  };
+
+  const profileData = {
+    roleDisplay,
+  };
+
+  const schoolData = schoolName ? { name: schoolName } : null;
 
   return (
     <header className="fixed top-0 right-0 left-0 lg:left-[280px] h-16 bg-white border-b border-gray-200 z-30">
@@ -373,11 +505,11 @@ export default function Header() {
               className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-xl transition-colors"
             >
               <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                <User className="text-white" size={18} />
+                <span className="text-white font-bold text-sm">{initials}</span>
               </div>
               <div className="hidden lg:block text-left">
-                <p className="text-sm font-semibold text-gray-900">João Silva</p>
-                <p className="text-xs text-gray-500">Administrador</p>
+                <p className="text-sm font-semibold text-gray-900">{fullName}</p>
+                <p className="text-xs text-gray-500">{roleDisplay}</p>
               </div>
               <ChevronDown size={16} className="text-gray-400" />
             </button>
@@ -387,6 +519,10 @@ export default function Header() {
                 <UserMenu 
                   isOpen={userMenuOpen}
                   onClose={() => setUserMenuOpen(false)}
+                  user={userData}
+                  profile={profileData}
+                  school={schoolData}
+                  isSuperuser={isSuperuser}
                 />
               )}
             </AnimatePresence>

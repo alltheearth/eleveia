@@ -1,10 +1,10 @@
-// src/pages/Profile/index.tsx - 🎨 VERSÃO PROFISSIONAL
-import { useState } from 'react';
+// src/pages/Perfil/index.tsx - ✅ VERSÃO CORRIGIDA COM API
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   User,
   Mail,
-  Phone,
+  // Phone,
   Building2,
   Shield,
   Bell,
@@ -22,21 +22,13 @@ import {
   EyeOff,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useGetProfileQuery, useUpdateProfileMutation } from '../../services';
 
 // ============================================
 // TYPES
 // ============================================
 
 type TabType = 'profile' | 'security' | 'preferences' | 'activity';
-
-interface UserData {
-  name: string;
-  email: string;
-  phone: string;
-  school: string;
-  role: string;
-  avatar?: string;
-}
 
 // ============================================
 // TABS CONFIGURATION
@@ -55,15 +47,72 @@ const TABS = [
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<TabType>('profile');
-  const [userData, setUserData] = useState<UserData>({
-    name: 'João Silva',
-    email: 'joao.silva@escola.com',
-    phone: '(11) 98765-4321',
-    school: 'Colégio Exemplo',
-    role: 'Administrador',
+  
+  // ✅ Buscar dados do perfil da API
+  const { data: apiUser, isLoading, isError } = useGetProfileQuery();
+  const [updateProfile] = useUpdateProfileMutation();
+
+  // State local para edição
+  const [formData, setFormData] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
   });
+
+  // ✅ Atualizar formData quando dados da API chegarem
+  useEffect(() => {
+    if (apiUser) {
+      setFormData({
+        first_name: apiUser.first_name || '',
+        last_name: apiUser.last_name || '',
+        email: apiUser.email || '',
+      });
+    }
+  }, [apiUser]);
+
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  // ✅ Loading state
+  if (isLoading) {
+    return (
+      <div className="max-w-6xl mx-auto">
+        <div className="bg-white rounded-2xl p-8 shadow-sm animate-pulse">
+          <div className="h-32 bg-gray-200 rounded-xl mb-6"></div>
+          <div className="h-64 bg-gray-200 rounded-xl"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Error state
+  if (isError || !apiUser) {
+    return (
+      <div className="max-w-6xl mx-auto">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-8">
+          <div className="flex items-center gap-3 mb-4">
+            <AlertCircle className="text-red-600" size={24} />
+            <h3 className="text-lg font-bold text-red-900">
+              Erro ao carregar perfil
+            </h3>
+          </div>
+          <p className="text-red-700">
+            Não foi possível carregar as informações do seu perfil.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Dados derivados
+  const fullName = `${apiUser.first_name || ''} ${apiUser.last_name || ''}`.trim() || apiUser.username;
+  const initials = apiUser.first_name && apiUser.last_name
+    ? `${apiUser.first_name[0]}${apiUser.last_name[0]}`.toUpperCase()
+    : apiUser.username.substring(0, 2).toUpperCase();
+
+  const schoolName = apiUser.perfil?.escola_nome || 'Sem escola';
+  const roleDisplay = apiUser.perfil?.tipo_display || 'Usuário';
+  const isSuperuser = apiUser.is_superuser || apiUser.is_staff;
 
   // Handle avatar upload
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,8 +128,19 @@ export default function ProfilePage() {
   };
 
   // Handle save
-  const handleSave = () => {
-    toast.success('Perfil atualizado com sucesso!');
+  const handleSave = async () => {
+    try {
+      await updateProfile({
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email,
+      }).unwrap();
+      
+      toast.success('Perfil atualizado com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao atualizar perfil:', error);
+      toast.error(error?.data?.detail || 'Erro ao atualizar perfil');
+    }
   };
 
   return (
@@ -100,7 +160,7 @@ export default function ProfilePage() {
               {avatarPreview ? (
                 <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <User className="text-white" size={48} />
+                <span className="text-white font-bold text-4xl">{initials}</span>
               )}
             </div>
             
@@ -118,20 +178,28 @@ export default function ProfilePage() {
 
           {/* User Info */}
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-white mb-2">{userData.name}</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">{fullName}</h1>
             <div className="flex flex-wrap gap-4 text-white/90">
               <div className="flex items-center gap-2">
                 <Mail size={16} />
-                <span>{userData.email}</span>
+                <span>{apiUser.email}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Building2 size={16} />
-                <span>{userData.school}</span>
+                <span>{schoolName}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Shield size={16} />
-                <span>{userData.role}</span>
+                <span>{roleDisplay}</span>
               </div>
+              {isSuperuser && (
+                <div className="flex items-center gap-2">
+                  <Shield size={16} />
+                  <span className="px-2 py-1 bg-purple-500/30 rounded-full text-sm">
+                    Superusuário
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -190,7 +258,16 @@ export default function ProfilePage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        {activeTab === 'profile' && <ProfileTab userData={userData} setUserData={setUserData} onSave={handleSave} />}
+        {activeTab === 'profile' && (
+          <ProfileTab 
+            userData={formData}
+            setUserData={setFormData}
+            onSave={handleSave}
+            schoolName={schoolName}
+            roleDisplay={roleDisplay}
+            isSuperuser={isSuperuser}
+          />
+        )}
         {activeTab === 'security' && <SecurityTab showPassword={showPassword} setShowPassword={setShowPassword} />}
         {activeTab === 'preferences' && <PreferencesTab />}
         {activeTab === 'activity' && <ActivityTab />}
@@ -204,12 +281,19 @@ export default function ProfilePage() {
 // ============================================
 
 interface ProfileTabProps {
-  userData: UserData;
-  setUserData: (data: UserData) => void;
+  userData: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+  setUserData: (data: any) => void;
   onSave: () => void;
+  schoolName: string;
+  roleDisplay: string;
+  isSuperuser: boolean;
 }
 
-function ProfileTab({ userData, setUserData, onSave }: ProfileTabProps) {
+function ProfileTab({ userData, setUserData, onSave, schoolName, roleDisplay, isSuperuser }: ProfileTabProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Personal Information */}
@@ -220,19 +304,36 @@ function ProfileTab({ userData, setUserData, onSave }: ProfileTabProps) {
         </h3>
 
         <div className="space-y-4">
-          {/* Name */}
+          {/* First Name */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Nome Completo
+              Nome
             </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
-                value={userData.name}
-                onChange={(e) => setUserData({ ...userData, name: e.target.value })}
+                value={userData.first_name}
+                onChange={(e) => setUserData({ ...userData, first_name: e.target.value })}
                 className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
-                placeholder="Seu nome completo"
+                placeholder="Seu primeiro nome"
+              />
+            </div>
+          </div>
+
+          {/* Last Name */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Sobrenome
+            </label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                value={userData.last_name}
+                onChange={(e) => setUserData({ ...userData, last_name: e.target.value })}
+                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
+                placeholder="Seu sobrenome"
               />
             </div>
           </div>
@@ -250,23 +351,6 @@ function ProfileTab({ userData, setUserData, onSave }: ProfileTabProps) {
                 onChange={(e) => setUserData({ ...userData, email: e.target.value })}
                 className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
                 placeholder="seu@email.com"
-              />
-            </div>
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Telefone
-            </label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="tel"
-                value={userData.phone}
-                onChange={(e) => setUserData({ ...userData, phone: e.target.value })}
-                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
-                placeholder="(00) 00000-0000"
               />
             </div>
           </div>
@@ -290,10 +374,8 @@ function ProfileTab({ userData, setUserData, onSave }: ProfileTabProps) {
               <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
-                value={userData.school}
-                onChange={(e) => setUserData({ ...userData, school: e.target.value })}
-                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all"
-                placeholder="Nome da escola"
+                value={schoolName}
+                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl bg-gray-50 text-gray-500"
                 disabled
               />
             </div>
@@ -311,7 +393,7 @@ function ProfileTab({ userData, setUserData, onSave }: ProfileTabProps) {
               <Shield className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
-                value={userData.role}
+                value={roleDisplay}
                 className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl bg-gray-50 text-gray-500"
                 disabled
               />
@@ -325,9 +407,14 @@ function ProfileTab({ userData, setUserData, onSave }: ProfileTabProps) {
                 <Shield className="text-white" size={20} />
               </div>
               <div>
-                <p className="font-semibold text-gray-900 mb-1">Permissões Administrativas</p>
+                <p className="font-semibold text-gray-900 mb-1">
+                  {isSuperuser ? 'Permissões de Superusuário' : 'Permissões de ' + roleDisplay}
+                </p>
                 <p className="text-sm text-gray-600">
-                  Você possui acesso total a todas as funcionalidades do sistema.
+                  {isSuperuser 
+                    ? 'Você possui acesso total a todas as funcionalidades do sistema.'
+                    : `Como ${roleDisplay}, você tem acesso às funcionalidades da sua escola.`
+                  }
                 </p>
               </div>
             </div>
