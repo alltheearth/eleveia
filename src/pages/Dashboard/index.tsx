@@ -1,7 +1,5 @@
 // src/pages/Dashboard/index.tsx
 // 🎯 DASHBOARD PROFISSIONAL - ELEVE.IA
-
-import { useState } from 'react';
 import { 
   Users, 
   TrendingUp, 
