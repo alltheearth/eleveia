@@ -1,472 +1,607 @@
-// src/pages/Dashboard/index.tsx - ✅ CORRIGIDO
-import { useState, useEffect } from 'react';
+// src/pages/Dashboard/index.tsx
+// 🎯 DASHBOARD PROFISSIONAL - ELEVE.IA
+
+import { useState } from 'react';
 import { 
   Users, 
-  MessageSquare, 
   TrendingUp, 
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  Activity,
+  MessageSquare, 
+  Calendar,
+  UserPlus,
   Phone,
   Mail,
-  FileText,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  ArrowUpRight,
+  ArrowDownRight,
+  MoreVertical,
+  Download,
+  Filter,
   RefreshCw
 } from 'lucide-react';
-
-// Componentes
-import PageModel from '../../components/layout/PageModel';
-import { StatCard, LoadingState, Badge } from '../../components/common';
-
-// Hooks e Services
-import { useCurrentSchool } from '../../hooks/useCurrentSchool';
+import { motion } from 'framer-motion';
 import {
-  useGetLeadStatsQuery,
-  useGetContactStatsQuery,
-  useGetTicketStatsQuery,
-  useGetRecentLeadsQuery,
-  useGetRecentTicketsQuery,
-} from '../../services';
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  Area,
+  AreaChart,
+} from 'recharts';
+import { useGetContactsQuery, useGetEventsQuery, useGetLeadsQuery } from '../../services';
+// import { useGetLeadsQuery } from '../../services/leadsApi';
+// import { useGetContactsQuery } from '../../services/contactsApi';
+// import { useGetEventsQuery } from '../../services/eventsApi';
 
 // ============================================
-// INTERFACES
+// METRIC CARD COMPONENT
 // ============================================
-
-interface DashboardStats {
-  totalInteracoes: number;
-  interacoesHoje: number;
-  leadsCapturados: number;
-  ticketsAbertos: number;
-  tempoMedioResposta: string;
-  taxaSatisfacao: number;
-  statusAgente: 'online' | 'offline' | 'ocupado';
+interface MetricCardProps {
+  title: string;
+  value: number | string;
+  change?: number;
+  period?: string;
+  icon: React.ReactNode;
+  color: 'blue' | 'green' | 'orange' | 'purple' | 'red';
+  loading?: boolean;
+  subtitle?: string;
 }
 
-export default function Dashboard() {
-  // ============================================
-  // HOOKS
-  // ============================================
-  
-  const { currentSchool, isLoading: schoolsLoading } = useCurrentSchool();
-  
-  // Stats de diferentes módulos
-  const { data: leadStats, isLoading: leadsLoading, refetch: refetchLeads } = useGetLeadStatsQuery();
-  const { data: contactStats, isLoading: contactsLoading, refetch: refetchContacts } = useGetContactStatsQuery();
-  const { data: ticketStats, isLoading: ticketsLoading, refetch: refetchTickets } = useGetTicketStatsQuery();
-  
-  // Dados recentes
-  const { data: recentLeads, refetch: refetchRecentLeads } = useGetRecentLeadsQuery(5);
-  const { data: recentTickets, refetch: refetchRecentTickets } = useGetRecentTicketsQuery(5);
+const colorClasses = {
+  blue: {
+    gradient: 'from-blue-500 to-blue-600',
+    light: 'bg-blue-50',
+    text: 'text-blue-600',
+    ring: 'ring-blue-100',
+  },
+  green: {
+    gradient: 'from-green-500 to-green-600',
+    light: 'bg-green-50',
+    text: 'text-green-600',
+    ring: 'ring-green-100',
+  },
+  orange: {
+    gradient: 'from-orange-500 to-orange-600',
+    light: 'bg-orange-50',
+    text: 'text-orange-600',
+    ring: 'ring-orange-100',
+  },
+  purple: {
+    gradient: 'from-purple-500 to-purple-600',
+    light: 'bg-purple-50',
+    text: 'text-purple-600',
+    ring: 'ring-purple-100',
+  },
+  red: {
+    gradient: 'from-red-500 to-red-600',
+    light: 'bg-red-50',
+    text: 'text-red-600',
+    ring: 'ring-red-100',
+  },
+};
 
-  // ============================================
-  // ESTADOS
-  // ============================================
-  
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
-    totalInteracoes: 0,
-    interacoesHoje: 0,
-    leadsCapturados: 0,
-    ticketsAbertos: 0,
-    tempoMedioResposta: '0min',
-    taxaSatisfacao: 0,
-    statusAgente: 'online',
-  });
+function MetricCard({
+  title,
+  value,
+  change,
+  period = 'vs mês anterior',
+  icon,
+  color,
+  loading = false,
+  subtitle,
+}: MetricCardProps) {
+  const colors = colorClasses[color];
+  const isPositive = change !== undefined && change >= 0;
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date>(new Date());
-
-  // ============================================
-  // EFFECTS
-  // ============================================
-  
-  // Atualizar stats quando dados mudarem
-  useEffect(() => {
-    if (leadStats && contactStats && ticketStats) {
-      setDashboardStats({
-        totalInteracoes: contactStats.total + leadStats.total,
-        interacoesHoje: leadStats.novos_hoje + contactStats.novos_hoje,
-        leadsCapturados: leadStats.total,
-        ticketsAbertos: ticketStats.open + ticketStats.in_progress,
-        tempoMedioResposta: '5min', // Pode vir do backend
-        taxaSatisfacao: 92, // Pode vir do backend
-        statusAgente: 'online',
-      });
-    }
-  }, [leadStats, contactStats, ticketStats]);
-
-  // Auto-refresh a cada 30 segundos
-  useEffect(() => {
-    const interval = setInterval(() => {
-      handleRefresh();
-    }, 30000); // 30 segundos
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // ============================================
-  // HANDLERS
-  // ============================================
-  
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await Promise.all([
-        refetchLeads(),
-        refetchContacts(),
-        refetchTickets(),
-        refetchRecentLeads(),
-        refetchRecentTickets(),
-      ]);
-      setUltimaAtualizacao(new Date());
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  const formatarDataRelativa = (data: string): string => {
-    const agora = new Date();
-    const dataObj = new Date(data);
-    const diffMs = agora.getTime() - dataObj.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 1) return 'Agora mesmo';
-    if (diffMins < 60) return `${diffMins}min atrás`;
-    
-    const diffHoras = Math.floor(diffMins / 60);
-    if (diffHoras < 24) return `${diffHoras}h atrás`;
-    
-    const diffDias = Math.floor(diffHoras / 24);
-    return `${diffDias}d atrás`;
-  };
-
-  const formatarHora = (data: Date): string => {
-    return data.toLocaleTimeString('pt-BR', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
-
-  // ============================================
-  // LOADING STATE
-  // ============================================
-  
-  if (schoolsLoading || leadsLoading || contactsLoading || ticketsLoading) {
-    return (
-      <LoadingState 
-        message="Carregando dashboard..."
-        icon={<Activity size={48} className="text-blue-600" />}
-      />
-    );
-  }
-
-  // ============================================
-  // RENDER
-  // ============================================
-  
   return (
-    <PageModel>
-      {/* Header com status do agente */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg p-6 text-white">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Dashboard - {currentSchool?.school_name}</h1>
-            <p className="text-blue-100">Visão geral das suas operações em tempo real</p>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      whileHover={{ y: -4, boxShadow: '0 12px 24px -8px rgba(0,0,0,0.1)' }}
+      className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group cursor-pointer"
+    >
+      {/* Header com gradiente */}
+      <div className={`bg-gradient-to-r ${colors.gradient} px-6 pt-6 pb-4`}>
+        <div className="flex items-start justify-between">
+          <div className={`w-14 h-14 ${colors.light} rounded-xl flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform`}>
+            {icon}
           </div>
           
-          <div className="flex items-center gap-4">
-            {/* Status do Agente */}
-            <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg">
-              <div className={`w-3 h-3 rounded-full ${
-                dashboardStats.statusAgente === 'online' ? 'bg-green-400 animate-pulse' :
-                dashboardStats.statusAgente === 'ocupado' ? 'bg-yellow-400' :
-                'bg-red-400'
-              }`}></div>
-              <span className="font-semibold">
-                Agente {dashboardStats.statusAgente === 'online' ? 'Online' : 
-                        dashboardStats.statusAgente === 'ocupado' ? 'Ocupado' : 'Offline'}
+          {change !== undefined && (
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full ${colors.light} shadow-sm`}>
+              {isPositive ? (
+                <ArrowUpRight size={16} className={colors.text} />
+              ) : (
+                <ArrowDownRight size={16} className="text-red-600" />
+              )}
+              <span className={`text-sm font-bold ${isPositive ? colors.text : 'text-red-600'}`}>
+                {Math.abs(change)}%
               </span>
             </div>
+          )}
+        </div>
+      </div>
 
-            {/* Botão de Refresh */}
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition disabled:opacity-50"
+      {/* Conteúdo */}
+      <div className="px-6 py-5">
+        <p className="text-sm text-gray-600 font-medium mb-2 uppercase tracking-wide">
+          {title}
+        </p>
+        
+        {loading ? (
+          <div className="space-y-3">
+            <div className="h-9 bg-gray-200 rounded animate-pulse w-3/4" />
+            <div className="h-4 bg-gray-100 rounded animate-pulse w-1/2" />
+          </div>
+        ) : (
+          <>
+            <p className="text-4xl font-bold text-gray-900 mb-1 tracking-tight">
+              {value}
+            </p>
+            {subtitle ? (
+              <p className="text-sm text-gray-500">{subtitle}</p>
+            ) : (
+              period && change !== undefined && (
+                <p className="text-xs text-gray-500 flex items-center gap-1">
+                  <Clock size={12} />
+                  {period}
+                </p>
+              )
+            )}
+          </>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// ============================================
+// ACTIVITY FEED COMPONENT
+// ============================================
+interface Activity {
+  id: string;
+  type: 'lead' | 'contact' | 'event' | 'conversion';
+  title: string;
+  description: string;
+  time: string;
+  icon: React.ReactNode;
+  color: string;
+}
+
+function ActivityFeed({ activities }: { activities: Activity[] }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+      className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
+    >
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-gray-900">Atividades Recentes</h3>
+        <button className="text-sm text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1">
+          Ver todas
+          <ArrowUpRight size={16} />
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        {activities.map((activity, index) => (
+          <motion.div
+            key={activity.id}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}
+            className="flex gap-4 items-start p-4 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer group"
+          >
+            <div className={`w-10 h-10 ${activity.color} rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
+              {activity.icon}
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 text-sm mb-1">
+                {activity.title}
+              </p>
+              <p className="text-sm text-gray-600 mb-1">
+                {activity.description}
+              </p>
+              <p className="text-xs text-gray-500 flex items-center gap-1">
+                <Clock size={12} />
+                {activity.time}
+              </p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+// ============================================
+// QUICK STATS COMPONENT
+// ============================================
+interface QuickStat {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  color: string;
+}
+
+function QuickStats({ stats }: { stats: QuickStat[] }) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {stats.map((stat, index) => (
+        <motion.div
+          key={stat.label}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3, delay: index * 0.1 }}
+          className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow"
+        >
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 ${stat.color} rounded-lg flex items-center justify-center`}>
+              {stat.icon}
+            </div>
+            <div>
+              <p className="text-xs text-gray-600 font-medium uppercase tracking-wide">
+                {stat.label}
+              </p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {stat.value}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================
+// CHART COMPONENT - CONVERSÃO DE LEADS
+// ============================================
+function LeadConversionChart({ data }: { data: any[] }) {
+  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.3 }}
+      className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
+    >
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-xl font-bold text-gray-900">Funil de Conversão</h3>
+          <p className="text-sm text-gray-500 mt-1">Status dos leads ativos</p>
+        </div>
+        <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+          <MoreVertical size={20} className="text-gray-600" />
+        </button>
+      </div>
+
+      <div className="h-80">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={({ name, percent }) => `${name}: ${percent !== undefined ? (percent * 100).toFixed(0) : 0}%`}
+              outerRadius={100}
+              fill="#8884d8"
+              dataKey="value"
             >
-              <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
-              Atualizar
-            </button>
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Legenda personalizada */}
+      <div className="grid grid-cols-2 gap-3 mt-6">
+        {data.map((item, index) => (
+          <div key={item.name} className="flex items-center gap-2">
+            <div 
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: COLORS[index % COLORS.length] }}
+            />
+            <span className="text-sm text-gray-700">
+              {item.name}: <span className="font-semibold">{item.value}</span>
+            </span>
           </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+// ============================================
+// CHART COMPONENT - TENDÊNCIA MENSAL
+// ============================================
+function MonthlyTrendChart({ data }: { data: any[] }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.4 }}
+      className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
+    >
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-xl font-bold text-gray-900">Tendência Mensal</h3>
+          <p className="text-sm text-gray-500 mt-1">Leads captados nos últimos 6 meses</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <Download size={18} className="text-gray-600" />
+          </button>
+          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <Filter size={18} className="text-gray-600" />
+          </button>
         </div>
       </div>
 
-      {/* Última atualização */}
-      <div className="flex items-center gap-2 text-sm text-gray-600">
-        <Clock size={16} />
-        <span>Última atualização: {formatarHora(ultimaAtualizacao)}</span>
+      <div className="h-80">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+              </linearGradient>
+              <linearGradient id="colorConversoes" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+            <XAxis 
+              dataKey="mes" 
+              tick={{ fill: '#6B7280', fontSize: 12 }}
+              axisLine={{ stroke: '#E5E7EB' }}
+            />
+            <YAxis 
+              tick={{ fill: '#6B7280', fontSize: 12 }}
+              axisLine={{ stroke: '#E5E7EB' }}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#FFF',
+                border: '1px solid #E5E7EB',
+                borderRadius: '12px',
+                padding: '12px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              }}
+            />
+            <Legend 
+              wrapperStyle={{ paddingTop: '20px' }}
+              iconType="circle"
+            />
+            <Area 
+              type="monotone" 
+              dataKey="leads" 
+              stroke="#3B82F6" 
+              strokeWidth={3}
+              fillOpacity={1} 
+              fill="url(#colorLeads)"
+              name="Leads Capturados"
+            />
+            <Area 
+              type="monotone" 
+              dataKey="conversoes" 
+              stroke="#10B981" 
+              strokeWidth={3}
+              fillOpacity={1} 
+              fill="url(#colorConversoes)"
+              name="Conversões"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </motion.div>
+  );
+}
+
+// ============================================
+// MAIN DASHBOARD COMPONENT
+// ============================================
+export default function Dashboard() {
+  const { data: leads = [], isLoading: leadsLoading } = useGetLeadsQuery({});
+  const { data: contacts = [], isLoading: contactsLoading } = useGetContactsQuery({});
+  const { data: events = [], isLoading: eventsLoading } = useGetEventsQuery({});
+
+  // Ensure leads, contacts and events are arrays
+  const leadsArray = Array.isArray(leads) ? leads : [];
+  const contactsArray = Array.isArray(contacts) ? contacts : [];
+  const eventsArray = Array.isArray(events) ? events : [];
+
+  // Calcular métricas
+  const totalLeads = leadsArray.length;
+  const leadsNovos = leadsArray.filter((l: any) => l.status === 'novo').length;
+  const leadsConversao = leadsArray.filter((l: any) => l.status === 'conversao').length;
+  const taxaConversao = totalLeads > 0 ? ((leadsConversao / totalLeads) * 100).toFixed(1) : 0;
+
+  // Dados do funil
+  const funnelData = [
+    { name: 'Novo', value: leadsArray.filter((l: any) => l.status === 'novo').length },
+    { name: 'Contato', value: leadsArray.filter((l: any) => l.status === 'contato').length },
+    { name: 'Qualificado', value: leadsArray.filter((l: any) => l.status === 'qualificado').length },
+    { name: 'Conversão', value: leadsArray.filter((l: any) => l.status === 'conversao').length },
+    { name: 'Perdido', value: leadsArray.filter((l: any) => l.status === 'perdido').length },
+  ];
+
+  // Dados de tendência mensal (mock - substituir por dados reais)
+  const trendData = [
+    { mes: 'Jul', leads: 65, conversoes: 28 },
+    { mes: 'Ago', leads: 89, conversoes: 42 },
+    { mes: 'Set', leads: 78, conversoes: 35 },
+    { mes: 'Out', leads: 94, conversoes: 51 },
+    { mes: 'Nov', leads: 112, conversoes: 67 },
+    { mes: 'Dez', leads: 98, conversoes: 58 },
+  ];
+
+  // Atividades recentes (mock - substituir por dados reais)
+  const recentActivities: Activity[] = [
+    {
+      id: '1',
+      type: 'lead',
+      title: 'Novo Lead Capturado',
+      description: 'Maria Silva entrou em contato via WhatsApp',
+      time: 'há 5 minutos',
+      icon: <UserPlus size={20} className="text-blue-600" />,
+      color: 'bg-blue-50',
+    },
+    {
+      id: '2',
+      type: 'conversion',
+      title: 'Conversão Realizada',
+      description: 'João Santos confirmou matrícula',
+      time: 'há 1 hora',
+      icon: <CheckCircle2 size={20} className="text-green-600" />,
+      color: 'bg-green-50',
+    },
+    {
+      id: '3',
+      type: 'event',
+      title: 'Evento Agendado',
+      description: 'Reunião com pais - Turma A',
+      time: 'há 2 horas',
+      icon: <Calendar size={20} className="text-purple-600" />,
+      color: 'bg-purple-50',
+    },
+    {
+      id: '4',
+      type: 'contact',
+      title: 'Contato Atualizado',
+      description: 'Pedro Oliveira - telefone alterado',
+      time: 'há 3 horas',
+      icon: <Phone size={20} className="text-orange-600" />,
+      color: 'bg-orange-50',
+    },
+  ];
+
+  // Quick stats
+  const quickStats: QuickStat[] = [
+    {
+      label: 'Leads Hoje',
+      value: leadsNovos,
+      icon: <TrendingUp size={20} className="text-blue-600" />,
+      color: 'bg-blue-50',
+    },
+    {
+      label: 'Contatos',
+      value: contactsArray.length,
+      icon: <Users size={20} className="text-green-600" />,
+      color: 'bg-green-50',
+    },
+    {
+      label: 'Eventos',
+      value: eventsArray.length,
+      icon: <Calendar size={20} className="text-purple-600" />,
+      color: 'bg-purple-50',
+    },
+    {
+      label: 'Taxa Conv.',
+      value: `${taxaConversao}%`,
+      icon: <CheckCircle2 size={20} className="text-orange-600" />,
+      color: 'bg-orange-50',
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              Dashboard
+            </h1>
+            <p className="text-gray-600 flex items-center gap-2">
+              <Calendar size={16} />
+              Bem-vindo de volta! Aqui está o resumo de hoje.
+            </p>
+          </div>
+          
+          <button className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-500/30 transition-all">
+            <RefreshCw size={18} />
+            Atualizar
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Quick Stats */}
+      <div className="mb-6">
+        <QuickStats stats={quickStats} />
       </div>
 
-      {/* Grid de Estatísticas Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Total de Interações"
-          value={dashboardStats.totalInteracoes}
+      {/* Main Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <MetricCard
+          title="Total de Leads"
+          value={totalLeads}
+          change={12}
+          icon={<Users className="text-blue-600" size={28} />}
           color="blue"
-          icon={<MessageSquare size={24} />}
-          description="Leads + Contatos"
+          loading={leadsLoading}
+          subtitle="Captados este mês"
         />
         
-        <StatCard
-          label="Interações Hoje"
-          value={dashboardStats.interacoesHoje}
+        <MetricCard
+          title="Em Conversão"
+          value={leadsConversao}
+          change={8}
+          icon={<TrendingUp className="text-green-600" size={28} />}
           color="green"
-          icon={<TrendingUp size={24} />}
-          description="Novos hoje"
+          loading={leadsLoading}
         />
         
-        <StatCard
-          label="Leads Capturados"
-          value={dashboardStats.leadsCapturados}
+        <MetricCard
+          title="Taxa de Sucesso"
+          value={`${taxaConversao}%`}
+          change={5}
+          icon={<CheckCircle2 className="text-purple-600" size={28} />}
           color="purple"
-          icon={<Users size={24} />}
-          description="Total de leads"
+          loading={leadsLoading}
         />
         
-        <StatCard
-          label="Tickets Abertos"
-          value={dashboardStats.ticketsAbertos}
+        <MetricCard
+          title="Mensagens"
+          value={342}
+          change={-3}
+          icon={<MessageSquare className="text-orange-600" size={28} />}
           color="orange"
-          icon={<AlertCircle size={24} />}
-          description="Aguardando resposta"
+          subtitle="Este mês"
         />
       </div>
 
-      {/* Grid de Métricas Secundárias */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">Tempo de Resposta</h3>
-            <Clock className="text-blue-600" size={24} />
-          </div>
-          <p className="text-4xl font-bold text-blue-600">{dashboardStats.tempoMedioResposta}</p>
-          <p className="text-sm text-gray-600 mt-2">Média de resposta</p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">Taxa de Satisfação</h3>
-            <CheckCircle className="text-green-600" size={24} />
-          </div>
-          <p className="text-4xl font-bold text-green-600">{dashboardStats.taxaSatisfacao}%</p>
-          <p className="text-sm text-gray-600 mt-2">Clientes satisfeitos</p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">Taxa de Conversão</h3>
-            <TrendingUp className="text-purple-600" size={24} />
-          </div>
-          <p className="text-4xl font-bold text-purple-600">
-            {leadStats?.taxa_conversao || 0}%
-          </p>
-          <p className="text-sm text-gray-600 mt-2">Leads convertidos</p>
-        </div>
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <LeadConversionChart data={funnelData} />
+        <ActivityFeed activities={recentActivities} />
       </div>
 
-      {/* Grid com Leads e Tickets Recentes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Leads Recentes */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Users className="text-blue-600" size={24} />
-              Leads Recentes
-            </h2>
-            <Badge variant="blue">{recentLeads?.length || 0}</Badge>
-          </div>
-
-          <div className="space-y-3">
-            {recentLeads && recentLeads.length > 0 ? (
-              recentLeads.map((lead) => (
-                <div
-                  key={lead.id}
-                  className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-                >
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Users size={20} className="text-blue-600" />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="font-semibold text-gray-900 truncate">{lead.nome}</p>
-                      <Badge 
-                        variant={
-                          lead.status === 'novo' ? 'blue' :
-                          lead.status === 'contato' ? 'yellow' :
-                          lead.status === 'qualificado' ? 'purple' :
-                          lead.status === 'conversao' ? 'green' :
-                          'red'
-                        }
-                        size="sm"
-                      >
-                        {lead.status}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                      <Mail size={14} />
-                      <span className="truncate">{lead.email}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Phone size={14} />
-                      <span>{lead.telefone}</span>
-                      <span className="ml-auto text-xs text-gray-500">
-                        {formatarDataRelativa(lead.criado_em)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Users size={48} className="mx-auto mb-2 text-gray-300" />
-                <p>Nenhum lead recente</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Tickets Recentes */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <AlertCircle className="text-orange-600" size={24} />
-              Tickets Recentes
-            </h2>
-            <Badge variant="orange">{recentTickets?.length || 0}</Badge>
-          </div>
-
-          <div className="space-y-3">
-            {recentTickets && recentTickets.length > 0 ? (
-              recentTickets.map((ticket) => (
-                <div
-                  key={ticket.id}
-                  className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-                >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    ticket.priority === 'urgent' ? 'bg-red-100' :
-                    ticket.priority === 'high' ? 'bg-orange-100' :
-                    'bg-blue-100'
-                  }`}>
-                    <AlertCircle size={20} className={
-                      ticket.priority === 'urgent' ? 'text-red-600' :
-                      ticket.priority === 'high' ? 'text-orange-600' :
-                      'text-blue-600'
-                    } />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="font-semibold text-gray-900 truncate">{ticket.title}</p>
-                      <Badge 
-                        variant={
-                          ticket.status === 'open' ? 'blue' :
-                          ticket.status === 'in_progress' ? 'yellow' :
-                          ticket.status === 'resolved' ? 'green' :
-                          'gray'
-                        }
-                        size="sm"
-                      >
-                        {ticket.status_display}
-                      </Badge>
-                    </div>
-                    
-                    <p className="text-sm text-gray-600 truncate mb-1">
-                      {ticket.description}
-                    </p>
-                    
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>#{ticket.id}</span>
-                      <span>{formatarDataRelativa(ticket.created_at)}</span>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <AlertCircle size={48} className="mx-auto mb-2 text-gray-300" />
-                <p>Nenhum ticket recente</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Estatísticas Detalhadas por Status */}
-      {leadStats && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Activity className="text-blue-600" size={24} />
-            Distribuição de Leads por Status
-          </h2>
-          
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <p className="text-3xl font-bold text-blue-600">{leadStats.novo}</p>
-              <p className="text-sm text-gray-600 mt-1">Novos</p>
-            </div>
-            
-            <div className="text-center p-4 bg-yellow-50 rounded-lg">
-              <p className="text-3xl font-bold text-yellow-600">{leadStats.contato}</p>
-              <p className="text-sm text-gray-600 mt-1">Em Contato</p>
-            </div>
-            
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <p className="text-3xl font-bold text-purple-600">{leadStats.qualificado}</p>
-              <p className="text-sm text-gray-600 mt-1">Qualificados</p>
-            </div>
-            
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <p className="text-3xl font-bold text-green-600">{leadStats.conversao}</p>
-              <p className="text-sm text-gray-600 mt-1">Conversão</p>
-            </div>
-            
-            <div className="text-center p-4 bg-red-50 rounded-lg">
-              <p className="text-3xl font-bold text-red-600">{leadStats.perdido}</p>
-              <p className="text-sm text-gray-600 mt-1">Perdidos</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Ações Rápidas */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Ações Rápidas</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <button className="flex items-center justify-center gap-3 bg-blue-600 text-white py-4 px-6 rounded-lg hover:bg-blue-700 transition font-semibold shadow-md">
-            <Users size={20} />
-            <span>Novo Lead</span>
-          </button>
-          
-          <button className="flex items-center justify-center gap-3 bg-green-600 text-white py-4 px-6 rounded-lg hover:bg-green-700 transition font-semibold shadow-md">
-            <Phone size={20} />
-            <span>Novo Contato</span>
-          </button>
-          
-          <button className="flex items-center justify-center gap-3 bg-orange-600 text-white py-4 px-6 rounded-lg hover:bg-orange-700 transition font-semibold shadow-md">
-            <AlertCircle size={20} />
-            <span>Novo Ticket</span>
-          </button>
-          
-          <button className="flex items-center justify-center gap-3 bg-purple-600 text-white py-4 px-6 rounded-lg hover:bg-purple-700 transition font-semibold shadow-md">
-            <FileText size={20} />
-            <span>Relatórios</span>
-          </button>
-        </div>
-      </div>
-    </PageModel>
+      {/* Monthly Trend */}
+      <MonthlyTrendChart data={trendData} />
+    </div>
   );
 }
