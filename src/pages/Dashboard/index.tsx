@@ -9,10 +9,10 @@ import {
   Calendar,
   UserPlus,
   Phone,
-  Mail,
+  // Mail,
   CheckCircle2,
   XCircle,
-  Clock,
+  // Clock,
   ArrowUpRight,
   ArrowDownRight,
   MoreVertical,
@@ -22,10 +22,10 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
+  // LineChart,
+  // Line,
+  // BarChart,
+  // Bar,
   PieChart,
   Pie,
   Cell,
@@ -303,7 +303,7 @@ function LeadConversionChart({ data }: { data: any[] }) {
               fill="#8884d8"
               dataKey="value"
             >
-              {data.map((entry, index) => (
+              {data.map((_entry, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
@@ -422,8 +422,8 @@ function MonthlyTrendChart({ data }: { data: any[] }) {
 // ============================================
 export default function Dashboard() {
   const { data: leads = [], isLoading: leadsLoading } = useGetLeadsQuery({});
-  const { data: contacts = [], isLoading: contactsLoading } = useGetContactsQuery({});
-  const { data: events = [], isLoading: eventsLoading } = useGetEventsQuery({});
+  const { data: contacts = []} = useGetContactsQuery({});
+  const { data: events = []} = useGetEventsQuery({});
 
   // Ensure leads, contacts and events are arrays
   const leadsArray = Array.isArray(leads) ? leads : [];
