@@ -1,18 +1,13 @@
 // src/pages/Leads/index.tsx
-// 💼 PÁGINA DE LEADS - VERSÃO PROFISSIONAL E MODERNA
+// 💼 PÁGINA DE LEADS - DESIGN PROFISSIONAL E COERENTE
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, RefreshCw } from 'lucide-react';
+import { Users, RefreshCw, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-// Componentes Locais
-import LeadStats from './components/LeadStats';
-import LeadFilters from './components/LeadFilters';
-import { type LeadViewMode } from './components/LeadFilters';
-import LeadGridView from './components/LeadGridView';
-import LeadListView from './components/LeadListView';
-import LeadsKanbanView from './components/LeadsKanbanView';
+// Layout
+import PageModel from '../../components/layout/PageModel';
 
 // Componentes Comuns
 import { 
@@ -21,28 +16,27 @@ import {
   LoadingState,
 } from '../../components/common';
 
-// Hooks e Services
-import { useCurrentSchool } from '../../hooks/useCurrentSchool';
-import {
-  useGetLeadsQuery,
-  useGetLeadStatsQuery,
-  useCreateLeadMutation,
-  useUpdateLeadMutation,
-  useDeleteLeadMutation,
-  useChangeLeadStatusMutation,
-  useExportLeadsCSVMutation,
-  extractErrorMessage,
-  type Lead,
-} from '../../services';
+// Componentes Locais
+import LeadStats from './components/LeadStats';
+import LeadFilters, { type LeadViewMode } from './components/LeadFilters';
+import LeadGridView from './components/LeadGridView';
+import LeadListView from './components/LeadListView';
+import LeadsKanbanView from './components/LeadsKanbanView';
 
-// ============================================
-// TYPES
-// ============================================
-
-interface LeadFilters {
-  search?: string;
-  status?: string;
-  origem?: string;
+// Types
+interface Lead {
+  id: number;
+  nome: string;
+  email: string;
+  telefone: string;
+  status: 'novo' | 'contato' | 'qualificado' | 'conversao' | 'perdido';
+  origem: 'site' | 'whatsapp' | 'indicacao' | 'ligacao' | 'email' | 'facebook' | 'instagram';
+  origem_display: string;
+  observacoes?: string;
+  criado_em: string;
+  escola_nome?: string;
+  escola: number;
+  interesses?: Record<string, any>;
 }
 
 interface LeadFormData {
@@ -52,8 +46,144 @@ interface LeadFormData {
   status: Lead['status'];
   origem: Lead['origem'];
   observacoes: string;
-  interesses: Record<string, any>;
 }
+
+// ============================================
+// DADOS MOCADOS
+// ============================================
+
+const MOCK_LEADS: Lead[] = [
+  {
+    id: 1,
+    nome: 'Maria Silva Santos',
+    email: 'maria.silva@email.com',
+    telefone: '11999998888',
+    status: 'novo',
+    origem: 'site',
+    origem_display: 'Site',
+    observacoes: 'Interessada em turma de manhã para o filho de 5 anos',
+    criado_em: '2026-01-31T10:00:00',
+    escola_nome: 'Escola ABC',
+    escola: 1,
+  },
+  {
+    id: 2,
+    nome: 'João Pedro Oliveira',
+    email: 'joao.pedro@email.com',
+    telefone: '11988887777',
+    status: 'contato',
+    origem: 'whatsapp',
+    origem_display: 'WhatsApp',
+    observacoes: 'Quer conhecer a estrutura da escola',
+    criado_em: '2026-01-30T14:30:00',
+    escola_nome: 'Escola ABC',
+    escola: 1,
+  },
+  {
+    id: 3,
+    nome: 'Ana Carolina Lima',
+    email: 'ana.lima@email.com',
+    telefone: '11977776666',
+    status: 'qualificado',
+    origem: 'indicacao',
+    origem_display: 'Indicação',
+    observacoes: 'Indicada pela mãe do Pedro. Muito interessada.',
+    criado_em: '2026-01-29T09:15:00',
+    escola_nome: 'Escola ABC',
+    escola: 1,
+  },
+  {
+    id: 4,
+    nome: 'Carlos Eduardo Costa',
+    email: 'carlos.costa@email.com',
+    telefone: '11966665555',
+    status: 'conversao',
+    origem: 'facebook',
+    origem_display: 'Facebook',
+    observacoes: 'Matrícula confirmada para turma integral',
+    criado_em: '2026-01-28T16:45:00',
+    escola_nome: 'Escola ABC',
+    escola: 1,
+  },
+  {
+    id: 5,
+    nome: 'Juliana Fernandes',
+    email: 'juliana.f@email.com',
+    telefone: '11955554444',
+    status: 'novo',
+    origem: 'instagram',
+    origem_display: 'Instagram',
+    observacoes: 'Perguntou sobre valores e horários',
+    criado_em: '2026-01-31T11:20:00',
+    escola_nome: 'Escola ABC',
+    escola: 1,
+  },
+  {
+    id: 6,
+    nome: 'Roberto Almeida',
+    email: 'roberto.almeida@email.com',
+    telefone: '11944443333',
+    status: 'contato',
+    origem: 'ligacao',
+    origem_display: 'Ligação',
+    observacoes: 'Agendada visita para próxima semana',
+    criado_em: '2026-01-30T10:00:00',
+    escola_nome: 'Escola ABC',
+    escola: 1,
+  },
+  {
+    id: 7,
+    nome: 'Patrícia Souza',
+    email: 'patricia.souza@email.com',
+    telefone: '11933332222',
+    status: 'qualificado',
+    origem: 'site',
+    origem_display: 'Site',
+    observacoes: 'Preencheu formulário completo. Alta chance de conversão.',
+    criado_em: '2026-01-29T15:30:00',
+    escola_nome: 'Escola ABC',
+    escola: 1,
+  },
+  {
+    id: 8,
+    nome: 'Fernando Rocha',
+    email: 'fernando.rocha@email.com',
+    telefone: '11922221111',
+    status: 'conversao',
+    origem: 'whatsapp',
+    origem_display: 'WhatsApp',
+    observacoes: 'Matrícula efetivada. Pagamento confirmado.',
+    criado_em: '2026-01-27T14:00:00',
+    escola_nome: 'Escola ABC',
+    escola: 1,
+  },
+  {
+    id: 9,
+    nome: 'Amanda Torres',
+    email: 'amanda.torres@email.com',
+    telefone: '11911110000',
+    status: 'perdido',
+    origem: 'email',
+    origem_display: 'Email',
+    observacoes: 'Optou por outra escola devido à localização',
+    criado_em: '2026-01-26T09:00:00',
+    escola_nome: 'Escola ABC',
+    escola: 1,
+  },
+  {
+    id: 10,
+    nome: 'Ricardo Mendes',
+    email: 'ricardo.mendes@email.com',
+    telefone: '11900009999',
+    status: 'novo',
+    origem: 'facebook',
+    origem_display: 'Facebook',
+    observacoes: 'Respondeu anúncio sobre período integral',
+    criado_em: '2026-01-31T08:00:00',
+    escola_nome: 'Escola ABC',
+    escola: 1,
+  },
+];
 
 // ============================================
 // MAIN COMPONENT
@@ -62,19 +192,11 @@ interface LeadFormData {
 export default function LeadsPage() {
   
   // ============================================
-  // HOOKS
-  // ============================================
-  
-  const { 
-    currentSchool, 
-    currentSchoolId,
-    isLoading: schoolsLoading 
-  } = useCurrentSchool();
-
-  // ============================================
   // STATE
   // ============================================
   
+  const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS);
+  const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState<LeadViewMode>('kanban');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
@@ -90,46 +212,47 @@ export default function LeadsPage() {
     status: 'novo',
     origem: 'site',
     observacoes: '',
-    interesses: {},
   });
-
-  // ============================================
-  // API
-  // ============================================
-  
-  const filters: LeadFilters = {
-    search: searchTerm || undefined,
-    status: statusFilter !== 'todos' ? statusFilter : undefined,
-    origem: origemFilter !== 'todas' ? origemFilter : undefined,
-  };
-
-  const { 
-    data: leadsData, 
-    isLoading: leadsLoading, 
-    error: fetchError,
-    refetch,
-    isFetching,
-  } = useGetLeadsQuery(filters);
-
-  const { data: stats } = useGetLeadStatsQuery();
-
-  const [createLead, { isLoading: isCreating }] = useCreateLeadMutation();
-  const [updateLead, { isLoading: isUpdating }] = useUpdateLeadMutation();
-  const [deleteLead, { isLoading: isDeleting }] = useDeleteLeadMutation();
-  const [changeStatus] = useChangeLeadStatusMutation();
-  const [exportCSV, { isLoading: isExporting }] = useExportLeadsCSVMutation();
-
-  const leads = leadsData?.results || [];
 
   // ============================================
   // COMPUTED
   // ============================================
   
-  const hasActiveFilters = useMemo(() => {
-    return searchTerm !== '' || 
-           statusFilter !== 'todos' || 
-           origemFilter !== 'todas';
-  }, [searchTerm, statusFilter, origemFilter]);
+  const filteredLeads = useMemo(() => {
+    return leads.filter((lead) => {
+      const matchesSearch =
+        searchTerm === '' ||
+        lead.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.telefone.includes(searchTerm);
+
+      const matchesStatus = statusFilter === 'todos' || lead.status === statusFilter;
+      const matchesOrigem = origemFilter === 'todas' || lead.origem === origemFilter;
+
+      return matchesSearch && matchesStatus && matchesOrigem;
+    });
+  }, [leads, searchTerm, statusFilter, origemFilter]);
+
+  const stats = useMemo(() => {
+    return {
+      total: leads.length,
+      novo: leads.filter(l => l.status === 'novo').length,
+      contato: leads.filter(l => l.status === 'contato').length,
+      qualificado: leads.filter(l => l.status === 'qualificado').length,
+      conversao: leads.filter(l => l.status === 'conversao').length,
+      perdido: leads.filter(l => l.status === 'perdido').length,
+      taxa_conversao: leads.length > 0 
+        ? Number(((leads.filter(l => l.status === 'conversao').length / leads.length) * 100).toFixed(1))
+        : 0,
+      novos_hoje: leads.filter(l => {
+        const hoje = new Date().toISOString().split('T')[0];
+        const leadDate = l.criado_em.split('T')[0];
+        return leadDate === hoje;
+      }).length,
+    };
+  }, [leads]);
+
+  const hasActiveFilters = searchTerm !== '' || statusFilter !== 'todos' || origemFilter !== 'todas';
 
   // ============================================
   // HANDLERS
@@ -143,7 +266,6 @@ export default function LeadsPage() {
       status: 'novo',
       origem: 'site',
       observacoes: '',
-      interesses: {},
     });
     setEditingLead(null);
     setShowForm(false);
@@ -158,35 +280,37 @@ export default function LeadsPage() {
     return null;
   };
 
-  const handleSubmit = async (): Promise<void> => {
+  const handleSubmit = (): void => {
     const error = validate();
     if (error) {
       toast.error(error);
       return;
     }
 
-    try {
-      if (editingLead) {
-        await updateLead({ 
-          id: editingLead.id, 
-          data: {
-            ...formData,
-            escola: parseInt(currentSchoolId),
-          }
-        }).unwrap();
-        toast.success('✅ Lead atualizado com sucesso!');
-      } else {
-        await createLead({
-          ...formData,
-          escola: parseInt(currentSchoolId),
-        }).unwrap();
-        toast.success('✅ Lead criado com sucesso!');
-      }
-      resetForm();
-      refetch();
-    } catch (err) {
-      toast.error(`❌ ${extractErrorMessage(err)}`);
+    if (editingLead) {
+      setLeads(prev => prev.map(l => 
+        l.id === editingLead.id 
+          ? { 
+              ...l, 
+              ...formData,
+              origem_display: getOrigemDisplay(formData.origem)
+            } 
+          : l
+      ));
+      toast.success('✅ Lead atualizado com sucesso!');
+    } else {
+      const newLead: Lead = {
+        id: Math.max(...leads.map(l => l.id)) + 1,
+        ...formData,
+        origem_display: getOrigemDisplay(formData.origem),
+        criado_em: new Date().toISOString(),
+        escola_nome: 'Escola ABC',
+        escola: 1,
+      };
+      setLeads(prev => [newLead, ...prev]);
+      toast.success('✅ Lead criado com sucesso!');
     }
+    resetForm();
   };
 
   const handleEdit = (lead: Lead): void => {
@@ -197,64 +321,52 @@ export default function LeadsPage() {
       status: lead.status,
       origem: lead.origem,
       observacoes: lead.observacoes || '',
-      interesses: lead.interesses || {},
     });
     setEditingLead(lead);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = async (): Promise<void> => {
+  const handleDelete = (): void => {
     if (!leadToDelete) return;
-
-    try {
-      await deleteLead(leadToDelete.id).unwrap();
-      toast.success('✅ Lead deletado com sucesso!');
-      setLeadToDelete(null);
-      refetch();
-    } catch (err) {
-      toast.error(`❌ ${extractErrorMessage(err)}`);
-    }
+    setLeads(prev => prev.filter(l => l.id !== leadToDelete.id));
+    toast.success('✅ Lead deletado com sucesso!');
+    setLeadToDelete(null);
   };
 
-  const handleStatusChange = async (lead: Lead, newStatus: Lead['status']): Promise<void> => {
-    try {
-      await changeStatus({ id: lead.id, status: newStatus }).unwrap();
-      toast.success('✅ Status atualizado!');
-      refetch();
-    } catch (err) {
-      toast.error(`❌ ${extractErrorMessage(err)}`);
-    }
+  const handleStatusChange = (lead: Lead, newStatus: Lead['status']): void => {
+    setLeads(prev => prev.map(l => 
+      l.id === lead.id ? { ...l, status: newStatus } : l
+    ));
+    toast.success('✅ Status atualizado!');
   };
 
-  const handleStatusChangeKanban = async (id: number, _fromStatus: string, toStatus: string): Promise<void> => {
-    try {
-      await changeStatus({ id, status: toStatus as Lead['status'] }).unwrap();
-      toast.success('✅ Lead movido com sucesso!');
-      refetch();
-    } catch (err) {
-      toast.error(`❌ ${extractErrorMessage(err)}`);
-    }
+  const handleStatusChangeKanban = (id: number, _fromStatus: string, toStatus: string): void => {
+    setLeads(prev => prev.map(l => 
+      l.id === id ? { ...l, status: toStatus as Lead['status'] } : l
+    ));
+    toast.success('✅ Lead movido com sucesso!');
   };
 
-  const handleExport = async (): Promise<void> => {
-    try {
-      const blob = await exportCSV().unwrap();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `leads_${currentSchool?.school_name || 'escola'}_${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      toast.success('✅ CSV exportado com sucesso!');
-    } catch (err) {
-      toast.error('❌ Erro ao exportar CSV');
-    }
+  const handleExport = (): void => {
+    // Simular exportação
+    const csv = convertToCSV(filteredLeads);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `leads_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    toast.success('✅ CSV exportado com sucesso!');
   };
 
   const handleRefresh = (): void => {
-    refetch();
-    toast.success('🔄 Dados atualizados!');
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      toast.success('🔄 Dados atualizados!');
+    }, 1000);
   };
 
   const handleClearFilters = (): void => {
@@ -264,10 +376,41 @@ export default function LeadsPage() {
   };
 
   // ============================================
+  // HELPERS
+  // ============================================
+
+  const getOrigemDisplay = (origem: Lead['origem']): string => {
+    const map: Record<Lead['origem'], string> = {
+      site: 'Site',
+      whatsapp: 'WhatsApp',
+      indicacao: 'Indicação',
+      ligacao: 'Ligação',
+      email: 'Email',
+      facebook: 'Facebook',
+      instagram: 'Instagram',
+    };
+    return map[origem];
+  };
+
+  const convertToCSV = (data: Lead[]): string => {
+    const headers = ['ID', 'Nome', 'Email', 'Telefone', 'Status', 'Origem', 'Criado Em'];
+    const rows = data.map(l => [
+      l.id,
+      l.nome,
+      l.email,
+      l.telefone,
+      l.status,
+      l.origem_display,
+      new Date(l.criado_em).toLocaleDateString('pt-BR'),
+    ]);
+    return [headers, ...rows].map(row => row.join(',')).join('\n');
+  };
+
+  // ============================================
   // LOADING STATE
   // ============================================
   
-  if (leadsLoading || schoolsLoading) {
+  if (isLoading && leads.length === 0) {
     return (
       <LoadingState 
         message="Carregando leads..."
@@ -277,167 +420,140 @@ export default function LeadsPage() {
   }
 
   // ============================================
-  // NO SCHOOL STATE
-  // ============================================
-  
-  if (!currentSchool) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
-        <div className="text-center max-w-md mx-4">
-          <Users className="mx-auto mb-4 h-16 w-16 text-yellow-600" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Nenhuma escola cadastrada
-          </h2>
-          <p className="text-gray-600">
-            Entre em contato com o administrador.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // ============================================
   // RENDER
   // ============================================
   
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
-        >
+    <PageModel>
+      
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8"
+      >
+        <div className="flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
-              <Users className="text-blue-600" size={40} />
-              Leads
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              Gestão de Leads
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-gray-600 flex items-center gap-2">
+              <Users size={16} />
               Gerencie seu funil de captação e conversão de alunos
             </p>
           </div>
 
-          <button
-            onClick={handleRefresh}
-            disabled={isFetching}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw size={18} className={`text-gray-600 ${isFetching ? 'animate-spin' : ''}`} />
-            <span className="text-sm font-semibold text-gray-700">
-              {isFetching ? 'Atualizando...' : 'Atualizar'}
-            </span>
-          </button>
-        </motion.div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-2 px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl font-semibold shadow-sm hover:shadow transition-all"
+            >
+              <Download size={18} />
+              <span className="hidden sm:inline">Exportar</span>
+            </button>
 
-        {/* Error Alert */}
-        {fetchError && (
+            <button
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="flex items-center gap-2 px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl font-semibold shadow-sm hover:shadow transition-all disabled:opacity-50"
+            >
+              <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+              <span className="hidden sm:inline">Atualizar</span>
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Stats */}
+      <LeadStats stats={stats} loading={false} />
+
+      {/* Filters */}
+      <LeadFilters
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        origemFilter={origemFilter}
+        onOrigemFilterChange={setOrigemFilter}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onNewLead={() => setShowForm(true)}
+        onExport={handleExport}
+        onRefresh={handleRefresh}
+        onClearFilters={handleClearFilters}
+        hasActiveFilters={hasActiveFilters}
+        isExporting={false}
+        isRefreshing={isLoading}
+      />
+
+      {/* Views */}
+      <AnimatePresence mode="wait">
+        {viewMode === 'grid' && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg"
-          >
-            <p className="text-red-700 font-semibold">
-              ❌ Erro: {extractErrorMessage(fetchError)}
-            </p>
-          </motion.div>
-        )}
-
-        {/* Stats */}
-        {stats && (
-          <LeadStats stats={stats} loading={leadsLoading} />
-        )}
-
-        {/* Filters */}
-        <LeadFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-          origemFilter={origemFilter}
-          onOrigemFilterChange={setOrigemFilter}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          onNewLead={() => setShowForm(true)}
-          onExport={handleExport}
-          onRefresh={handleRefresh}
-          onClearFilters={handleClearFilters}
-          hasActiveFilters={hasActiveFilters}
-          isExporting={isExporting}
-          isRefreshing={isFetching}
-        />
-
-        {/* Views */}
-        <AnimatePresence mode="wait">
-          {viewMode === 'grid' && (
-            <motion.div
-              key="grid"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <LeadGridView
-                leads={leads}
-                onEdit={handleEdit}
-                onDelete={setLeadToDelete}
-                onStatusChange={handleStatusChange}
-                loading={leadsLoading}
-              />
-            </motion.div>
-          )}
-
-          {viewMode === 'list' && (
-            <motion.div
-              key="list"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <LeadListView
-                leads={leads}
-                onEdit={handleEdit}
-                onDelete={setLeadToDelete}
-                onStatusChange={handleStatusChange}
-                loading={leadsLoading}
-              />
-            </motion.div>
-          )}
-
-          {viewMode === 'kanban' && (
-            <motion.div
-              key="kanban"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <LeadsKanbanView
-                leads={leads}
-                onLeadClick={handleEdit}
-                onChangeStatus={handleStatusChangeKanban}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Results Info */}
-        {leads.length > 0 && (
-          <motion.div
+            key="grid"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-blue-50 p-4 rounded-lg border border-blue-200"
+            exit={{ opacity: 0 }}
           >
-            <p className="text-gray-700 font-semibold">
-              Mostrando <span className="text-blue-600 font-bold">{leads.length}</span> de{' '}
-              <span className="text-blue-600 font-bold">{stats?.total || 0}</span> leads
-              {hasActiveFilters && (
-                <span className="text-gray-600 text-sm ml-2">(filtrado)</span>
-              )}
-            </p>
+            <LeadGridView
+              leads={filteredLeads}
+              onEdit={handleEdit}
+              onDelete={setLeadToDelete}
+              onStatusChange={handleStatusChange}
+              loading={false}
+            />
           </motion.div>
         )}
-      </div>
+
+        {viewMode === 'list' && (
+          <motion.div
+            key="list"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <LeadListView
+              leads={filteredLeads}
+              onEdit={handleEdit}
+              onDelete={setLeadToDelete}
+              onStatusChange={handleStatusChange}
+              loading={false}
+            />
+          </motion.div>
+        )}
+
+        {viewMode === 'kanban' && (
+          <motion.div
+            key="kanban"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <LeadsKanbanView
+              leads={filteredLeads}
+              onLeadClick={handleEdit}
+              onChangeStatus={handleStatusChangeKanban}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Results Info */}
+      {filteredLeads.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-blue-50 p-4 rounded-lg border border-blue-200"
+        >
+          <p className="text-gray-700 font-semibold">
+            Mostrando <span className="text-blue-600 font-bold">{filteredLeads.length}</span> de{' '}
+            <span className="text-blue-600 font-bold">{stats.total}</span> leads
+            {hasActiveFilters && (
+              <span className="text-gray-600 text-sm ml-2">(filtrado)</span>
+            )}
+          </p>
+        </motion.div>
+      )}
 
       {/* Form Modal */}
       {showForm && (
@@ -453,7 +569,7 @@ export default function LeadsPage() {
             onChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
             onSubmit={handleSubmit}
             onCancel={resetForm}
-            isLoading={isCreating || isUpdating}
+            isLoading={false}
             isEditing={!!editingLead}
           />
         </FormModal>
@@ -469,11 +585,11 @@ export default function LeadsPage() {
           cancelLabel="Cancelar"
           onConfirm={handleDelete}
           onCancel={() => setLeadToDelete(null)}
-          isLoading={isDeleting}
+          isLoading={false}
           variant="danger"
         />
       )}
-    </div>
+    </PageModel>
   );
 }
 
@@ -551,7 +667,7 @@ function LeadForm({
           </label>
           <select
             value={formData.origem}
-            onChange={(e) => onChange('origem', e.target.value as Lead['origem'])}
+            onChange={(e) => onChange('origem', e.target.value)}
             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
           >
             <option value="site">🌐 Site</option>
@@ -572,7 +688,7 @@ function LeadForm({
         </label>
         <select
           value={formData.status}
-          onChange={(e) => onChange('status', e.target.value as Lead['status'])}
+          onChange={(e) => onChange('status', e.target.value)}
           className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
         >
           <option value="novo">🆕 Novo</option>

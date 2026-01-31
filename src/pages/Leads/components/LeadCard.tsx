@@ -1,5 +1,5 @@
 // src/pages/Leads/components/LeadCard.tsx
-// 💼 CARD DE LEAD PROFISSIONAL
+// 💼 CARD DE LEAD PROFISSIONAL - DESIGN ATUALIZADO
 
 import { motion } from 'framer-motion';
 import { 
@@ -11,7 +11,8 @@ import {
   Calendar,
   MapPin,
   Tag,
-  User
+  User,
+  ChevronRight
 } from 'lucide-react';
 import { useState } from 'react';
 import type { Lead } from '../../../services';
@@ -29,7 +30,7 @@ interface LeadCardProps {
 }
 
 // ============================================
-// STATUS CONFIG
+// STATUS CONFIG (Seguindo padrão do projeto)
 // ============================================
 
 const STATUS_CONFIG: Record<Lead['status'], {
@@ -82,7 +83,7 @@ const STATUS_CONFIG: Record<Lead['status'], {
   },
 };
 
-const ORIGEM_ICONS: Record<Lead['origem'], string> = {
+const ORIGEM_ICONS: Record<string, string> = {
   site: '🌐',
   whatsapp: '💬',
   indicacao: '👥',
@@ -117,7 +118,6 @@ export default function LeadCard({
   };
 
   const formatPhone = (phone: string) => {
-    // Formatar telefone brasileiro
     const cleaned = phone.replace(/\D/g, '');
     if (cleaned.length === 11) {
       return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
@@ -135,72 +135,78 @@ export default function LeadCard({
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         whileHover={{ x: 4 }}
-        className={`flex items-center gap-4 p-4 rounded-xl border ${config.border} ${config.bg} hover:shadow-md transition-all cursor-pointer group`}
+        className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer group"
       >
-        {/* Avatar */}
-        <div className={`w-12 h-12 bg-gradient-to-br ${config.gradient} rounded-xl flex items-center justify-center text-2xl shadow-lg flex-shrink-0`}>
-          <User className="text-white" size={24} />
-        </div>
-
-        {/* Conteúdo */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <h4 className="font-bold text-gray-900 line-clamp-1">
-              {lead.nome}
-            </h4>
-            <span className={`px-2 py-1 rounded-full text-xs font-bold border-2 ${config.border} ${config.bg} ${config.text} whitespace-nowrap`}>
-              {config.icon}
-            </span>
+        <div className="flex items-center gap-4">
+          {/* Avatar com gradiente */}
+          <div className={`w-12 h-12 bg-gradient-to-br ${config.gradient} rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-md flex-shrink-0`}>
+            {lead.nome.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
           </div>
-          
-          <div className="flex items-center gap-3 text-xs text-gray-600 mb-1">
-            {lead.email && (
-              <span className="flex items-center gap-1 line-clamp-1">
-                <Mail size={12} />
-                {lead.email}
+
+          {/* Conteúdo */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <h4 className="font-bold text-gray-900 line-clamp-1">
+                {lead.nome}
+              </h4>
+              <span className={`px-2 py-1 rounded-full text-xs font-bold border-2 ${config.border} ${config.bg} ${config.text} whitespace-nowrap flex items-center gap-1`}>
+                <span>{config.icon}</span>
               </span>
-            )}
-            {lead.telefone && (
-              <span className="flex items-center gap-1">
-                <Phone size={12} />
-                {formatPhone(lead.telefone)}
+            </div>
+            
+            <div className="flex items-center gap-3 text-xs text-gray-600 mb-2">
+              {lead.email && (
+                <span className="flex items-center gap-1 line-clamp-1">
+                  <Mail size={12} />
+                  {lead.email}
+                </span>
+              )}
+              {lead.telefone && (
+                <span className="flex items-center gap-1">
+                  <Phone size={12} />
+                  {formatPhone(lead.telefone)}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 text-xs">
+              <span className={`px-2 py-0.5 rounded-full border ${config.border} ${config.bg} ${config.text} font-semibold flex items-center gap-1`}>
+                <span>{origemIcon}</span>
+                {lead.origem_display}
               </span>
-            )}
+              <span className="text-gray-500 flex items-center gap-1">
+                <Calendar size={12} />
+                {formatDate(lead.criado_em)}
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs">
-            <span className={`px-2 py-0.5 rounded-full border ${config.border} ${config.bg} ${config.text} font-semibold`}>
-              {origemIcon} {lead.origem_display}
-            </span>
-            <span className="text-gray-500 flex items-center gap-1">
-              <Calendar size={12} />
-              {formatDate(lead.criado_em)}
-            </span>
+          {/* Ações e indicador */}
+          <div className="flex items-center gap-2">
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(lead);
+                }}
+                className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                title="Editar"
+              >
+                <Edit2 size={16} className="text-blue-600" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(lead);
+                }}
+                className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                title="Deletar"
+              >
+                <Trash2 size={16} className="text-red-600" />
+              </button>
+            </div>
+            <ChevronRight size={20} className="text-gray-400 flex-shrink-0" />
           </div>
-        </div>
-
-        {/* Ações */}
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(lead);
-            }}
-            className="p-2 hover:bg-white rounded-lg transition-colors"
-            title="Editar"
-          >
-            <Edit2 size={16} className="text-blue-600" />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(lead);
-            }}
-            className="p-2 hover:bg-white rounded-lg transition-colors"
-            title="Deletar"
-          >
-            <Trash2 size={16} className="text-red-600" />
-          </button>
         </div>
       </motion.div>
     );
@@ -221,18 +227,19 @@ export default function LeadCard({
       {/* Header com gradiente */}
       <div className={`bg-gradient-to-r ${config.gradient} px-6 py-4 relative`}>
         <div className="flex items-start justify-between">
-          {/* Status */}
+          {/* Status e Avatar */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-2xl border border-white/30">
-              <User className="text-white" size={24} />
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-2xl border border-white/30 text-white font-bold">
+              {lead.nome.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
             </div>
             <div>
               <span className="text-white/80 text-xs font-semibold uppercase tracking-wider">
                 {config.label}
               </span>
               <div className="mt-1">
-                <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs text-white font-bold border border-white/30">
-                  {config.icon} {lead.origem_display}
+                <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs text-white font-bold border border-white/30 flex items-center gap-1 w-fit">
+                  <span>{origemIcon}</span>
+                  {lead.origem_display}
                 </span>
               </div>
             </div>
@@ -367,6 +374,9 @@ export default function LeadCard({
           )}
         </div>
       </div>
+
+      {/* Hover indicator */}
+      <div className="h-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
     </motion.div>
   );
 }

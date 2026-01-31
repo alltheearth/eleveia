@@ -1,17 +1,18 @@
 // src/pages/Leads/components/LeadStats.tsx
-// 📊 ESTATÍSTICAS VISUAIS DE LEADS - PROFISSIONAL
+// 📊 ESTATÍSTICAS VISUAIS DE LEADS - DESIGN ATUALIZADO
 
 import { motion } from 'framer-motion';
 import { 
   Users, 
   TrendingUp, 
-  Clock, 
   CheckCircle2,
   ArrowUpRight,
   ArrowDownRight,
   Target,
   Phone,
-  UserCheck
+  UserCheck,
+  XCircle,
+  Sparkles
 } from 'lucide-react';
 
 // ============================================
@@ -37,13 +38,13 @@ interface StatCardProps {
   value: number;
   change?: number;
   icon: React.ReactNode;
-  color: 'blue' | 'yellow' | 'purple' | 'green' | 'red' | 'gray';
+  color: 'blue' | 'yellow' | 'purple' | 'green' | 'red';
   subtitle?: string;
   percentage?: number;
 }
 
 // ============================================
-// COLOR CONFIG
+// COLOR CONFIG (Seguindo padrão do projeto)
 // ============================================
 
 const colorConfigs = {
@@ -76,12 +77,6 @@ const colorConfigs = {
     light: 'bg-red-50',
     text: 'text-red-600',
     border: 'border-red-200',
-  },
-  gray: {
-    gradient: 'from-gray-500 to-gray-600',
-    light: 'bg-gray-50',
-    text: 'text-gray-600',
-    border: 'border-gray-200',
   },
 };
 
@@ -143,7 +138,7 @@ function StatCard({
           <p className="text-xs text-gray-500">{subtitle}</p>
         )}
         
-        {/* Barra de progresso (se houver percentage) */}
+        {/* Barra de progresso */}
         {percentage !== undefined && (
           <div className="mt-3">
             <div className="flex items-center justify-between mb-1">
@@ -191,10 +186,10 @@ export default function LeadStats({ stats, loading = false }: LeadStatsProps) {
 
   // Calcular percentuais
   const totalAtivos = stats.total - stats.perdido;
-  const pctNovo = totalAtivos > 0 ? ((stats.novo / totalAtivos) * 100).toFixed(0) : 0;
-  const pctContato = totalAtivos > 0 ? ((stats.contato / totalAtivos) * 100).toFixed(0) : 0;
-  const pctQualificado = totalAtivos > 0 ? ((stats.qualificado / totalAtivos) * 100).toFixed(0) : 0;
-  const pctConversao = totalAtivos > 0 ? ((stats.conversao / totalAtivos) * 100).toFixed(0) : 0;
+  const pctNovo = totalAtivos > 0 ? Number(((stats.novo / totalAtivos) * 100).toFixed(0)) : 0;
+  const pctContato = totalAtivos > 0 ? Number(((stats.contato / totalAtivos) * 100).toFixed(0)) : 0;
+  const pctQualificado = totalAtivos > 0 ? Number(((stats.qualificado / totalAtivos) * 100).toFixed(0)) : 0;
+  const pctConversao = totalAtivos > 0 ? Number(((stats.conversao / totalAtivos) * 100).toFixed(0)) : 0;
 
   return (
     <div className="space-y-6">
@@ -207,7 +202,7 @@ export default function LeadStats({ stats, loading = false }: LeadStatsProps) {
           icon={<Users className="text-blue-600" size={24} />}
           color="blue"
           subtitle="Aguardando primeiro contato"
-          percentage={Number(pctNovo)}
+          percentage={pctNovo}
         />
 
         <StatCard
@@ -217,7 +212,7 @@ export default function LeadStats({ stats, loading = false }: LeadStatsProps) {
           icon={<Phone className="text-yellow-600" size={24} />}
           color="yellow"
           subtitle="Sendo trabalhados"
-          percentage={Number(pctContato)}
+          percentage={pctContato}
         />
 
         <StatCard
@@ -227,7 +222,7 @@ export default function LeadStats({ stats, loading = false }: LeadStatsProps) {
           icon={<UserCheck className="text-purple-600" size={24} />}
           color="purple"
           subtitle="Prontos para conversão"
-          percentage={Number(pctQualificado)}
+          percentage={pctQualificado}
         />
 
         <StatCard
@@ -237,50 +232,46 @@ export default function LeadStats({ stats, loading = false }: LeadStatsProps) {
           icon={<CheckCircle2 className="text-green-600" size={24} />}
           color="green"
           subtitle="Matrículas confirmadas"
-          percentage={Number(pctConversao)}
+          percentage={pctConversao}
         />
       </div>
 
-      {/* Performance Cards */}
+      {/* Cards de Performance (Seguindo padrão do Dashboard) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Taxa de Conversão */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg p-6 text-white"
+          className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
               <Target className="text-white" size={24} />
             </div>
-            <div className="text-right">
-              <p className="text-sm text-white/80 font-semibold uppercase tracking-wider">
-                Taxa de Conversão
-              </p>
+            <div className="flex items-center gap-1 px-3 py-1.5 bg-green-50 rounded-full">
+              <ArrowUpRight size={14} className="text-green-600" />
+              <span className="text-xs font-bold text-green-600">+5%</span>
             </div>
           </div>
 
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-5xl font-bold mb-1">{stats.taxa_conversao}%</p>
-              <p className="text-sm text-white/80">
-                {stats.conversao} de {stats.total} leads
-              </p>
-            </div>
-            <div className="flex items-center gap-1 px-3 py-1.5 bg-white/20 rounded-full">
-              <TrendingUp size={16} />
-              <span className="text-sm font-bold">+5%</span>
-            </div>
-          </div>
+          <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">
+            Taxa de Conversão
+          </p>
+          <p className="text-4xl font-bold text-gray-900 mb-1">
+            {stats.taxa_conversao}%
+          </p>
+          <p className="text-xs text-gray-500">
+            {stats.conversao} de {stats.total} leads
+          </p>
 
           {/* Barra de progresso */}
-          <div className="mt-4 h-3 bg-white/20 rounded-full overflow-hidden">
+          <div className="mt-4 h-3 bg-gray-100 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${stats.taxa_conversao}%` }}
               transition={{ duration: 1, ease: 'easeOut' }}
-              className="h-full bg-white shadow-lg"
+              className="h-full bg-gradient-to-r from-green-500 to-green-600 shadow-md"
             />
           </div>
         </motion.div>
@@ -290,31 +281,27 @@ export default function LeadStats({ stats, loading = false }: LeadStatsProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg p-6 text-white"
+          className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30">
-              <Clock className="text-white" size={24} />
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Sparkles className="text-white" size={24} />
             </div>
-            <div className="text-right">
-              <p className="text-sm text-white/80 font-semibold uppercase tracking-wider">
-                Novos Hoje
-              </p>
+            <div className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 rounded-full">
+              <ArrowUpRight size={14} className="text-blue-600" />
+              <span className="text-xs font-bold text-blue-600">+3</span>
             </div>
           </div>
 
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-5xl font-bold mb-1">{stats.novos_hoje}</p>
-              <p className="text-sm text-white/80">
-                Captados nas últimas 24h
-              </p>
-            </div>
-            <div className="flex items-center gap-1 px-3 py-1.5 bg-white/20 rounded-full">
-              <ArrowUpRight size={16} />
-              <span className="text-sm font-bold">+3</span>
-            </div>
-          </div>
+          <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">
+            Novos Hoje
+          </p>
+          <p className="text-4xl font-bold text-gray-900 mb-1">
+            {stats.novos_hoje}
+          </p>
+          <p className="text-xs text-gray-500">
+            Captados nas últimas 24h
+          </p>
 
           {/* Mini chart visual */}
           <div className="mt-4 flex items-end gap-1 h-12">
@@ -324,7 +311,7 @@ export default function LeadStats({ stats, loading = false }: LeadStatsProps) {
                 initial={{ height: 0 }}
                 animate={{ height: `${height}%` }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="flex-1 bg-white/30 rounded-t"
+                className="flex-1 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t"
               />
             ))}
           </div>
@@ -335,43 +322,41 @@ export default function LeadStats({ stats, loading = false }: LeadStatsProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl shadow-lg p-6 text-white"
+          className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30">
-              <Users className="text-white" size={24} />
+            <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+              <XCircle className="text-white" size={24} />
             </div>
-            <div className="text-right">
-              <p className="text-sm text-white/80 font-semibold uppercase tracking-wider">
-                Leads Perdidos
-              </p>
+            <div className="flex items-center gap-1 px-3 py-1.5 bg-red-50 rounded-full">
+              <ArrowDownRight size={14} className="text-red-600" />
+              <span className="text-xs font-bold text-red-600">-2%</span>
             </div>
           </div>
 
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-5xl font-bold mb-1">{stats.perdido}</p>
-              <p className="text-sm text-white/80">
-                {((stats.perdido / stats.total) * 100).toFixed(1)}% do total
-              </p>
-            </div>
-            <div className="flex items-center gap-1 px-3 py-1.5 bg-white/20 rounded-full">
-              <ArrowDownRight size={16} />
-              <span className="text-sm font-bold">-2%</span>
-            </div>
-          </div>
+          <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">
+            Leads Perdidos
+          </p>
+          <p className="text-4xl font-bold text-gray-900 mb-1">
+            {stats.perdido}
+          </p>
+          <p className="text-xs text-gray-500">
+            {((stats.perdido / stats.total) * 100).toFixed(1)}% do total
+          </p>
 
           {/* Indicador visual */}
-          <div className="mt-4 flex items-center justify-between">
-            <span className="text-xs text-white/80">Meta: &lt;15%</span>
-            <span className="text-xs font-bold">
+          <div className="mt-4 flex items-center justify-between text-xs">
+            <span className="text-gray-500">Meta: &lt;15%</span>
+            <span className={`font-bold ${
+              (stats.perdido / stats.total) * 100 < 15 ? 'text-green-600' : 'text-red-600'
+            }`}>
               {((stats.perdido / stats.total) * 100).toFixed(1)}%
             </span>
           </div>
         </motion.div>
       </div>
 
-      {/* Funil Visual */}
+      {/* Funil Visual (Seguindo padrão das outras páginas) */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -380,11 +365,14 @@ export default function LeadStats({ stats, loading = false }: LeadStatsProps) {
       >
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-bold text-gray-900">Funil de Conversão</h3>
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <TrendingUp className="text-blue-600" size={20} />
+              Funil de Conversão
+            </h3>
             <p className="text-sm text-gray-500 mt-1">Pipeline de leads ativo</p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-gray-600">Total Ativo</p>
+            <p className="text-sm text-gray-600 font-semibold">Total Ativo</p>
             <p className="text-2xl font-bold text-gray-900">{totalAtivos}</p>
           </div>
         </div>
@@ -392,21 +380,24 @@ export default function LeadStats({ stats, loading = false }: LeadStatsProps) {
         {/* Funil visual */}
         <div className="space-y-3">
           {[
-            { label: 'Novos', value: stats.novo, color: 'bg-blue-500', width: 100 },
-            { label: 'Em Contato', value: stats.contato, color: 'bg-yellow-500', width: 75 },
-            { label: 'Qualificados', value: stats.qualificado, color: 'bg-purple-500', width: 50 },
-            { label: 'Convertidos', value: stats.conversao, color: 'bg-green-500', width: 30 },
+            { label: 'Novos', value: stats.novo, color: 'from-blue-500 to-blue-600', width: 100, icon: '🆕' },
+            { label: 'Em Contato', value: stats.contato, color: 'from-yellow-500 to-yellow-600', width: 75, icon: '📞' },
+            { label: 'Qualificados', value: stats.qualificado, color: 'from-purple-500 to-purple-600', width: 50, icon: '⭐' },
+            { label: 'Convertidos', value: stats.conversao, color: 'from-green-500 to-green-600', width: 30, icon: '✅' },
           ].map((stage, index) => (
             <div key={stage.label} className="relative">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-semibold text-gray-700">{stage.label}</span>
+                <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <span className="text-lg">{stage.icon}</span>
+                  {stage.label}
+                </span>
                 <span className="text-sm font-bold text-gray-900">{stage.value}</span>
               </div>
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${stage.width}%` }}
                 transition={{ duration: 0.8, delay: index * 0.1 }}
-                className={`h-10 ${stage.color} rounded-lg flex items-center justify-end px-4 shadow-md`}
+                className={`h-10 bg-gradient-to-r ${stage.color} rounded-xl flex items-center justify-end px-4 shadow-md`}
               >
                 <span className="text-white font-bold">
                   {totalAtivos > 0 ? ((stage.value / totalAtivos) * 100).toFixed(0) : 0}%
