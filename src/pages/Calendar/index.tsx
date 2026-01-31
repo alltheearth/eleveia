@@ -43,6 +43,9 @@ type ViewMode = 'grid' | 'list' | 'calendar';
 
 interface FormState extends EventFormData {
   id?: number;
+  school: number;
+  start_date: string;
+  end_date: string;
 }
 
 // ============================================

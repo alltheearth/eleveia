@@ -1,26 +1,24 @@
-// src/pages/FAQs/index.tsx - ✅ COM FILTROS FUNCIONANDO
-import { Edit2, HelpCircle, Plus, Trash2, Search } from "lucide-react";
-import React, { useEffect, useState, useMemo } from "react";
-import { 
-  ConfirmDialog, 
-  DataTable, 
-  EmptyState, 
-  FilterBar, 
-  FormModal, 
-  LoadingState, 
-  MessageAlert 
-} from "../../components/common";
-import StatCard from "../../components/common/Statistics/StatCard";
-import PageModel from "../../components/layout/PageModel";
-import { useCurrentSchool } from "../../hooks/useCurrentSchool";
-import { 
-  extractErrorMessage,
-  useCreateFAQMutation,
-  useDeleteFAQMutation,
+// src/pages/FAQs/index.tsx
+// 💬 PÁGINA DE FAQs - VERSÃO PROFISSIONAL
+
+import { useState, useEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { HelpCircle, RefreshCw } from 'lucide-react';
+import toast from 'react-hot-toast';
+import {
   useGetFAQsQuery,
+  useCreateFAQMutation,
   useUpdateFAQMutation,
-  type FAQ, 
+  useDeleteFAQMutation,
+  extractErrorMessage,
+  type FAQ,
 } from '../../services';
+import { useCurrentSchool } from '../../hooks/useCurrentSchool';
+import FAQStats from './components/FAQStats';
+import FAQFilters from './components/FAQFilters';
+import FAQGridView from './components/FAQGridView';
+import FAQListView from './components/FAQListView';
+import FAQAccordionView from './components/FAQAccordionView';
 
 // ============================================
 // CONSTANTS
@@ -39,29 +37,6 @@ const CATEGORIES: FAQ['category'][] = [
   'Pedagogical',
 ];
 
-const FAQ_STATUS_STYLES: Record<FAQ['status'], string> = {
-  active: 'bg-green-100 text-green-700 border-green-300',
-  inactive: 'bg-orange-100 text-orange-700 border-orange-300',
-};
-
-const FAQ_STATUS_LABELS: Record<FAQ['status'], string> = {
-  active: 'Ativa',
-  inactive: 'Inativa',
-};
-
-const CATEGORY_COLORS: Record<FAQ['category'], 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'gray' | 'orange'> = {
-  General: 'gray',
-  Admission: 'blue',
-  Pricing: 'green',
-  Uniform: 'purple',
-  Schedule: 'orange',
-  Documentation: 'blue',
-  Activities: 'yellow',
-  Meals: 'orange',
-  Transport: 'purple',
-  Pedagogical: 'red',
-};
-
 // ============================================
 // TYPES
 // ============================================
@@ -74,195 +49,29 @@ interface FAQFormData {
   school: number;
 }
 
-interface StatusSelectProps {
-  value: FAQ['status'];
-  onChange: (status: FAQ['status']) => void;
-  disabled?: boolean;
-}
-
-interface CategoryBadgeProps {
-  category: FAQ['category'];
-}
-
-interface FAQFormProps {
-  formData: FAQFormData;
-  onChange: (field: keyof FAQFormData, value: any) => void;
-  onSubmit: () => void;
-  onCancel: () => void;
-  isLoading?: boolean;
-  isEditing?: boolean;
-}
-
-// ============================================
-// SUB-COMPONENTS
-// ============================================
-
-const StatusSelect: React.FC<StatusSelectProps> = ({ 
-  value, 
-  onChange, 
-  disabled = false 
-}) => {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value as FAQ['status'])}
-      disabled={disabled}
-      className={`
-        ${FAQ_STATUS_STYLES[value]}
-        px-3 py-1 rounded-full font-semibold text-sm 
-        border-2 cursor-pointer 
-        focus:outline-none focus:ring-2 focus:ring-blue-300 
-        disabled:opacity-50 disabled:cursor-not-allowed
-        transition-all
-      `}
-    >
-      <option value="active">✅ {FAQ_STATUS_LABELS.active}</option>
-      <option value="inactive">⛔ {FAQ_STATUS_LABELS.inactive}</option>
-    </select>
-  );
-};
-
-const CategoryBadge: React.FC<CategoryBadgeProps> = ({ category }) => {
-  const color = CATEGORY_COLORS[category];
-  
-  const colorClasses: Record<typeof color, string> = {
-    blue: 'bg-blue-100 text-blue-700',
-    green: 'bg-green-100 text-green-700',
-    yellow: 'bg-yellow-100 text-yellow-700',
-    red: 'bg-red-100 text-red-700',
-    purple: 'bg-purple-100 text-purple-700',
-    gray: 'bg-gray-100 text-gray-700',
-    orange: 'bg-orange-100 text-orange-700',
-  };
-
-  return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full font-semibold px-3 py-1 text-sm ${colorClasses[color]}`}>
-      {category}
-    </span>
-  );
-};
-
-const FAQForm: React.FC<FAQFormProps> = ({ 
-  formData, 
-  onChange, 
-  onSubmit, 
-  onCancel, 
-  isLoading = false,
-  isEditing = false 
-}) => {
-  return (
-    <div className="space-y-4">
-      <div>
-        <label className="block text-gray-700 font-semibold mb-2">
-          Pergunta * (mín. 10 caracteres)
-        </label>
-        <input
-          type="text"
-          placeholder="Ex: Como funciona a matrícula?"
-          value={formData.question}
-          onChange={(e) => onChange('question', e.target.value)}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-        />
-        <p className="text-sm text-gray-500 mt-1">{formData.question.length} caracteres</p>
-      </div>
-
-      <div>
-        <label className="block text-gray-700 font-semibold mb-2">
-          Resposta * (mín. 20 caracteres)
-        </label>
-        <textarea
-          placeholder="Digite a resposta completa..."
-          value={formData.answer}
-          onChange={(e) => onChange('answer', e.target.value)}
-          rows={5}
-          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-        />
-        <p className="text-sm text-gray-500 mt-1">{formData.answer.length} caracteres</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-gray-700 font-semibold mb-2">Categoria</label>
-          <select
-            value={formData.category}
-            onChange={(e) => onChange('category', e.target.value as FAQ['category'])}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-          >
-            {CATEGORIES.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-gray-700 font-semibold mb-2">Status</label>
-          <select
-            value={formData.status}
-            onChange={(e) => onChange('status', e.target.value as FAQ['status'])}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
-          >
-            <option value="active">✅ Ativa</option>
-            <option value="inactive">⛔ Inativa</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="flex gap-3 pt-4">
-        <button
-          onClick={onSubmit}
-          disabled={isLoading}
-          className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50"
-        >
-          {isEditing ? <Edit2 size={20} /> : <Plus size={20} />}
-          {isLoading 
-            ? (isEditing ? 'Atualizando...' : 'Criando...')
-            : (isEditing ? 'Atualizar' : 'Criar FAQ')
-          }
-        </button>
-
-        <button
-          onClick={onCancel}
-          disabled={isLoading}
-          className="px-6 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition font-semibold disabled:opacity-50"
-        >
-          Cancelar
-        </button>
-      </div>
-    </div>
-  );
-};
-
 // ============================================
 // MAIN COMPONENT
 // ============================================
 
-const FAQsPage: React.FC = () => {
-  // ============================================
-  // HOOKS
-  // ============================================
-  
-  const { 
-    currentSchool, 
-    currentSchoolId,
-    isLoading: schoolsLoading 
-  } = useCurrentSchool();
-  
+export default function FAQsPage() {
+  const { currentSchool, currentSchoolId, isLoading: schoolsLoading } = useCurrentSchool();
+
   // ============================================
   // STATE
   // ============================================
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | FAQ['status']>('all');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | FAQ['category']>('all'); // ✅ ATIVADO
+  const [categoryFilter, setCategoryFilter] = useState<'all' | FAQ['category']>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'accordion'>('grid');
   const [showForm, setShowForm] = useState(false);
   const [editingFAQ, setEditingFAQ] = useState<FAQ | null>(null);
   const [faqToDelete, setFaqToDelete] = useState<FAQ | null>(null);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [formData, setFormData] = useState<FAQFormData>({
-    question: "",
-    answer: "",
-    category: "General",
+    question: '',
+    answer: '',
+    category: 'General',
     status: 'active',
     school: parseInt(currentSchoolId) || 0,
   });
@@ -271,36 +80,31 @@ const FAQsPage: React.FC = () => {
   // API
   // ============================================
 
-  const { 
-    data: faqsData, 
-    isLoading: faqsLoading, 
+  const {
+    data: faqsData,
+    isLoading: faqsLoading,
     error: fetchError,
-    refetch 
-  } = useGetFAQsQuery({
-    status: statusFilter !== 'all' ? statusFilter : undefined,
-  });
+    refetch,
+  } = useGetFAQsQuery({});
 
   const [createFAQ, { isLoading: isCreating }] = useCreateFAQMutation();
   const [updateFAQ, { isLoading: isUpdating }] = useUpdateFAQMutation();
   const [deleteFAQ, { isLoading: isDeleting }] = useDeleteFAQMutation();
-  
+
   // ============================================
-  // COMPUTED - ✅ FILTROS APLICADOS AQUI
+  // COMPUTED
   // ============================================
 
   const filteredFAQs = useMemo(() => {
     if (!faqsData?.results) return [];
 
-    return faqsData.results.filter(faq => {
-      // Filtro de busca por texto
-      const matchesSearch = searchTerm === '' || 
+    return faqsData.results.filter((faq) => {
+      const matchesSearch =
+        searchTerm === '' ||
         faq.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
         faq.answer.toLowerCase().includes(searchTerm.toLowerCase());
 
-      // Filtro de categoria
       const matchesCategory = categoryFilter === 'all' || faq.category === categoryFilter;
-
-      // Filtro de status (já vem da API, mas garantimos aqui também)
       const matchesStatus = statusFilter === 'all' || faq.status === statusFilter;
 
       return matchesSearch && matchesCategory && matchesStatus;
@@ -309,13 +113,30 @@ const FAQsPage: React.FC = () => {
 
   const stats = useMemo(() => {
     const allFAQs = faqsData?.results || [];
+    
+    // Calcular distribuição por categoria
+    const byCategory = allFAQs.reduce((acc, faq) => {
+      acc[faq.category] = (acc[faq.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // FAQs atualizadas nos últimos 7 dias
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const recentlyUpdated = allFAQs.filter(
+      (faq) => new Date(faq.updated_at) > sevenDaysAgo
+    ).length;
+
     return {
       total: allFAQs.length,
-      active: allFAQs.filter(f => f.status === 'active').length,
-      inactive: allFAQs.filter(f => f.status === 'inactive').length,
-      filtered: filteredFAQs.length, // ✅ NOVO: mostra quantos passaram no filtro
+      active: allFAQs.filter((f) => f.status === 'active').length,
+      inactive: allFAQs.filter((f) => f.status === 'inactive').length,
+      byCategory,
+      recentlyUpdated,
     };
-  }, [faqsData?.results, filteredFAQs]);
+  }, [faqsData?.results]);
+
+  const hasActiveFilters = searchTerm !== '' || categoryFilter !== 'all' || statusFilter !== 'all';
 
   // ============================================
   // EFFECTS
@@ -323,16 +144,9 @@ const FAQsPage: React.FC = () => {
 
   useEffect(() => {
     if (currentSchoolId && !editingFAQ) {
-      setFormData(prev => ({ ...prev, school: parseInt(currentSchoolId) }));
+      setFormData((prev) => ({ ...prev, school: parseInt(currentSchoolId) }));
     }
   }, [currentSchoolId, editingFAQ]);
-
-  useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [message]);
 
   // ============================================
   // HANDLERS
@@ -340,9 +154,9 @@ const FAQsPage: React.FC = () => {
 
   const resetForm = (): void => {
     setFormData({
-      question: "",
-      answer: "",
-      category: "General",
+      question: '',
+      answer: '',
+      category: 'General',
       status: 'active',
       school: parseInt(currentSchoolId) || 0,
     });
@@ -361,22 +175,22 @@ const FAQsPage: React.FC = () => {
   const handleSubmit = async (): Promise<void> => {
     const error = validate();
     if (error) {
-      setMessage({ type: 'error', text: error });
+      toast.error(error);
       return;
     }
 
     try {
       if (editingFAQ) {
         await updateFAQ({ id: editingFAQ.id, data: formData }).unwrap();
-        setMessage({ type: 'success', text: '✅ FAQ atualizada com sucesso!' });
+        toast.success('✅ FAQ atualizada com sucesso!');
       } else {
         await createFAQ(formData).unwrap();
-        setMessage({ type: 'success', text: '✅ FAQ criada com sucesso!' });
+        toast.success('✅ FAQ criada com sucesso!');
       }
       resetForm();
       refetch();
     } catch (err) {
-      setMessage({ type: 'error', text: `❌ ${extractErrorMessage(err)}` });
+      toast.error(`❌ ${extractErrorMessage(err)}`);
     }
   };
 
@@ -398,42 +212,36 @@ const FAQsPage: React.FC = () => {
 
     try {
       await deleteFAQ(faqToDelete.id).unwrap();
-      setMessage({ type: 'success', text: '✅ FAQ deletada com sucesso!' });
+      toast.success('✅ FAQ deletada com sucesso!');
       setFaqToDelete(null);
       refetch();
     } catch (err) {
-      setMessage({ type: 'error', text: `❌ ${extractErrorMessage(err)}` });
+      toast.error(`❌ ${extractErrorMessage(err)}`);
     }
   };
 
   const handleStatusChange = async (faq: FAQ, newStatus: FAQ['status']): Promise<void> => {
     try {
-      await updateFAQ({ 
-        id: faq.id, 
-        data: { status: newStatus } 
+      await updateFAQ({
+        id: faq.id,
+        data: { ...faq, status: newStatus },
       }).unwrap();
-      setMessage({ type: 'success', text: '✅ Status atualizado!' });
+      toast.success('✅ Status atualizado!');
       refetch();
     } catch (err) {
-      setMessage({ type: 'error', text: `❌ ${extractErrorMessage(err)}` });
+      toast.error(`❌ ${extractErrorMessage(err)}`);
     }
   };
 
-  // ✅ NOVO: Limpar todos os filtros
   const handleClearFilters = (): void => {
     setSearchTerm('');
     setStatusFilter('all');
     setCategoryFilter('all');
   };
 
-  const formatDate = (date: string): string => {
-    return new Date(date).toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const handleRefresh = (): void => {
+    refetch();
+    toast.success('🔄 Dados atualizados!');
   };
 
   // ============================================
@@ -442,10 +250,12 @@ const FAQsPage: React.FC = () => {
 
   if (faqsLoading || schoolsLoading) {
     return (
-      <LoadingState 
-        message="Carregando FAQs..."
-        icon={<HelpCircle size={48} className="text-blue-600" />}
-      />
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <HelpCircle className="mx-auto mb-4 h-12 w-12 animate-pulse text-blue-600" />
+          <p className="text-gray-600 font-semibold">Carregando FAQs...</p>
+        </div>
+      </div>
     );
   }
 
@@ -455,11 +265,13 @@ const FAQsPage: React.FC = () => {
 
   if (!currentSchool) {
     return (
-      <EmptyState
-        icon={<HelpCircle size={64} className="text-yellow-600" />}
-        title="Nenhuma escola cadastrada"
-        description="Entre em contato com o administrador."
-      />
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md mx-4">
+          <HelpCircle className="mx-auto mb-4 h-16 w-16 text-yellow-600" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Nenhuma escola cadastrada</h2>
+          <p className="text-gray-600">Entre em contato com o administrador.</p>
+        </div>
+      </div>
     );
   }
 
@@ -468,241 +280,251 @@ const FAQsPage: React.FC = () => {
   // ============================================
 
   return (
-    <PageModel>
-      {/* Alerts */}
-      {message && (
-        <MessageAlert
-          type={message.type}
-          message={message.text}
-          onClose={() => setMessage(null)}
-        />
-      )}
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between"
+        >
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
+              <HelpCircle className="text-blue-600" size={40} />
+              FAQs
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Gerencie perguntas frequentes da sua escola
+            </p>
+          </div>
 
-      {fetchError && (
-        <MessageAlert
-          type="error"
-          message={`Erro: ${extractErrorMessage(fetchError)}`}
-          dismissible={false}
-        />
-      )}
+          <button
+            onClick={handleRefresh}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <RefreshCw size={18} className="text-gray-600" />
+            <span className="text-sm font-semibold text-gray-700">Atualizar</span>
+          </button>
+        </motion.div>
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">FAQs</h1>
-          <p className="text-gray-600 mt-1">Gerencie perguntas frequentes</p>
-        </div>
+        {/* Error Alert */}
+        {fetchError && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg"
+          >
+            <p className="text-red-700 font-semibold">
+              ❌ Erro: {extractErrorMessage(fetchError)}
+            </p>
+          </motion.div>
+        )}
+
+        {/* Stats */}
+        <FAQStats stats={stats} loading={faqsLoading} />
+
+        {/* Filters */}
+        <FAQFilters
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          categoryFilter={categoryFilter}
+          onCategoryFilterChange={setCategoryFilter}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          onNewFAQ={() => setShowForm(true)}
+          onClearFilters={handleClearFilters}
+          hasActiveFilters={hasActiveFilters}
+        />
+
+        {/* Views */}
+        {viewMode === 'grid' && (
+          <FAQGridView
+            faqs={filteredFAQs}
+            onEdit={handleEdit}
+            onDelete={setFaqToDelete}
+            onStatusChange={handleStatusChange}
+            loading={faqsLoading}
+          />
+        )}
+
+        {viewMode === 'list' && (
+          <FAQListView
+            faqs={filteredFAQs}
+            onEdit={handleEdit}
+            onDelete={setFaqToDelete}
+            onStatusChange={handleStatusChange}
+            loading={faqsLoading}
+          />
+        )}
+
+        {viewMode === 'accordion' && (
+          <FAQAccordionView
+            faqs={filteredFAQs}
+            onEdit={handleEdit}
+            onDelete={setFaqToDelete}
+            onStatusChange={handleStatusChange}
+            loading={faqsLoading}
+          />
+        )}
+
+        {/* Results Info */}
+        {filteredFAQs.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-blue-50 p-4 rounded-lg border border-blue-200"
+          >
+            <p className="text-gray-700 font-semibold">
+              Mostrando <span className="text-blue-600 font-bold">{filteredFAQs.length}</span> de{' '}
+              <span className="text-blue-600 font-bold">{stats.total}</span> FAQs
+              {hasActiveFilters && <span className="text-gray-600 text-sm ml-2">(filtrado)</span>}
+            </p>
+          </motion.div>
+        )}
       </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          label="Total" 
-          value={stats.total} 
-          color="blue" 
-          icon={<HelpCircle size={24} />} 
-        />
-        <StatCard 
-          label="Ativas" 
-          value={stats.active} 
-          color="green" 
-        />
-        <StatCard 
-          label="Inativas" 
-          value={stats.inactive} 
-          color="orange" 
-        />
-        <StatCard 
-          label="Filtradas" 
-          value={stats.filtered} 
-          color="purple"
-          description="Resultados visíveis"
-        />
-      </div>
-
-      {/* Filters - ✅ COM BUSCA E CATEGORIA */}
-      <FilterBar
-        fields={[
-          {
-            type: 'search',
-            name: 'search',
-            placeholder: 'Buscar por pergunta ou resposta...',
-            value: searchTerm,
-            onChange: setSearchTerm,
-            icon: <Search className="absolute left-3 top-3 text-gray-400" size={20} />,
-          },
-          {
-            type: 'select',
-            name: 'category',
-            value: categoryFilter,
-            onChange: (value) => setCategoryFilter(value as 'all' | FAQ['category']),
-            options: [
-              { label: 'Todas as Categorias', value: 'all' },
-              ...CATEGORIES.map(cat => ({ label: cat, value: cat })),
-            ],
-          },
-          {
-            type: 'select',
-            name: 'status',
-            value: statusFilter,
-            onChange: (value) => setStatusFilter(value as 'all' | FAQ['status']),
-            options: [
-              { label: 'Todos os Status', value: 'all' },
-              { label: 'Ativas', value: 'active' },
-              { label: 'Inativas', value: 'inactive' }
-            ],
-          }
-        ]}
-        actions={[
-          {
-            label: 'Nova FAQ',
-            onClick: () => setShowForm(true),
-            icon: <Plus size={18} />,
-            variant: 'primary',
-          },
-        ]}
-        onClear={handleClearFilters}
-        showClearButton={searchTerm !== '' || statusFilter !== 'all' || categoryFilter !== 'all'}
-      />
-
-      {/* Table - ✅ USANDO filteredFAQs */}
-      <DataTable<FAQ>
-        columns={[
-          { 
-            key: 'id', 
-            label: '#', 
-            width: '80px', 
-            sortable: true 
-          },
-          { 
-            key: 'question', 
-            label: 'Pergunta', 
-            sortable: true,
-            render: (value) => (
-              <span className="font-medium text-gray-900">
-                {String(value)}
-              </span>
-            )
-          },
-          { 
-            key: 'answer', 
-            label: 'Resposta',
-            render: (value) => (
-              <span className="text-sm text-gray-600 line-clamp-2">
-                {String(value)}
-              </span>
-            )
-          },
-          { 
-            key: 'category', 
-            label: 'Categoria', 
-            render: (value) => <CategoryBadge category={value as FAQ['category']} /> 
-          },
-          { 
-            key: 'status', 
-            label: 'Status',
-            render: (value, row) => (
-              <StatusSelect
-                value={value as FAQ['status']}
-                onChange={(newStatus) => handleStatusChange(row, newStatus)}
-              />
-            )
-          },
-          { 
-            key: 'created_at', 
-            label: 'Criado em',
-            sortable: true,
-            render: (value) => (
-              <span className="text-sm">
-                {formatDate(String(value))}
-              </span>
-            )
-          },
-        ]}
-        data={filteredFAQs}
-        keyExtractor={(faq) => faq.id.toString()}
-        actions={[
-          {
-            icon: <Edit2 size={18} />,
-            onClick: handleEdit,
-            variant: 'primary',
-            label: 'Editar',
-          },
-          {
-            icon: <Trash2 size={18} />,
-            onClick: (faq) => setFaqToDelete(faq),
-            variant: 'danger',
-            label: 'Deletar',
-          },
-        ]}
-        emptyMessage="Nenhuma FAQ encontrada"
-        emptyIcon={<HelpCircle size={48} className="text-gray-400" />}
-      />
-
-      {/* Results Info - ✅ ATUALIZADO */}
-      {filteredFAQs.length > 0 && (
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <p className="text-gray-700 font-semibold">
-            Mostrando <span className="text-blue-600 font-bold">{filteredFAQs.length}</span> de{' '}
-            <span className="text-blue-600 font-bold">{stats.total}</span> FAQs
-            {(searchTerm || categoryFilter !== 'all' || statusFilter !== 'all') && (
-              <span className="text-gray-600 text-sm ml-2">
-                (filtrado)
-              </span>
-            )}
-          </p>
-        </div>
-      )}
-
-      {/* Empty State quando filtros não retornam resultados */}
-      {filteredFAQs.length === 0 && stats.total > 0 && (
-        <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200 text-center">
-          <HelpCircle className="mx-auto mb-2 text-yellow-600" size={48} />
-          <p className="text-gray-700 font-semibold">Nenhuma FAQ encontrada com os filtros aplicados</p>
-          <p className="text-sm text-gray-600 mt-1">
-            Tente ajustar os filtros ou{' '}
-            <button 
-              onClick={handleClearFilters}
-              className="text-blue-600 hover:text-blue-700 font-semibold underline"
-            >
-              limpar todos os filtros
-            </button>
-          </p>
-        </div>
-      )}
 
       {/* Form Modal */}
-      <FormModal
-        isOpen={showForm}
-        title={editingFAQ ? '✏️ Editar FAQ' : '➕ Nova FAQ'}
-        subtitle={editingFAQ ? 'Atualize as informações da FAQ' : 'Preencha os dados da nova FAQ'}
-        onClose={resetForm}
-        size="lg"
-      >
-        <FAQForm
-          formData={formData}
-          onChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
-          onSubmit={handleSubmit}
-          onCancel={resetForm}
-          isLoading={isCreating || isUpdating}
-          isEditing={!!editingFAQ}
-        />
-      </FormModal>
+      {showForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          >
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {editingFAQ ? '✏️ Editar FAQ' : '➕ Nova FAQ'}
+              </h2>
+              <p className="text-gray-600 mt-1">
+                {editingFAQ ? 'Atualize as informações' : 'Preencha os dados'}
+              </p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Question */}
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">
+                  Pergunta * (mín. 10 caracteres)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Como funciona a matrícula?"
+                  value={formData.question}
+                  onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
+                />
+                <p className="text-sm text-gray-500 mt-1">{formData.question.length} caracteres</p>
+              </div>
+
+              {/* Answer */}
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">
+                  Resposta * (mín. 20 caracteres)
+                </label>
+                <textarea
+                  placeholder="Digite a resposta completa..."
+                  value={formData.answer}
+                  onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
+                  rows={5}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
+                />
+                <p className="text-sm text-gray-500 mt-1">{formData.answer.length} caracteres</p>
+              </div>
+
+              {/* Category & Status */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-2">Categoria</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) =>
+                      setFormData({ ...formData, category: e.target.value as FAQ['category'] })
+                    }
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                  >
+                    {CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-2">Status</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) =>
+                      setFormData({ ...formData, status: e.target.value as FAQ['status'] })
+                    }
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600"
+                  >
+                    <option value="active">✅ Ativa</option>
+                    <option value="inactive">⛔ Inativa</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+              <button
+                onClick={resetForm}
+                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={isCreating || isUpdating}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold disabled:opacity-50"
+              >
+                {isCreating || isUpdating
+                  ? editingFAQ
+                    ? 'Atualizando...'
+                    : 'Criando...'
+                  : editingFAQ
+                  ? 'Atualizar'
+                  : 'Criar FAQ'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Delete Confirmation */}
-      <ConfirmDialog
-        isOpen={!!faqToDelete}
-        title="Confirmar Exclusão"
-        message={`Tem certeza que deseja deletar a FAQ "${faqToDelete?.question}"? Esta ação não pode ser desfeita.`}
-        confirmLabel="Deletar"
-        cancelLabel="Cancelar"
-        onConfirm={handleDelete}
-        onCancel={() => setFaqToDelete(null)}
-        isLoading={isDeleting}
-        variant="danger"
-      />
-    </PageModel>
+      {faqToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+          >
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Confirmar Exclusão</h3>
+            <p className="text-gray-700 mb-6">
+              Tem certeza que deseja deletar a FAQ "<strong>{faqToDelete.question}</strong>"? Esta
+              ação não pode ser desfeita.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setFaqToDelete(null)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold disabled:opacity-50"
+              >
+                {isDeleting ? 'Deletando...' : 'Deletar'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </div>
   );
-};
-
-export default FAQsPage;
+}

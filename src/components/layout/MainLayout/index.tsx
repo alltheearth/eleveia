@@ -1,22 +1,46 @@
-
+// src/components/layout/MainLayout/index.tsx - 🎨 VERSÃO PROFISSIONAL
 import { Outlet } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Sidebar from '../Sidebar';
 import Header from '../Header';
+import Breadcrumbs from '../Breadcrumbs';
 
-const MainLayout = () => {
+// ============================================
+// MAIN LAYOUT
+// ============================================
+
+export default function MainLayout() {
   return (
-    <div className="flex">
+    <div className="min-h-screen bg-gray-50">
+      {/* Sidebar */}
       <Sidebar />
-      
-      <main className="ml-64 flex-1 bg-gray-50 min-h-screen">
+
+      {/* Main Content Area */}
+      <div className="lg:ml-[280px]">
+        {/* Header */}
         <Header />
-        
-        <div className="p-6">
-          <Outlet />
-        </div>
-      </main>
+
+        {/* Content */}
+        <main className="pt-20 px-6 pb-8">
+          {/* Breadcrumbs */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6"
+          >
+            <Breadcrumbs />
+          </motion.div>
+
+          {/* Page Content */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <Outlet />
+          </motion.div>
+        </main>
+      </div>
     </div>
   );
-};
-
-export default MainLayout;
+}
