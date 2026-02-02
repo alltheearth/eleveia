@@ -19,7 +19,8 @@ import DocumentsPage from '../pages/Documents';
 
 // ✅ BOARDS - Importações adicionadas
 import BoardsPage from '../pages/Boards';
-import BoardView from '../pages/Boards/BoardView';
+// import BoardView from '../pages/Boards/BoardView';
+import BoardViewDnD from '../pages/Boards/BoardViewDnD';
 
 const AppRoutes = () => {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
@@ -47,7 +48,7 @@ const AppRoutes = () => {
           
           {/* ✅ BOARDS - Rotas Kanban */}
           <Route path="/boards" element={<BoardsPage />} />
-          <Route path="/boards/:id" element={<BoardView />} />
+          <Route path="/boards/:id" element={<BoardViewDnD />} />
         </Route>
       </Route>
 

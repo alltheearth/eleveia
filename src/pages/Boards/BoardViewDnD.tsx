@@ -23,11 +23,15 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  closestCorners,
+} from '@dnd-kit/core';
+
+import type {
   DragStartEvent,
   DragEndEvent,
   DragOverEvent,
-  closestCorners,
 } from '@dnd-kit/core';
+
 import {
   SortableContext,
   horizontalListSortingStrategy,
