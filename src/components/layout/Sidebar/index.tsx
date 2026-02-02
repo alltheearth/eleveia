@@ -71,6 +71,12 @@ const MENU_ITEMS: MenuItem[] = [
     path: '/documentos',
     gradient: 'from-violet-500 to-purple-600',
   },
+  {
+    label: 'Boards',
+    icon: BookOpen,
+    path: '/boards',
+    gradient: 'from-amber-500 to-yellow-600',
+  }
 ];
 
 // ============================================

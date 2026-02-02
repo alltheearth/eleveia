@@ -1,4 +1,4 @@
-// src/routes/AppRoutes.tsx - ✅ CORRIGIDO COM LOGS
+// src/routes/AppRoutes.tsx - ✅ CORRIGIDO COM BOARDS
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store';
@@ -16,6 +16,10 @@ import FAQs from '../pages/FAQs';
 import Perfil from '../pages/Perfil';
 import InformacoesEscola from '../components/Information';
 import DocumentsPage from '../pages/Documents';
+
+// ✅ BOARDS - Importações adicionadas
+import BoardsPage from '../pages/Boards';
+import BoardView from '../pages/Boards/BoardView';
 
 const AppRoutes = () => {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
@@ -40,6 +44,8 @@ const AppRoutes = () => {
           <Route path="/perfil" element={<Perfil />} />
           <Route path="/configuracoes" element={<InformacoesEscola />} />
           <Route path="/documentos" element={<DocumentsPage />} />
+          
+          {/* ✅ BOARDS - Rotas Kanban */}
           <Route path="/boards" element={<BoardsPage />} />
           <Route path="/boards/:id" element={<BoardView />} />
         </Route>

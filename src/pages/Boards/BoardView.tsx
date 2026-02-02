@@ -1,5 +1,5 @@
 // src/pages/Boards/BoardView.tsx
-// 📋 VISUALIZAÇÃO DE UM BOARD ESPECÍFICO - KANBAN
+// 📋 VISUALIZAÇÃO INDIVIDUAL DO BOARD - KANBAN PROFISSIONAL
 
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -16,6 +16,9 @@ import {
   Filter,
   Search,
   X,
+  TrendingUp,
+  CheckCircle2,
+  Clock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -23,6 +26,7 @@ import toast from 'react-hot-toast';
 import BoardList from './components/List/BoardList';
 import AddListButton from './components/List/AddListButton';
 import CardModal from './components/Card/CardModal';
+import BoardSettingsModal from './components/Modals/BoardSettingsModal';
 
 // Types & Constants
 import type { Board, BoardList as List, BoardCard, ListFormData, CardFormData } from '../../types/boards';
@@ -41,55 +45,71 @@ interface BoardHeaderProps {
   onToggleStar: () => void;
   onArchive: () => void;
   onSettings: () => void;
+  isStarred: boolean;
 }
 
-function BoardHeader({ board, onBack, onToggleStar, onArchive, onSettings }: BoardHeaderProps) {
+function BoardHeader({ board, onBack, onToggleStar, onArchive, onSettings, isStarred }: BoardHeaderProps) {
   const [showMenu, setShowMenu] = useState(false);
   const colorConfig = BOARD_COLORS[board.color || 'blue'];
 
   return (
     <div className={`bg-gradient-to-r ${colorConfig.gradient} px-6 py-5 shadow-lg`}>
       <div className="flex items-center justify-between">
-        {/* Left */}
+        
+        {/* Left Section */}
         <div className="flex items-center gap-4">
+          {/* Back Button */}
           <button
             onClick={onBack}
             className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+            title="Voltar para boards"
           >
             <ArrowLeft className="text-white" size={24} />
           </button>
 
+          {/* Board Info */}
           <div>
             <h1 className="text-2xl font-bold text-white mb-1">
               {board.title}
             </h1>
             {board.description && (
-              <p className="text-sm text-white/80 line-clamp-1">
+              <p className="text-sm text-white/80 line-clamp-1 max-w-xl">
                 {board.description}
               </p>
             )}
           </div>
         </div>
 
-        {/* Right */}
+        {/* Right Section - Actions */}
         <div className="flex items-center gap-3">
-          <button
+          
+          {/* Star/Favorite Button */}
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
             onClick={onToggleStar}
             className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            title="Favoritar"
+            title={isStarred ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
           >
-            <Star className="text-white" size={20} />
-          </button>
+            {isStarred ? (
+              <Star className="text-white" size={20} fill="white" />
+            ) : (
+              <StarOff className="text-white" size={20} />
+            )}
+          </motion.button>
 
+          {/* Share Button */}
           <button className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors font-semibold backdrop-blur-sm">
             <Users size={18} />
             <span className="hidden sm:inline">Compartilhar</span>
           </button>
 
+          {/* More Options Menu */}
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
               className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              title="Mais opções"
             >
               <MoreVertical className="text-white" size={20} />
             </button>
@@ -110,15 +130,18 @@ function BoardHeader({ board, onBack, onToggleStar, onArchive, onSettings }: Boa
                   <Settings size={16} className="text-gray-600" />
                   <span className="text-sm font-semibold text-gray-700">Configurações</span>
                 </button>
+                
+                <div className="border-t border-gray-200 my-2" />
+                
                 <button
                   onClick={() => {
                     onArchive();
                     setShowMenu(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 transition-colors text-left"
                 >
-                  <Archive size={16} className="text-gray-600" />
-                  <span className="text-sm font-semibold text-gray-700">Arquivar Board</span>
+                  <Archive size={16} className="text-orange-600" />
+                  <span className="text-sm font-semibold text-orange-600">Arquivar Board</span>
                 </button>
               </motion.div>
             )}
@@ -138,14 +161,24 @@ interface BoardToolbarProps {
   onSearchChange: (value: string) => void;
   showFilters: boolean;
   onToggleFilters: () => void;
+  stats: {
+    totalCards: number;
+    totalLists: number;
+    completedCards: number;
+  };
 }
 
-function BoardToolbar({ searchTerm, onSearchChange, showFilters, onToggleFilters }: BoardToolbarProps) {
+function BoardToolbar({ searchTerm, onSearchChange, showFilters, onToggleFilters, stats }: BoardToolbarProps) {
+  const completionRate = stats.totalCards > 0 
+    ? Math.round((stats.completedCards / stats.totalCards) * 100) 
+    : 0;
+
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-4">
-      <div className="flex items-center gap-4">
-        {/* Search */}
-        <div className="flex-1 max-w-md relative">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        
+        {/* Left: Search */}
+        <div className="flex-1 min-w-[250px] max-w-md relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
             type="text"
@@ -164,18 +197,45 @@ function BoardToolbar({ searchTerm, onSearchChange, showFilters, onToggleFilters
           )}
         </div>
 
-        {/* Filters */}
-        <button
-          onClick={onToggleFilters}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all font-semibold text-sm ${
-            showFilters
-              ? 'bg-blue-50 border-blue-600 text-blue-700'
-              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-          }`}
-        >
-          <Filter size={16} />
-          <span className="hidden sm:inline">Filtros</span>
-        </button>
+        {/* Right: Stats + Filters */}
+        <div className="flex items-center gap-4">
+          
+          {/* Quick Stats */}
+          <div className="hidden md:flex items-center gap-4">
+            {/* Lists */}
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
+              <TrendingUp size={16} className="text-blue-600" />
+              <span className="text-sm font-bold text-blue-700">{stats.totalLists} listas</span>
+            </div>
+            
+            {/* Cards */}
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-lg border border-purple-200">
+              <CheckCircle2 size={16} className="text-purple-600" />
+              <span className="text-sm font-bold text-purple-700">{stats.totalCards} cards</span>
+            </div>
+
+            {/* Completion */}
+            {stats.totalCards > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-200">
+                <Clock size={16} className="text-green-600" />
+                <span className="text-sm font-bold text-green-700">{completionRate}% concluído</span>
+              </div>
+            )}
+          </div>
+
+          {/* Filters Button */}
+          <button
+            onClick={onToggleFilters}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all font-semibold text-sm ${
+              showFilters
+                ? 'bg-blue-50 border-blue-600 text-blue-700'
+                : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+            }`}
+          >
+            <Filter size={16} />
+            <span className="hidden sm:inline">Filtros</span>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -209,6 +269,8 @@ export default function BoardView() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCard, setSelectedCard] = useState<BoardCard | null>(null);
   const [showCardModal, setShowCardModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [isStarred, setIsStarred] = useState(false);
 
   // ============================================
   // COMPUTED
@@ -221,6 +283,21 @@ export default function BoardView() {
     );
   }, [cards, searchTerm]);
 
+  const stats = useMemo(() => {
+    const activeCards = cards.filter(c => !c.is_archived);
+    const activeLists = lists.filter(l => !l.is_archived);
+    
+    // Aqui você pode adicionar lógica para marcar cards como "concluídos"
+    // Por exemplo, cards em uma lista específica ou com um status
+    const completedCards = 0; // TODO: implementar lógica de conclusão
+
+    return {
+      totalCards: activeCards.length,
+      totalLists: activeLists.length,
+      completedCards,
+    };
+  }, [cards, lists]);
+
   // ============================================
   // HANDLERS
   // ============================================
@@ -230,18 +307,26 @@ export default function BoardView() {
   };
 
   const handleToggleStar = () => {
-    toast.success('Board favoritado!');
+    setIsStarred(!isStarred);
+    toast.success(isStarred ? '⭐ Removido dos favoritos' : '⭐ Adicionado aos favoritos!');
   };
 
   const handleArchive = () => {
     if (window.confirm('Tem certeza que deseja arquivar este board?')) {
-      toast.success('Board arquivado!');
+      toast.success('📦 Board arquivado!');
       navigate('/boards');
     }
   };
 
   const handleSettings = () => {
-    toast.success('Configurações do board');
+    setShowSettingsModal(true);
+  };
+
+  const handleUpdateBoard = (updates: Partial<Board>) => {
+    if (board) {
+      setBoard({ ...board, ...updates, updated_at: new Date().toISOString() });
+      toast.success('✅ Board atualizado!');
+    }
   };
 
   const handleCreateList = (data: ListFormData) => {
@@ -308,21 +393,13 @@ export default function BoardView() {
     setShowCardModal(true);
   };
 
-  const handleMoveCard = (cardId: number, newListId: number, newPosition: number) => {
-    setCards(prev => prev.map(c => 
-      c.id === cardId 
-        ? { ...c, list: newListId, position: newPosition }
-        : c
-    ));
-  };
-
   // ============================================
   // RENDER
   // ============================================
 
   if (!board) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Board não encontrado</h2>
           <button
@@ -345,6 +422,7 @@ export default function BoardView() {
         onToggleStar={handleToggleStar}
         onArchive={handleArchive}
         onSettings={handleSettings}
+        isStarred={isStarred}
       />
 
       {/* Toolbar */}
@@ -353,10 +431,11 @@ export default function BoardView() {
         onSearchChange={setSearchTerm}
         showFilters={showFilters}
         onToggleFilters={() => setShowFilters(!showFilters)}
+        stats={stats}
       />
 
       {/* Board Content - Horizontal Scroll */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="flex gap-6 p-6 h-full min-w-max">
           {/* Lists */}
           <AnimatePresence mode="popLayout">
@@ -380,7 +459,6 @@ export default function BoardView() {
                     onUpdateCard={handleUpdateCard}
                     onDeleteCard={handleDeleteCard}
                     onCardClick={handleCardClick}
-                    onMoveCard={handleMoveCard}
                   />
                 </motion.div>
               ))}
@@ -407,6 +485,21 @@ export default function BoardView() {
             handleDeleteCard(selectedCard.id);
             setShowCardModal(false);
             setSelectedCard(null);
+          }}
+        />
+      )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <BoardSettingsModal
+          isOpen={showSettingsModal}
+          board={board}
+          onClose={() => setShowSettingsModal(false)}
+          onUpdate={handleUpdateBoard}
+          onArchive={handleArchive}
+          onDelete={() => {
+            toast.success('🗑️ Board deletado!');
+            navigate('/boards');
           }}
         />
       )}
