@@ -1,22 +1,34 @@
-// src/components/layout/MainLayout/index.tsx - 🎨 VERSÃO PROFISSIONAL
+// src/components/layout/MainLayout/index.tsx - 🎨 VERSÃO RESPONSIVA PROFISSIONAL
 import { Outlet } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Sidebar from '../Sidebar';
 import Header from '../Header';
 import Breadcrumbs from '../Breadcrumbs';
+import { useSidebar } from '../../../hooks/useSidebar';
 
 // ============================================
 // MAIN LAYOUT
 // ============================================
 
 export default function MainLayout() {
+  const { isCollapsed } = useSidebar();
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
       <Sidebar />
 
       {/* Main Content Area */}
-      <div className="lg:ml-[280px]">
+      <motion.div
+        initial={false}
+        animate={{
+          // Desktop: ajusta margem baseado no estado do sidebar
+          // Mobile: sem margem (sidebar é overlay)
+          marginLeft: window.innerWidth >= 1024 ? (isCollapsed ? 80 : 280) : 0,
+        }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        className="min-h-screen"
+      >
         {/* Header */}
         <Header />
 
@@ -40,7 +52,7 @@ export default function MainLayout() {
             <Outlet />
           </motion.div>
         </main>
-      </div>
+      </motion.div>
     </div>
   );
 }

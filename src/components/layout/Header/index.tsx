@@ -1,4 +1,4 @@
-// src/components/layout/Header/index.tsx - ✅ VERSÃO CORRIGIDA (LOADING FIX)
+// src/components/layout/Header/index.tsx - ✅ VERSÃO COM MENU MOBILE
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -10,11 +10,13 @@ import {
   HelpCircle,
   ChevronDown,
   Command,
+  Menu,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../store';
 import { useGetProfileQuery, useLogoutMutation } from '../../../services';
+import { useSidebar } from '../../../hooks/useSidebar';
 import HeaderSkeleton from './HeaderSkeleton';
 import HeaderError from './HeaderError';
 
@@ -194,7 +196,7 @@ function NotificationCenter({ isOpen, onClose }: NotificationCenterProps) {
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 20 }}
         transition={{ duration: 0.2 }}
-        className="absolute right-0 top-full mt-2 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50"
+        className="absolute right-0 top-full mt-2 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50 max-w-[calc(100vw-2rem)]"
       >
         {/* Header */}
         <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
@@ -284,7 +286,7 @@ function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: -20 }}
         transition={{ duration: 0.2 }}
-        className="fixed top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-white rounded-2xl shadow-2xl z-50"
+        className="fixed top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-white rounded-2xl shadow-2xl z-50 mx-4"
       >
         {/* Search Input */}
         <div className="p-6 border-b border-gray-200">
@@ -310,7 +312,6 @@ function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
             <button
               key={index}
               onClick={() => {
-                // Navigate to item.path
                 onClose();
               }}
               className="w-full flex items-center gap-4 p-4 hover:bg-gray-50 rounded-xl transition-colors text-left"
@@ -356,6 +357,9 @@ export default function Header() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // ✅ Hook do sidebar
+  const { toggleMobile } = useSidebar();
 
   // ✅ Pegar token e isAuthenticated do Redux
   const { token, isAuthenticated } = useSelector((state: RootState) => state.auth);
@@ -455,23 +459,35 @@ export default function Header() {
   const schoolData = schoolName ? { name: schoolName } : null;
 
   return (
-    <header className="fixed top-0 right-0 left-0 lg:left-[280px] h-16 bg-white border-b border-gray-200 z-30">
+    <header className="fixed top-0 right-0 left-0 lg:left-0 h-16 bg-white border-b border-gray-200 z-30">
       <div className="h-full px-6 flex items-center justify-between">
         
-        {/* Left Side - Search */}
-        <div className="flex-1 max-w-xl">
+        {/* Left Side - Mobile Menu + Search */}
+        <div className="flex items-center gap-4 flex-1">
+          {/* Mobile Menu Button */}
           <button
-            onClick={() => setSearchOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors text-left group"
+            onClick={toggleMobile}
+            className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Abrir menu"
           >
-            <Search className="text-gray-400 group-hover:text-gray-600" size={20} />
-            <span className="text-gray-500 group-hover:text-gray-700">
-              Buscar em tudo...
-            </span>
-            <kbd className="ml-auto px-2 py-1 bg-white border border-gray-300 text-gray-600 text-xs rounded font-mono">
-              ⌘K
-            </kbd>
+            <Menu size={24} className="text-gray-700" />
           </button>
+
+          {/* Search */}
+          <div className="flex-1 max-w-xl">
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="w-full flex items-center gap-3 px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors text-left group"
+            >
+              <Search className="text-gray-400 group-hover:text-gray-600" size={20} />
+              <span className="text-gray-500 group-hover:text-gray-700 hidden sm:inline">
+                Buscar em tudo...
+              </span>
+              <kbd className="ml-auto px-2 py-1 bg-white border border-gray-300 text-gray-600 text-xs rounded font-mono hidden md:inline">
+                ⌘K
+              </kbd>
+            </button>
+          </div>
         </div>
 
         {/* Right Side - Actions */}
@@ -511,7 +527,7 @@ export default function Header() {
                 <p className="text-sm font-semibold text-gray-900">{fullName}</p>
                 <p className="text-xs text-gray-500">{roleDisplay}</p>
               </div>
-              <ChevronDown size={16} className="text-gray-400" />
+              <ChevronDown size={16} className="text-gray-400 hidden sm:block" />
             </button>
 
             <AnimatePresence>
