@@ -1,4 +1,4 @@
-// src/components/layout/Sidebar/index.tsx - 🎨 VERSÃO RESPONSIVA PROFISSIONAL
+// src/components/layout/Sidebar/index.tsx - ✅ SOLUÇÃO DEFINITIVA
 import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,7 +16,6 @@ import {
   Building2,
   Sparkles,
   X,
-  Menu,
 } from 'lucide-react';
 import { useCurrentSchool } from '../../../hooks/useCurrentSchool';
 import { useSidebar } from '../../../hooks/useSidebar';
@@ -89,7 +88,7 @@ const MENU_ITEMS: MenuItem[] = [
 export default function Sidebar() {
   const location = useLocation();
   const { currentSchool } = useCurrentSchool();
-  const { isCollapsed, isMobileOpen, toggleCollapse, toggleMobile, setMobileOpen } = useSidebar();
+  const { isCollapsed, isMobileOpen, toggleCollapse, setMobileOpen } = useSidebar();
 
   const schoolName = currentSchool?.school_name || 'Carregando...';
   const schoolId = currentSchool?.id;
@@ -131,19 +130,27 @@ export default function Sidebar() {
 
       {/* ============================================
           SIDEBAR
+          
+          MOBILE: Controlado por transform translateX
+          DESKTOP: Sempre visível, apenas muda width
       ============================================ */}
       <motion.aside
         initial={false}
         animate={{ 
           width: isCollapsed ? 80 : 280,
-          x: isMobileOpen ? 0 : -280, // Mobile: slide in/out
         }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
         className={`
           fixed left-0 top-0 bottom-0 
           bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 
           text-white shadow-2xl z-40 flex flex-col
+
+          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
+
           lg:translate-x-0
+          
+
+          transition-transform duration-300 ease-in-out
         `}
       >
         {/* ============================================
@@ -152,12 +159,7 @@ export default function Sidebar() {
         <div className="p-6 border-b border-gray-800/50">
           <div className="flex items-center justify-between">
             {!isCollapsed && (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="flex items-center gap-3"
-              >
+              <div className="flex items-center gap-3">
                 {/* Logo com gradiente */}
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 transform hover:scale-110 transition-transform">
                   <Sparkles className="text-white" size={24} />
@@ -171,7 +173,7 @@ export default function Sidebar() {
                     Gestão Escolar
                   </p>
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {/* Botões de controle */}
@@ -217,10 +219,7 @@ export default function Sidebar() {
                   to={item.path}
                   className="block"
                 >
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
+                  <div
                     className={`relative group flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 ${
                       isActive
                         ? `bg-gradient-to-r ${item.gradient} shadow-lg shadow-blue-500/20`
@@ -252,21 +251,17 @@ export default function Sidebar() {
 
                     {/* Active Indicator */}
                     {isActive && (
-                      <motion.div
-                        layoutId="activeTab"
-                        className="absolute left-0 top-0 bottom-0 w-1 bg-white rounded-r-full"
-                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                      />
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-white rounded-r-full" />
                     )}
 
-                    {/* Tooltip para collapsed */}
+                    {/* Tooltip para collapsed (apenas desktop) */}
                     {isCollapsed && (
-                      <div className="absolute left-full ml-2 px-3 py-2 bg-gray-800 text-white text-sm font-semibold rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                      <div className="hidden lg:block absolute left-full ml-2 px-3 py-2 bg-gray-800 text-white text-sm font-semibold rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
                         {item.label}
                         <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800" />
                       </div>
                     )}
-                  </motion.div>
+                  </div>
                 </NavLink>
               );
             })}
@@ -280,9 +275,8 @@ export default function Sidebar() {
           
           {/* Settings Link */}
           <NavLink to="/configuracoes">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-3 transition-all ${
+            <div
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-3 transition-all hover:scale-[1.02] ${
                 location.pathname === '/configuracoes'
                   ? 'bg-gradient-to-r from-gray-700 to-gray-600 shadow-lg'
                   : 'hover:bg-white/5'
@@ -294,16 +288,12 @@ export default function Sidebar() {
                   Configurações
                 </span>
               )}
-            </motion.div>
+            </div>
           </NavLink>
 
           {/* School Info Card */}
           {!isCollapsed && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-xl p-4 backdrop-blur-sm"
-            >
+            <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-xl p-4 backdrop-blur-sm">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg">
                   <Building2 size={20} className="text-white" />
@@ -342,7 +332,7 @@ export default function Sidebar() {
                   <p className="text-white font-semibold mt-1">Pro</p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
 
           {/* Collapsed School Indicator */}
@@ -352,7 +342,7 @@ export default function Sidebar() {
                 <Building2 size={20} className="text-white" />
                 
                 {/* Tooltip */}
-                <div className="absolute left-full ml-2 px-3 py-2 bg-gray-800 text-white text-sm font-semibold rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                <div className="hidden lg:block absolute left-full ml-2 px-3 py-2 bg-gray-800 text-white text-sm font-semibold rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
                   {schoolName}
                   <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-800" />
                 </div>
@@ -362,23 +352,5 @@ export default function Sidebar() {
         </div>
       </motion.aside>
     </>
-  );
-}
-
-// ============================================
-// MOBILE MENU BUTTON (para usar no Header)
-// ============================================
-
-export function MobileMenuButton() {
-  const { toggleMobile } = useSidebar();
-  
-  return (
-    <button
-      onClick={toggleMobile}
-      className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
-      aria-label="Abrir menu"
-    >
-      <Menu size={24} className="text-gray-700" />
-    </button>
   );
 }
