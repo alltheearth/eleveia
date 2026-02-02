@@ -40,6 +40,8 @@ const AppRoutes = () => {
           <Route path="/perfil" element={<Perfil />} />
           <Route path="/configuracoes" element={<InformacoesEscola />} />
           <Route path="/documentos" element={<DocumentsPage />} />
+          <Route path="/boards" element={<BoardsPage />} />
+          <Route path="/boards/:id" element={<BoardView />} />
         </Route>
       </Route>
 

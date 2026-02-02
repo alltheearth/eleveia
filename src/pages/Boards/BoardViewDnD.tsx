@@ -1,5 +1,5 @@
-// src/pages/Boards/BoardView.tsx
-// 📋 VISUALIZAÇÃO DE UM BOARD ESPECÍFICO - KANBAN
+// src/pages/Boards/BoardViewDnD.tsx
+// 📋 VISUALIZAÇÃO DO BOARD COM DRAG & DROP COMPLETO
 
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -9,7 +9,6 @@ import {
   Plus, 
   MoreVertical, 
   Star, 
-  StarOff,
   Archive,
   Settings,
   Users,
@@ -18,11 +17,28 @@ import {
   X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragStartEvent,
+  DragEndEvent,
+  DragOverEvent,
+  closestCorners,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
 
 // Components
-import BoardList from './components/List/BoardList';
+import BoardListDnD from './components/List/BoardListDnD';
 import AddListButton from './components/List/AddListButton';
 import CardModal from './components/Card/CardModal';
+import DraggableCard from './components/Card/DraggableCard';
 
 // Types & Constants
 import type { Board, BoardList as List, BoardCard, ListFormData, CardFormData } from '../../types/boards';
@@ -50,7 +66,6 @@ function BoardHeader({ board, onBack, onToggleStar, onArchive, onSettings }: Boa
   return (
     <div className={`bg-gradient-to-r ${colorConfig.gradient} px-6 py-5 shadow-lg`}>
       <div className="flex items-center justify-between">
-        {/* Left */}
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
@@ -71,7 +86,6 @@ function BoardHeader({ board, onBack, onToggleStar, onArchive, onSettings }: Boa
           </div>
         </div>
 
-        {/* Right */}
         <div className="flex items-center gap-3">
           <button
             onClick={onToggleStar}
@@ -144,7 +158,6 @@ function BoardToolbar({ searchTerm, onSearchChange, showFilters, onToggleFilters
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center gap-4">
-        {/* Search */}
         <div className="flex-1 max-w-md relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
@@ -164,7 +177,6 @@ function BoardToolbar({ searchTerm, onSearchChange, showFilters, onToggleFilters
           )}
         </div>
 
-        {/* Filters */}
         <button
           onClick={onToggleFilters}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all font-semibold text-sm ${
@@ -185,7 +197,7 @@ function BoardToolbar({ searchTerm, onSearchChange, showFilters, onToggleFilters
 // MAIN COMPONENT
 // ============================================
 
-export default function BoardView() {
+export default function BoardViewDnD() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -193,7 +205,7 @@ export default function BoardView() {
   // STATE
   // ============================================
 
-  const [board, setBoard] = useState<Board | null>(
+  const [board] = useState<Board | null>(
     MOCK_BOARDS.find(b => b.id === parseInt(id || '0')) || null
   );
 
@@ -210,6 +222,22 @@ export default function BoardView() {
   const [selectedCard, setSelectedCard] = useState<BoardCard | null>(null);
   const [showCardModal, setShowCardModal] = useState(false);
 
+  // Drag & Drop state
+  const [activeCard, setActiveCard] = useState<BoardCard | null>(null);
+  const [activeList, setActiveList] = useState<List | null>(null);
+
+  // ============================================
+  // DND SETUP
+  // ============================================
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement required to start drag
+      },
+    })
+  );
+
   // ============================================
   // COMPUTED
   // ============================================
@@ -222,7 +250,98 @@ export default function BoardView() {
   }, [cards, searchTerm]);
 
   // ============================================
-  // HANDLERS
+  // DND HANDLERS
+  // ============================================
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const activeData = active.data.current;
+
+    if (activeData?.type === 'card') {
+      setActiveCard(activeData.card);
+    } else if (activeData?.type === 'list') {
+      setActiveList(activeData.list);
+    }
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeData = active.data.current;
+    const overData = over.data.current;
+
+    // Only handle card dragging over lists
+    if (activeData?.type === 'card' && overData?.type === 'list') {
+      const activeCard = activeData.card as BoardCard;
+      const overList = overData.list as List;
+
+      if (activeCard.list !== overList.id) {
+        setCards(prev => prev.map(card =>
+          card.id === activeCard.id
+            ? { ...card, list: overList.id }
+            : card
+        ));
+      }
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    setActiveCard(null);
+    setActiveList(null);
+
+    if (!over) return;
+
+    const activeData = active.data.current;
+    const overData = over.data.current;
+
+    // Handle card reordering
+    if (activeData?.type === 'card' && overData?.type === 'card') {
+      const activeCard = activeData.card as BoardCard;
+      const overCard = overData.card as BoardCard;
+
+      if (activeCard.id !== overCard.id && activeCard.list === overCard.list) {
+        setCards(prev => {
+          const listCards = prev.filter(c => c.list === activeCard.list);
+          const oldIndex = listCards.findIndex(c => c.id === activeCard.id);
+          const newIndex = listCards.findIndex(c => c.id === overCard.id);
+          
+          const reordered = arrayMove(listCards, oldIndex, newIndex);
+          const otherCards = prev.filter(c => c.list !== activeCard.list);
+          
+          return [
+            ...otherCards,
+            ...reordered.map((card, index) => ({ ...card, position: index }))
+          ];
+        });
+        
+        toast.success('Card reordenado!');
+      }
+    }
+
+    // Handle list reordering
+    if (activeData?.type === 'list' && overData?.type === 'list') {
+      const activeList = activeData.list as List;
+      const overList = overData.list as List;
+
+      if (activeList.id !== overList.id) {
+        setLists(prev => {
+          const oldIndex = prev.findIndex(l => l.id === activeList.id);
+          const newIndex = prev.findIndex(l => l.id === overList.id);
+          
+          const reordered = arrayMove(prev, oldIndex, newIndex);
+          return reordered.map((list, index) => ({ ...list, position: index }));
+        });
+        
+        toast.success('Lista reordenada!');
+      }
+    }
+  };
+
+  // ============================================
+  // REGULAR HANDLERS
   // ============================================
 
   const handleBack = () => {
@@ -308,14 +427,6 @@ export default function BoardView() {
     setShowCardModal(true);
   };
 
-  const handleMoveCard = (cardId: number, newListId: number, newPosition: number) => {
-    setCards(prev => prev.map(c => 
-      c.id === cardId 
-        ? { ...c, list: newListId, position: newPosition }
-        : c
-    ));
-  };
-
   // ============================================
   // RENDER
   // ============================================
@@ -337,79 +448,103 @@ export default function BoardView() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
-      <BoardHeader
-        board={board}
-        onBack={handleBack}
-        onToggleStar={handleToggleStar}
-        onArchive={handleArchive}
-        onSettings={handleSettings}
-      />
-
-      {/* Toolbar */}
-      <BoardToolbar
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        showFilters={showFilters}
-        onToggleFilters={() => setShowFilters(!showFilters)}
-      />
-
-      {/* Board Content - Horizontal Scroll */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden">
-        <div className="flex gap-6 p-6 h-full min-w-max">
-          {/* Lists */}
-          <AnimatePresence mode="popLayout">
-            {lists
-              .filter(l => !l.is_archived)
-              .sort((a, b) => a.position - b.position)
-              .map((list, index) => (
-                <motion.div
-                  key={list.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <BoardList
-                    list={list}
-                    cards={filteredCards.filter(c => c.list === list.id)}
-                    onUpdateList={handleUpdateList}
-                    onDeleteList={handleDeleteList}
-                    onCreateCard={handleCreateCard}
-                    onUpdateCard={handleUpdateCard}
-                    onDeleteCard={handleDeleteCard}
-                    onCardClick={handleCardClick}
-                    onMoveCard={handleMoveCard}
-                  />
-                </motion.div>
-              ))}
-          </AnimatePresence>
-
-          {/* Add List Button */}
-          <AddListButton onCreateList={handleCreateList} />
-        </div>
-      </div>
-
-      {/* Card Modal */}
-      {showCardModal && selectedCard && (
-        <CardModal
-          card={selectedCard}
-          onClose={() => {
-            setShowCardModal(false);
-            setSelectedCard(null);
-          }}
-          onUpdate={(data) => {
-            handleUpdateCard(selectedCard.id, data);
-            setSelectedCard({ ...selectedCard, ...data });
-          }}
-          onDelete={() => {
-            handleDeleteCard(selectedCard.id);
-            setShowCardModal(false);
-            setSelectedCard(null);
-          }}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="flex flex-col h-screen bg-gray-50">
+        {/* Header */}
+        <BoardHeader
+          board={board}
+          onBack={handleBack}
+          onToggleStar={handleToggleStar}
+          onArchive={handleArchive}
+          onSettings={handleSettings}
         />
-      )}
-    </div>
+
+        {/* Toolbar */}
+        <BoardToolbar
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          showFilters={showFilters}
+          onToggleFilters={() => setShowFilters(!showFilters)}
+        />
+
+        {/* Board Content */}
+        <div className="flex-1 overflow-x-auto overflow-y-hidden">
+          <div className="flex gap-6 p-6 h-full min-w-max">
+            <SortableContext
+              items={lists.map(l => `list-${l.id}`)}
+              strategy={horizontalListSortingStrategy}
+            >
+              <AnimatePresence mode="popLayout">
+                {lists
+                  .filter(l => !l.is_archived)
+                  .sort((a, b) => a.position - b.position)
+                  .map((list) => (
+                    <motion.div
+                      key={list.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                    >
+                      <BoardListDnD
+                        list={list}
+                        cards={filteredCards.filter(c => c.list === list.id)}
+                        onUpdateList={handleUpdateList}
+                        onDeleteList={handleDeleteList}
+                        onCreateCard={handleCreateCard}
+                        onUpdateCard={handleUpdateCard}
+                        onDeleteCard={handleDeleteCard}
+                        onCardClick={handleCardClick}
+                        isDragging={activeList?.id === list.id}
+                      />
+                    </motion.div>
+                  ))}
+              </AnimatePresence>
+            </SortableContext>
+
+            <AddListButton onCreateList={handleCreateList} />
+          </div>
+        </div>
+
+        {/* Drag Overlays */}
+        <DragOverlay>
+          {activeCard && (
+            <div className="rotate-3 opacity-90">
+              <DraggableCard
+                card={activeCard}
+                onClick={() => {}}
+                onUpdate={() => {}}
+                onDelete={() => {}}
+              />
+            </div>
+          )}
+        </DragOverlay>
+
+        {/* Card Modal */}
+        {showCardModal && selectedCard && (
+          <CardModal
+            card={selectedCard}
+            onClose={() => {
+              setShowCardModal(false);
+              setSelectedCard(null);
+            }}
+            onUpdate={(data) => {
+              handleUpdateCard(selectedCard.id, data);
+              setSelectedCard({ ...selectedCard, ...data });
+            }}
+            onDelete={() => {
+              handleDeleteCard(selectedCard.id);
+              setShowCardModal(false);
+              setSelectedCard(null);
+            }}
+          />
+        )}
+      </div>
+    </DndContext>
   );
 }

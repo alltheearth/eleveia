@@ -1,13 +1,18 @@
-// src/pages/Boards/components/List/BoardList.tsx
-// 📝 COMPONENTE DE LISTA/COLUNA DO KANBAN
+// src/pages/Boards/components/List/BoardListDnD.tsx
+// 📝 COMPONENTE DE LISTA COM DRAG & DROP
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { Plus, MoreVertical, Edit2, Trash2, GripVertical } from 'lucide-react';
 import toast from 'react-hot-toast';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
 
 // Components
-import BoardCardComponent from '../Card/BoardCard';
+import DraggableCard from '../Card/DraggableCard';
 
 // Types
 import type { BoardList as List, BoardCard, CardFormData } from '../../../../types/boards';
@@ -21,9 +26,10 @@ interface ListHeaderProps {
   cardCount: number;
   onUpdate: (title: string) => void;
   onDelete: () => void;
+  isDragging?: boolean;
 }
 
-function ListHeader({ list, cardCount, onUpdate, onDelete }: ListHeaderProps) {
+function ListHeader({ list, cardCount, onUpdate, onDelete, isDragging }: ListHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(list.title);
   const [showMenu, setShowMenu] = useState(false);
@@ -48,24 +54,31 @@ function ListHeader({ list, cardCount, onUpdate, onDelete }: ListHeaderProps) {
 
   return (
     <div className="flex items-center justify-between mb-4">
-      {isEditing ? (
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onBlur={handleSave}
-          onKeyDown={handleKeyPress}
-          autoFocus
-          className="flex-1 px-3 py-2 border-2 border-blue-500 rounded-lg font-bold text-gray-900 focus:outline-none"
-        />
-      ) : (
-        <h3 className="font-bold text-gray-900 flex items-center gap-2">
-          {list.title}
-          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full font-semibold">
-            {cardCount}
-          </span>
-        </h3>
-      )}
+      <div className="flex items-center gap-2 flex-1">
+        {/* Drag Handle */}
+        <div className={`cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-50' : ''}`}>
+          <GripVertical size={16} className="text-gray-400" />
+        </div>
+
+        {isEditing ? (
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={handleSave}
+            onKeyDown={handleKeyPress}
+            autoFocus
+            className="flex-1 px-3 py-2 border-2 border-blue-500 rounded-lg font-bold text-gray-900 focus:outline-none"
+          />
+        ) : (
+          <h3 className="font-bold text-gray-900 flex items-center gap-2 flex-1">
+            {list.title}
+            <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full font-semibold">
+              {cardCount}
+            </span>
+          </h3>
+        )}
+      </div>
 
       <div className="relative">
         <button
@@ -185,7 +198,7 @@ function AddCardButton({ onAdd }: AddCardButtonProps) {
 // MAIN COMPONENT
 // ============================================
 
-interface BoardListProps {
+interface BoardListDnDProps {
   list: List;
   cards: BoardCard[];
   onUpdateList: (listId: number, title: string) => void;
@@ -194,10 +207,10 @@ interface BoardListProps {
   onUpdateCard: (cardId: number, data: Partial<BoardCard>) => void;
   onDeleteCard: (cardId: number) => void;
   onCardClick: (card: BoardCard) => void;
-  onMoveCard: (cardId: number, newListId: number, newPosition: number) => void;
+  isDragging?: boolean;
 }
 
-export default function BoardList({
+export default function BoardListDnD({
   list,
   cards,
   onUpdateList,
@@ -206,12 +219,21 @@ export default function BoardList({
   onUpdateCard,
   onDeleteCard,
   onCardClick,
-  onMoveCard,
-}: BoardListProps) {
+  isDragging,
+}: BoardListDnDProps) {
   
   const sortedCards = cards
     .filter(c => !c.is_archived)
     .sort((a, b) => a.position - b.position);
+
+  // Setup droppable for the list
+  const { setNodeRef } = useDroppable({
+    id: `list-${list.id}`,
+    data: {
+      type: 'list',
+      list,
+    },
+  });
 
   const handleAddCard = (title: string) => {
     onCreateCard({
@@ -225,38 +247,43 @@ export default function BoardList({
 
   return (
     <div className="w-80 flex-shrink-0">
-      <div className="bg-gray-100 rounded-xl p-4 h-full flex flex-col">
+      <div className={`bg-gray-100 rounded-xl p-4 h-full flex flex-col transition-all ${
+        isDragging ? 'opacity-50 scale-95' : ''
+      }`}>
         {/* Header */}
         <ListHeader
           list={list}
           cardCount={sortedCards.length}
           onUpdate={(title) => onUpdateList(list.id, title)}
           onDelete={() => onDeleteList(list.id)}
+          isDragging={isDragging}
         />
 
-        {/* Cards Container - Scrollable */}
-        <div className="flex-1 overflow-y-auto space-y-3 mb-3 min-h-[100px]">
-          {sortedCards.length === 0 ? (
-            <div className="flex items-center justify-center h-24 text-sm text-gray-500 italic">
-              Nenhum card nesta lista
-            </div>
-          ) : (
-            sortedCards.map((card, index) => (
-              <motion.div
-                key={card.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <BoardCardComponent
+        {/* Cards Container - Scrollable & Droppable */}
+        <div
+          ref={setNodeRef}
+          className="flex-1 overflow-y-auto space-y-3 mb-3 min-h-[100px]"
+        >
+          <SortableContext
+            items={sortedCards.map(c => `card-${c.id}`)}
+            strategy={verticalListSortingStrategy}
+          >
+            {sortedCards.length === 0 ? (
+              <div className="flex items-center justify-center h-24 text-sm text-gray-500 italic border-2 border-dashed border-gray-300 rounded-lg">
+                Arraste cards aqui
+              </div>
+            ) : (
+              sortedCards.map((card) => (
+                <DraggableCard
+                  key={card.id}
                   card={card}
                   onClick={() => onCardClick(card)}
                   onUpdate={(data) => onUpdateCard(card.id, data)}
                   onDelete={() => onDeleteCard(card.id)}
                 />
-              </motion.div>
-            ))
-          )}
+              ))
+            )}
+          </SortableContext>
         </div>
 
         {/* Add Card Button */}
