@@ -1,307 +1,288 @@
-// src/pages/Campaigns/components/CampaignFilters.tsx
-// 🔍 FILTROS AVANÇADOS DE CAMPANHAS - PROFISSIONAL
+// src/pages/Campaigns/components/CampaignCard.tsx
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
-  Search, 
-  Filter, 
-  X, 
-  Plus,
-  Download,
-  Grid3x3,
-  List,
-  Kanban,
-  RefreshCw
+  MoreVertical, 
+  Send, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  Pause, 
+  Play,
+  Copy,
+  Calendar,
+  Users,
+  TrendingUp
 } from 'lucide-react';
 import { useState } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import type { Campaign } from '../../../types/campaigns/campaign.types';
+import { CAMPAIGN_TYPE_CONFIG, CAMPAIGN_STATUS_CONFIG, CHANNEL_CONFIG } from '../config/campaign.config';
 
-// ============================================
-// TYPES
-// ============================================
-
-export type CampaignViewMode = 'grid' | 'list' | 'kanban';
-
-interface CampaignFiltersProps {
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
-  statusFilter: string;
-  onStatusFilterChange: (value: string) => void;
-  typeFilter: string;
-  onTypeFilterChange: (value: string) => void;
-  viewMode: CampaignViewMode;
-  onViewModeChange: (mode: CampaignViewMode) => void;
-  onNewCampaign: () => void;
-  onExport?: () => void;
-  onRefresh?: () => void;
-  onClearFilters: () => void;
-  hasActiveFilters: boolean;
-  isExporting?: boolean;
-  isRefreshing?: boolean;
+interface CampaignCardProps {
+  campaign: Campaign;
+  onView?: (campaign: Campaign) => void;
+  onEdit?: (campaign: Campaign) => void;
+  onDelete?: (campaign: Campaign) => void;
+  onPause?: (campaign: Campaign) => void;
+  onResume?: (campaign: Campaign) => void;
+  onDuplicate?: (campaign: Campaign) => void;
 }
 
-const STATUS_OPTIONS: { value: string; label: string; emoji: string }[] = [
-  { value: 'all', label: 'Todos os Status', emoji: '📊' },
-  { value: 'draft', label: 'Rascunhos', emoji: '📝' },
-  { value: 'scheduled', label: 'Agendadas', emoji: '⏰' },
-  { value: 'sending', label: 'Enviando', emoji: '🚀' },
-  { value: 'completed', label: 'Concluídas', emoji: '✅' },
-  { value: 'paused', label: 'Pausadas', emoji: '⏸️' },
-  { value: 'cancelled', label: 'Canceladas', emoji: '🚫' },
-  { value: 'failed', label: 'Falharam', emoji: '❌' },
-];
-
-const TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: 'all', label: 'Todos os Tipos' },
-  { value: 'matricula', label: '🎓 Matrícula' },
-  { value: 'rematricula', label: '🔄 Rematrícula' },
-  { value: 'passei_direto', label: '🎉 Passei Direto' },
-  { value: 'reuniao', label: '📅 Reunião' },
-  { value: 'evento', label: '🎊 Evento' },
-  { value: 'cobranca', label: '💰 Cobrança' },
-  { value: 'comunicado', label: '📢 Comunicado' },
-];
-
-// ============================================
-// COMPONENT
-// ============================================
-
-export default function CampaignFilters({
-  searchTerm,
-  onSearchChange,
-  statusFilter,
-  onStatusFilterChange,
-  typeFilter,
-  onTypeFilterChange,
-  viewMode,
-  onViewModeChange,
-  onNewCampaign,
-  onExport,
-  onRefresh,
-  onClearFilters,
-  hasActiveFilters,
-  isExporting = false,
-  isRefreshing = false,
-}: CampaignFiltersProps) {
-  const [showAdvanced, setShowAdvanced] = useState(false);
+export default function CampaignCard({
+  campaign,
+  onView,
+  onEdit,
+  onDelete,
+  onPause,
+  onResume,
+  onDuplicate,
+}: CampaignCardProps) {
+  const [showActions, setShowActions] = useState(false);
+  
+  const typeConfig = CAMPAIGN_TYPE_CONFIG[campaign.type];
+  const statusConfig = CAMPAIGN_STATUS_CONFIG[campaign.status];
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* Header principal */}
-      <div className="p-6 border-b border-gray-100">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          {/* Busca */}
-          <div className="flex-1 min-w-[300px] max-w-md">
-            <div className="relative">
-              <Search
-                size={20}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <input
-                type="text"
-                placeholder="Buscar campanhas por nome..."
-                value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="w-full pl-12 pr-10 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-400 transition-all"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => onSearchChange('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded-lg transition-colors"
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      whileHover={{ y: -4, boxShadow: '0 12px 24px -8px rgba(0,0,0,0.15)' }}
+      transition={{ duration: 0.2 }}
+      className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group"
+    >
+      {/* Header com gradiente */}
+      <div className={`bg-gradient-to-r ${typeConfig.gradient} px-6 pt-6 pb-4`}>
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-3xl">{typeConfig.icon}</span>
+              <span className={`px-3 py-1 ${typeConfig.bg} rounded-full text-xs font-bold ${typeConfig.text}`}>
+                {typeConfig.label}
+              </span>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-1 line-clamp-2">
+              {campaign.name}
+            </h3>
+          </div>
+
+          {/* Actions Menu */}
+          <div className="relative">
+            <button
+              onClick={() => setShowActions(!showActions)}
+              className="w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+            >
+              <MoreVertical className="text-white" size={18} />
+            </button>
+
+            {showActions && (
+              <>
+                <div 
+                  className="fixed inset-0 z-10" 
+                  onClick={() => setShowActions(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="absolute right-0 top-10 w-48 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-20"
                 >
-                  <X size={18} className="text-gray-400" />
-                </button>
-              )}
-            </div>
-          </div>
+                  <button
+                    onClick={() => {
+                      onView?.(campaign);
+                      setShowActions(false);
+                    }}
+                    className="w-full px-4 py-2 flex items-center gap-3 hover:bg-gray-50 text-gray-700 text-sm font-medium"
+                  >
+                    <Eye size={16} />
+                    Ver Detalhes
+                  </button>
+                  <button
+                    onClick={() => {
+                      onEdit?.(campaign);
+                      setShowActions(false);
+                    }}
+                    className="w-full px-4 py-2 flex items-center gap-3 hover:bg-gray-50 text-gray-700 text-sm font-medium"
+                  >
+                    <Edit size={16} />
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDuplicate?.(campaign);
+                      setShowActions(false);
+                    }}
+                    className="w-full px-4 py-2 flex items-center gap-3 hover:bg-gray-50 text-gray-700 text-sm font-medium"
+                  >
+                    <Copy size={16} />
+                    Duplicar
+                  </button>
+                  
+                  {campaign.status === 'sending' && (
+                    <button
+                      onClick={() => {
+                        onPause?.(campaign);
+                        setShowActions(false);
+                      }}
+                      className="w-full px-4 py-2 flex items-center gap-3 hover:bg-orange-50 text-orange-600 text-sm font-medium"
+                    >
+                      <Pause size={16} />
+                      Pausar
+                    </button>
+                  )}
 
-          {/* Ações direita */}
-          <div className="flex items-center gap-3">
-            {/* Filtros avançados */}
-            <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className={`flex items-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all ${
-                showAdvanced || hasActiveFilters
-                  ? 'bg-blue-50 text-blue-600 border-2 border-blue-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <Filter size={18} />
-              <span className="hidden sm:inline">Filtros</span>
-              {hasActiveFilters && (
-                <span className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-              )}
-            </button>
+                  {campaign.status === 'paused' && (
+                    <button
+                      onClick={() => {
+                        onResume?.(campaign);
+                        setShowActions(false);
+                      }}
+                      className="w-full px-4 py-2 flex items-center gap-3 hover:bg-green-50 text-green-600 text-sm font-medium"
+                    >
+                      <Play size={16} />
+                      Retomar
+                    </button>
+                  )}
 
-            {/* View mode */}
-            <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl">
-              <button
-                onClick={() => onViewModeChange('grid')}
-                className={`p-2 rounded-lg transition-all ${
-                  viewMode === 'grid'
-                    ? 'bg-white shadow-sm text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                title="Visualização em grade"
-              >
-                <Grid3x3 size={18} />
-              </button>
-              <button
-                onClick={() => onViewModeChange('list')}
-                className={`p-2 rounded-lg transition-all ${
-                  viewMode === 'list'
-                    ? 'bg-white shadow-sm text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                title="Visualização em lista"
-              >
-                <List size={18} />
-              </button>
-              <button
-                onClick={() => onViewModeChange('kanban')}
-                className={`p-2 rounded-lg transition-all ${
-                  viewMode === 'kanban'
-                    ? 'bg-white shadow-sm text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                title="Visualização Kanban"
-              >
-                <Kanban size={18} />
-              </button>
-            </div>
-
-            {/* Refresh */}
-            {onRefresh && (
-              <button
-                onClick={onRefresh}
-                disabled={isRefreshing}
-                className="hidden lg:flex items-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all disabled:opacity-50"
-              >
-                <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
-                <span>Atualizar</span>
-              </button>
+                  <div className="my-2 border-t border-gray-200" />
+                  
+                  <button
+                    onClick={() => {
+                      onDelete?.(campaign);
+                      setShowActions(false);
+                    }}
+                    className="w-full px-4 py-2 flex items-center gap-3 hover:bg-red-50 text-red-600 text-sm font-medium"
+                  >
+                    <Trash2 size={16} />
+                    Excluir
+                  </button>
+                </motion.div>
+              </>
             )}
-
-            {/* Exportar */}
-            {onExport && (
-              <button
-                onClick={onExport}
-                disabled={isExporting}
-                className="hidden lg:flex items-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all disabled:opacity-50"
-              >
-                <Download size={18} />
-                <span>{isExporting ? 'Exportando...' : 'Exportar'}</span>
-              </button>
-            )}
-
-            {/* Nova campanha */}
-            <button
-              onClick={onNewCampaign}
-              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all"
-            >
-              <Plus size={20} />
-              <span className="hidden sm:inline">Nova Campanha</span>
-            </button>
           </div>
+        </div>
+
+        {/* Status Badge */}
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center gap-2 px-3 py-1.5 ${statusConfig.color} rounded-full text-xs font-bold border`}>
+            <span className={`w-2 h-2 ${statusConfig.dotColor} rounded-full animate-pulse`} />
+            {statusConfig.icon} {statusConfig.label}
+          </span>
         </div>
       </div>
 
-      {/* Filtros avançados */}
-      <AnimatePresence>
-        {showAdvanced && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="border-b border-gray-100 overflow-hidden"
-          >
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Status */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Status da Campanha
-                  </label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => onStatusFilterChange(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                  >
-                    {STATUS_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.emoji} {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Tipo */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Tipo da Campanha
-                  </label>
-                  <select
-                    value={typeFilter}
-                    onChange={(e) => onTypeFilterChange(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                  >
-                    {TYPE_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Botão de limpar */}
-              {hasActiveFilters && (
-                <div className="flex justify-end pt-2">
-                  <button
-                    onClick={onClearFilters}
-                    className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors"
-                  >
-                    <X size={16} />
-                    Limpar filtros
-                  </button>
-                </div>
-              )}
-            </div>
-          </motion.div>
+      {/* Body */}
+      <div className="p-6">
+        {/* Description */}
+        {campaign.description && (
+          <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+            {campaign.description}
+          </p>
         )}
-      </AnimatePresence>
 
-      {/* Indicador de filtros ativos */}
-      {hasActiveFilters && !showAdvanced && (
-        <div className="px-6 py-3 bg-blue-50 border-t border-blue-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-semibold text-blue-700">Filtros ativos:</span>
-              {searchTerm && (
-                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                  Busca: "{searchTerm.slice(0, 20)}{searchTerm.length > 20 ? '...' : ''}"
-                </span>
-              )}
-              {statusFilter !== 'all' && (
-                <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
-                  Status: {STATUS_OPTIONS.find(s => s.value === statusFilter)?.label}
-                </span>
-              )}
-              {typeFilter !== 'all' && (
-                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                  Tipo: {TYPE_OPTIONS.find(t => t.value === typeFilter)?.label}
-                </span>
-              )}
+        {/* Info Grid */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+              <Users className="text-blue-600" size={16} />
             </div>
-            <button
-              onClick={onClearFilters}
-              className="text-sm text-blue-600 hover:text-blue-700 font-semibold hover:underline"
-            >
-              Limpar
-            </button>
+            <div>
+              <p className="text-xs text-gray-500">Público</p>
+              <p className="text-sm font-bold text-gray-900">
+                {campaign.audience_count.toLocaleString()} pessoas
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
+              <Calendar className="text-purple-600" size={16} />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">
+                {campaign.scheduled_at ? 'Agendado' : 'Criado'}
+              </p>
+              <p className="text-sm font-bold text-gray-900">
+                {format(
+                  new Date(campaign.scheduled_at || campaign.created_at),
+                  'dd/MM/yy',
+                  { locale: ptBR }
+                )}
+              </p>
+            </div>
           </div>
         </div>
-      )}
-    </div>
+
+        {/* Channels */}
+        <div className="mb-4">
+          <p className="text-xs text-gray-500 mb-2">Canais de envio:</p>
+          <div className="flex gap-2">
+            {campaign.channels.map((channel) => {
+              const channelConfig = CHANNEL_CONFIG[channel];
+              return (
+                <span
+                  key={channel}
+                  className={`inline-flex items-center gap-1 px-3 py-1.5 ${channelConfig.bgColor} rounded-lg text-xs font-semibold ${channelConfig.color}`}
+                >
+                  {channelConfig.icon} {channelConfig.label}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Analytics (se disponível) */}
+        {campaign.analytics && campaign.analytics.messages_sent > 0 && (
+          <div className="pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900">
+                  {campaign.analytics.delivery_rate.toFixed(0)}%
+                </p>
+                <p className="text-xs text-gray-500">Entrega</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900">
+                  {campaign.analytics.open_rate.toFixed(0)}%
+                </p>
+                <p className="text-xs text-gray-500">Abertura</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900">
+                  {campaign.analytics.conversion_rate.toFixed(0)}%
+                </p>
+                <p className="text-xs text-gray-500">Conversão</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tags */}
+        {campaign.tags && campaign.tags.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {campaign.tags.map((tag, index) => (
+              <span
+                key={index}
+                className="px-2 py-1 bg-gray-100 text-gray-600 rounded-md text-xs font-medium"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+        <button
+          onClick={() => onView?.(campaign)}
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-blue-500/30 transition-all group"
+        >
+          <TrendingUp size={18} className="group-hover:scale-110 transition-transform" />
+          Ver Analytics Completo
+        </button>
+      </div>
+    </motion.div>
   );
 }
