@@ -6,7 +6,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
-  Plus, 
   MoreVertical, 
   Star, 
   StarOff,

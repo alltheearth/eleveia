@@ -1,5 +1,5 @@
 // src/pages/Boards/components/Modals/BoardSettingsModal.tsx
-// ⚙️ CONFIGURAÇÕES DO BOARD
+// ⚙️ CONFIGURAÇÕES DO BOARD - VERSÃO CORRIGIDA
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { BOARD_COLORS } from '../../../../constants/boards';
-import type { Board } from '../../../../types/boards';
+import type { Board, BoardColor } from '../../../../types/boards';
 
 // ============================================
 // TYPES
@@ -47,7 +47,7 @@ export default function BoardSettingsModal({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [title, setTitle] = useState(board.title);
   const [description, setDescription] = useState(board.description || '');
-  const [selectedColor, setSelectedColor] = useState(board.color || 'blue');
+  const [selectedColor, setSelectedColor] = useState<BoardColor>(board.color || 'blue');
 
   if (!isOpen) return null;
 
@@ -184,31 +184,34 @@ export default function BoardSettingsModal({
                   Cor do Board
                 </label>
                 <div className="grid grid-cols-4 gap-3">
-                  {Object.entries(BOARD_COLORS).map(([key, config]) => (
-                    <button
-                      key={key}
-                      onClick={() => setSelectedColor(key)}
-                      className={`group relative h-20 rounded-xl transition-all ${
-                        selectedColor === key
-                          ? 'ring-4 ring-gray-900 scale-105'
-                          : 'hover:scale-105'
-                      }`}
-                    >
-                      <div className={`absolute inset-0 bg-gradient-to-r ${config.gradient} rounded-xl`} />
-                      {selectedColor === key && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
-                            <span className="text-2xl">✓</span>
+                  {(Object.keys(BOARD_COLORS) as BoardColor[]).map((key) => {
+                    const config = BOARD_COLORS[key];
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setSelectedColor(key)}
+                        className={`group relative h-20 rounded-xl transition-all ${
+                          selectedColor === key
+                            ? 'ring-4 ring-gray-900 scale-105'
+                            : 'hover:scale-105'
+                        }`}
+                      >
+                        <div className={`absolute inset-0 bg-gradient-to-r ${config.gradient} rounded-xl`} />
+                        {selectedColor === key && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
+                              <span className="text-2xl">✓</span>
+                            </div>
                           </div>
+                        )}
+                        <div className="absolute bottom-2 left-2 right-2">
+                          <span className="text-xs text-white font-bold capitalize">
+                            {key}
+                          </span>
                         </div>
-                      )}
-                      <div className="absolute bottom-2 left-2 right-2">
-                        <span className="text-xs text-white font-bold capitalize">
-                          {key}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
