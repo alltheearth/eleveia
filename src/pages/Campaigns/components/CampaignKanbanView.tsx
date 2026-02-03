@@ -1,289 +1,228 @@
 // src/pages/Campaigns/components/CampaignKanbanView.tsx
-// 📊 VISUALIZAÇÃO KANBAN DE CAMPANHAS - PROFISSIONAL E MODERNA
 
-import { useMemo } from 'react';
-import { Calendar, Users, Send, TrendingUp, Target } from 'lucide-react';
-import { motion } from 'framer-motion';
-import Kanban from '../../../components/common/Kanban';
-import { Badge } from '../../../components/common';
-import type { Campaign, CampaignStatus } from '../../../types/campaigns/campaign.types';
-import type { KanbanColumn, KanbanCard } from '../../../components/common/Kanban/types';
-import { CAMPAIGN_STATUS_CONFIG, CHANNEL_CONFIG } from '../../../types/campaigns/campaign.types';
+import { motion, AnimatePresence } from 'framer-motion';
+import CampaignCard from './CampaignCard';
+import type { Campaign, CampaignStatus } from '../../types/campaign.types';
 
 interface CampaignKanbanViewProps {
   campaigns: Campaign[];
-  onCampaignClick?: (campaign: Campaign) => void;
-  onChangeStatus: (cardId: number, fromStatus: string, toStatus: string) => void;
+  loading?: boolean;
+  onView?: (campaign: Campaign) => void;
+  onEdit?: (campaign: Campaign) => void;
+  onDelete?: (campaign: Campaign) => void;
+  onDuplicate?: (campaign: Campaign) => void;
+  onSend?: (campaign: Campaign) => void;
+  onPause?: (campaign: Campaign) => void;
+  onResume?: (campaign: Campaign) => void;
+  onViewAnalytics?: (campaign: Campaign) => void;
+}
+
+interface KanbanColumn {
+  status: CampaignStatus;
+  title: string;
+  icon: string;
+  color: string;
+  campaigns: Campaign[];
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="bg-gray-100 rounded-2xl p-4 h-[600px] animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-3/4 mb-4" />
+          <div className="space-y-3">
+            {[...Array(3)].map((_, j) => (
+              <div key={j} className="h-48 bg-gray-200 rounded-xl" />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="text-center py-16 bg-white rounded-2xl col-span-full"
+    >
+      <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center">
+        <span className="text-5xl">📧</span>
+      </div>
+      <h3 className="text-2xl font-bold text-gray-900 mb-2">
+        Nenhuma campanha encontrada
+      </h3>
+      <p className="text-gray-600 mb-6">
+        Comece criando sua primeira campanha de comunicação
+      </p>
+    </motion.div>
+  );
 }
 
 export default function CampaignKanbanView({
   campaigns,
-  onCampaignClick,
-  onChangeStatus,
+  loading = false,
+  onView,
+  onEdit,
+  onDelete,
+  onDuplicate,
+  onSend,
+  onPause,
+  onResume,
+  onViewAnalytics,
 }: CampaignKanbanViewProps) {
-  
-  // ============================================
-  // CONFIGURAÇÃO DOS STATUS
-  // ============================================
-  
-  const CAMPAIGN_STATUS_KANBAN = [
-    { 
-      id: 'draft', 
-      title: 'Rascunhos', 
-      color: 'bg-gray-100 text-gray-700', 
-      icon: <span className="text-2xl">📝</span>,
-      gradient: 'from-gray-500 to-gray-600',
+  if (loading) {
+    return <LoadingSkeleton />;
+  }
+
+  if (campaigns.length === 0) {
+    return <EmptyState />;
+  }
+
+  // Define colunas do Kanban
+  const columns: KanbanColumn[] = [
+    {
+      status: 'draft',
+      title: 'Rascunhos',
+      icon: '📝',
+      color: 'from-gray-400 to-gray-500',
+      campaigns: campaigns.filter(c => c.status === 'draft'),
     },
-    { 
-      id: 'scheduled', 
-      title: 'Agendadas', 
-      color: 'bg-blue-100 text-blue-700', 
-      icon: <span className="text-2xl">⏰</span>,
-      gradient: 'from-blue-500 to-blue-600',
+    {
+      status: 'scheduled',
+      title: 'Agendadas',
+      icon: '⏰',
+      color: 'from-blue-400 to-blue-500',
+      campaigns: campaigns.filter(c => c.status === 'scheduled'),
     },
-    { 
-      id: 'sending', 
-      title: 'Em Envio', 
-      color: 'bg-yellow-100 text-yellow-700', 
-      icon: <span className="text-2xl">🚀</span>,
-      gradient: 'from-yellow-500 to-yellow-600',
+    {
+      status: 'sending',
+      title: 'Em Envio',
+      icon: '🚀',
+      color: 'from-orange-400 to-orange-500',
+      campaigns: campaigns.filter(c => c.status === 'sending'),
     },
-    { 
-      id: 'completed', 
-      title: 'Concluídas', 
-      color: 'bg-green-100 text-green-700', 
-      icon: <span className="text-2xl">✅</span>,
-      gradient: 'from-green-500 to-green-600',
-    },
-    { 
-      id: 'paused', 
-      title: 'Pausadas', 
-      color: 'bg-orange-100 text-orange-700', 
-      icon: <span className="text-2xl">⏸️</span>,
-      gradient: 'from-orange-500 to-orange-600',
+    {
+      status: 'completed',
+      title: 'Concluídas',
+      icon: '✅',
+      color: 'from-green-400 to-green-500',
+      campaigns: campaigns.filter(c => c.status === 'completed'),
     },
   ];
 
-  // ============================================
-  // TRANSFORMAR CAMPANHAS EM COLUNAS KANBAN
-  // ============================================
-  
-  const kanbanColumns: KanbanColumn[] = useMemo(() => {
-    return CAMPAIGN_STATUS_KANBAN.map(statusConfig => ({
-      id: statusConfig.id,
-      title: statusConfig.title,
-      color: statusConfig.color,
-      icon: statusConfig.icon,
-      cards: campaigns
-        .filter(campaign => campaign.status === statusConfig.id)
-        .map(campaign => ({
-          id: campaign.id,
-          title: campaign.name,
-          description: campaign.description || 'Sem descrição',
-          columnId: campaign.status,
-          metadata: {
-            audience_count: campaign.audience_count,
-            channels: campaign.channels,
-            scheduled_at: campaign.scheduled_at,
-            created_at: campaign.created_at,
-            campaign: campaign,
-          },
-        })),
-    }));
-  }, [campaigns]);
-
-  // ============================================
-  // HANDLERS
-  // ============================================
-  
-  const handleCardMove = async (cardId: string | number, fromColumnId: string, toColumnId: string) => {
-    onChangeStatus(Number(cardId), fromColumnId, toColumnId);
-  };
-
-  const handleCardClick = (card: KanbanCard) => {
-    const campaign = card.metadata?.campaign as Campaign;
-    if (campaign && onCampaignClick) onCampaignClick(campaign);
-  };
-
-  // ============================================
-  // RENDERIZAÇÃO CUSTOMIZADA DO CARD
-  // ============================================
-  
-  const renderCampaignCard = (card: KanbanCard) => {
-    const { audience_count, channels, scheduled_at, created_at } = card.metadata || {};
-    const statusConfig = CAMPAIGN_STATUS_KANBAN.find(s => s.id === card.columnId);
-
-    return (
-      <motion.div
-        whileHover={{ scale: 1.02 }}
-        transition={{ duration: 0.2 }}
-        className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer group"
-      >
-        {/* Header do card */}
-        <div className="flex items-start justify-between mb-3">
-          <h4 className="font-bold text-gray-900 text-sm line-clamp-2 flex-1">
-            {card.title}
-          </h4>
-          {statusConfig && (
-            <div className={`w-8 h-8 bg-gradient-to-br ${statusConfig.gradient} rounded-lg flex items-center justify-center flex-shrink-0 ml-2 shadow-md`}>
-              <span className="text-white text-xs font-bold">
-                {card.title.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Descrição */}
-        <p className="text-sm text-gray-600 mb-3 line-clamp-2 leading-relaxed">
-          {card.description}
-        </p>
-        
-        {/* Informações */}
-        <div className="space-y-2 mb-3">
-          {/* Audiência */}
-          {audience_count !== undefined && (
-            <div className="flex items-center gap-2 text-xs text-gray-600 bg-purple-50 p-2 rounded-lg">
-              <Users size={14} className="text-purple-600 flex-shrink-0" />
-              <span className="font-semibold">{audience_count} pessoas</span>
-            </div>
-          )}
-          
-          {/* Canais */}
-          {channels && channels.length > 0 && (
-            <div className="flex items-center gap-1 flex-wrap">
-              {channels.map((channel: string) => {
-                const config = CHANNEL_CONFIG[channel as keyof typeof CHANNEL_CONFIG];
-                return config ? (
-                  <Badge key={channel} variant="blue" size="sm">
-                    {config.icon} {config.label}
-                  </Badge>
-                ) : null;
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Footer do card */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-          {scheduled_at && (
-            <div className="flex items-center gap-1 text-xs text-orange-600 font-semibold">
-              <Calendar size={12} />
-              <span>
-                {new Date(scheduled_at).toLocaleDateString('pt-BR', { 
-                  day: '2-digit', 
-                  month: 'short' 
-                })}
-              </span>
-            </div>
-          )}
-          {created_at && !scheduled_at && (
-            <div className="flex items-center gap-1 text-xs text-gray-500">
-              <Calendar size={12} />
-              <span>
-                {new Date(created_at).toLocaleDateString('pt-BR', { 
-                  day: '2-digit', 
-                  month: 'short' 
-                })}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Hover indicator */}
-        <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" />
-        </div>
-      </motion.div>
-    );
-  };
-
-  // ============================================
-  // CALCULAR ESTATÍSTICAS
-  // ============================================
-  
-  const totalAtivas = campaigns.filter(c => 
-    c.status !== 'cancelled' && c.status !== 'failed'
-  ).length;
-  
-  const taxaConversao = totalAtivas > 0 
-    ? ((kanbanColumns.find(c => c.id === 'completed')?.cards.length || 0) / totalAtivas * 100).toFixed(1)
-    : 0;
-
-  // ============================================
-  // RENDER
-  // ============================================
-  
   return (
-    <div className="space-y-6">
-      
-      {/* Stats Summary */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-2xl p-6 border border-blue-200 shadow-sm"
-      >
-        <div className="flex items-center justify-between flex-wrap gap-6">
-          
-          {/* Info principal */}
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <Target className="text-white" size={28} />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 font-semibold uppercase tracking-wider">
-                Pipeline de Campanhas
-              </p>
-              <p className="text-3xl font-bold text-gray-900">
-                {campaigns.length} campanhas
-              </p>
-            </div>
-          </div>
-
-          {/* Stats das colunas */}
-          <div className="flex gap-6 flex-wrap">
-            {kanbanColumns.map(col => {
-              const config = CAMPAIGN_STATUS_KANBAN.find(s => s.id === col.id);
-              const percentage = totalAtivas > 0 ? ((col.cards.length / totalAtivas) * 100).toFixed(0) : 0;
-              
-              return (
-                <div key={col.id} className="text-center">
-                  <div className="flex items-center gap-2 mb-1">
-                    {config?.icon}
-                    <p className="text-xs text-gray-600 font-medium">{col.title}</p>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <p className={`text-2xl font-bold ${col.color.split(' ')[1]}`}>
-                      {col.cards.length}
-                    </p>
-                    <span className="text-xs text-gray-500">
-                      ({percentage}%)
-                    </span>
-                  </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {columns.map((column, columnIndex) => (
+        <motion.div
+          key={column.status}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: columnIndex * 0.1 }}
+          className="flex flex-col h-full"
+        >
+          {/* Column Header */}
+          <div className="mb-4">
+            <div className={`bg-gradient-to-r ${column.color} rounded-2xl p-4 shadow-lg`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">{column.icon}</span>
+                  <h3 className="font-bold text-white text-lg">{column.title}</h3>
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Taxa de conclusão */}
-          <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-200 shadow-sm">
-            <TrendingUp className="text-green-600" size={24} />
-            <div>
-              <p className="text-xs text-gray-600 font-medium">Taxa de Conclusão</p>
-              <p className="text-2xl font-bold text-green-600">{taxaConversao}%</p>
+                <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">
+                    {column.campaigns.length}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Progress bar */}
+              <div className="h-1 bg-white/20 rounded-full overflow-hidden mt-3">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min((column.campaigns.length / campaigns.length) * 100, 100)}%` }}
+                  transition={{ duration: 0.8, delay: columnIndex * 0.1 + 0.3 }}
+                  className="h-full bg-white"
+                />
+              </div>
             </div>
           </div>
-        </div>
-      </motion.div>
 
-      {/* Kanban Board */}
-      <Kanban
-        columns={kanbanColumns}
-        onCardMove={handleCardMove}
-        onCardClick={handleCardClick}
-        renderCard={renderCampaignCard}
-        emptyColumnMessage="Nenhuma campanha neste status"
-        allowDragAndDrop={true}
-      />
+          {/* Column Content */}
+          <div className="flex-1 bg-gray-50 rounded-2xl p-4 min-h-[500px] max-h-[calc(100vh-300px)] overflow-y-auto custom-scrollbar">
+            {column.campaigns.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-3">
+                  <span className="text-3xl opacity-50">{column.icon}</span>
+                </div>
+                <p className="text-sm text-gray-500 font-medium">
+                  Nenhuma campanha
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {column.status === 'draft' && 'Crie uma nova campanha'}
+                  {column.status === 'scheduled' && 'Agende uma campanha'}
+                  {column.status === 'sending' && 'Envie uma campanha'}
+                  {column.status === 'completed' && 'Aguarde conclusões'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <AnimatePresence mode="popLayout">
+                  {column.campaigns.map((campaign, index) => (
+                    <motion.div
+                      key={campaign.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.2, delay: index * 0.05 }}
+                      layout
+                    >
+                      <CampaignCard
+                        campaign={campaign}
+                        onView={onView}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                        onDuplicate={onDuplicate}
+                        onSend={onSend}
+                        onPause={onPause}
+                        onResume={onResume}
+                        onViewAnalytics={onViewAnalytics}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+
+          {/* Column Footer */}
+          <div className="mt-4 text-center">
+            <p className="text-xs text-gray-500">
+              {column.campaigns.length} {column.campaigns.length === 1 ? 'campanha' : 'campanhas'}
+            </p>
+          </div>
+        </motion.div>
+      ))}
+
+      {/* Custom scrollbar styles */}
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #CBD5E0;
+          border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #A0AEC0;
+        }
+      `}</style>
     </div>
   );
 }

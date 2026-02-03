@@ -17,7 +17,7 @@ import SegmentPreview from './SegmentPreview';
 import ManualSelection from './ManualSelection';
 import ImportList from './ImportList';
 import SavedSegments from './SavedSegments';
-import type { AudienceFilter } from '../../types/campaign.types';
+import type { AudienceFilter } from '../../../../types/campaigns/campaign.types';
 
 // ============================================
 // TYPES
