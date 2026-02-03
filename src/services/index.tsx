@@ -98,6 +98,7 @@ export type {
   Event, 
   EventsResponse,
   EventFilters,
+  EventFormData,
 } from './api/eventsApi';
 
 // ============================================

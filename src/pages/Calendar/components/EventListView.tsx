@@ -2,7 +2,7 @@
 // 📋 VISUALIZAÇÃO EM LISTA PROFISSIONAL
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Clock, User, MapPin } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import EventCard from './EventCard';
 import { EmptyState } from '../../../components/common';
 import type { Event } from '../../../services';

@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, RefreshCw, Download } from 'lucide-react';
+import { Calendar, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Layout
@@ -41,13 +41,6 @@ import {
 
 type ViewMode = 'grid' | 'list' | 'calendar';
 
-interface FormState extends EventFormData {
-  id?: number;
-  school: number;
-  start_date: string;
-  end_date: string;
-}
-
 // ============================================
 // MAIN COMPONENT
 // ============================================
@@ -59,7 +52,6 @@ export default function EventsPage() {
   // ============================================
   
   const { 
-    currentSchool, 
     currentSchoolId, 
     isLoading: schoolsLoading 
   } = useCurrentSchool();
@@ -81,7 +73,7 @@ export default function EventsPage() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Event | null>(null);
 
-  const [formData, setFormData] = useState<FormState>({
+  const [formData, setFormData] = useState<EventFormData>({
     school: parseInt(currentSchoolId),
     start_date: '',
     end_date: '',
@@ -97,7 +89,6 @@ export default function EventsPage() {
   const { 
     data: eventsData, 
     isLoading: eventsLoading, 
-    error: eventsError,
     refetch 
   } = useGetEventsQuery({
     event_type: filters.eventType !== 'all' ? filters.eventType as any : undefined,
@@ -192,8 +183,7 @@ export default function EventsPage() {
 
     try {
       if (editingEvent) {
-        const { id, ...data } = formData;
-        await updateEvent({ id: editingEvent.id, data }).unwrap();
+        await updateEvent({ id: editingEvent.id, data: formData }).unwrap();
         toast.success('✅ Evento atualizado com sucesso!');
       } else {
         await createEvent(formData).unwrap();
@@ -420,8 +410,8 @@ export default function EventsPage() {
 // ============================================
 
 interface EventFormContentProps {
-  formData: FormState;
-  setFormData: React.Dispatch<React.SetStateAction<FormState>>;
+  formData: EventFormData;
+  setFormData: React.Dispatch<React.SetStateAction<EventFormData>>;
   onSubmit: () => void;
   onCancel: () => void;
   isLoading: boolean;
@@ -487,7 +477,7 @@ function EventFormContent({
         </label>
         <textarea
           placeholder="Detalhes sobre o evento..."
-          value={formData.description}
+          value={formData.description || ''}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           rows={4}
           className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
@@ -501,15 +491,15 @@ function EventFormContent({
         </label>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { value: 'holiday', label: 'Feriado', emoji: '📌', color: 'red' },
-            { value: 'exam', label: 'Prova', emoji: '📝', color: 'blue' },
-            { value: 'graduation', label: 'Formatura', emoji: '🎓', color: 'purple' },
-            { value: 'cultural', label: 'Cultural', emoji: '🎭', color: 'orange' },
+            { value: 'holiday' as const, label: 'Feriado', emoji: '📌', color: 'red' },
+            { value: 'exam' as const, label: 'Prova', emoji: '📝', color: 'blue' },
+            { value: 'graduation' as const, label: 'Formatura', emoji: '🎓', color: 'purple' },
+            { value: 'cultural' as const, label: 'Cultural', emoji: '🎭', color: 'orange' },
           ].map((type) => (
             <button
               key={type.value}
               type="button"
-              onClick={() => setFormData({ ...formData, event_type: type.value as any })}
+              onClick={() => setFormData({ ...formData, event_type: type.value })}
               className={`p-4 rounded-xl border-2 transition-all ${
                 formData.event_type === type.value
                   ? `border-${type.color}-500 bg-${type.color}-50`
