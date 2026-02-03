@@ -1,5 +1,5 @@
 // src/pages/Boards/components/Card/DraggableCard.tsx
-// 🎴 CARD ARRASTÁVEL COM @DND-KIT
+// 🎴 CARD ARRASTÁVEL COM @DND-KIT - VERSÃO CORRIGIDA
 
 import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
@@ -86,6 +86,7 @@ export default function DraggableCard({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
   const priorityConfig = card.priority ? PRIORITY_CONFIG[card.priority] : null;
@@ -131,14 +132,15 @@ export default function DraggableCard({
       ref={setNodeRef}
       style={style}
       className={`bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all border border-gray-200 group relative ${
-        isDragging ? 'opacity-50 shadow-xl ring-2 ring-blue-500' : ''
+        isDragging ? 'shadow-xl ring-2 ring-blue-500 z-50' : ''
       }`}
     >
-      {/* Drag Handle (top-left) */}
+      {/* Drag Handle (top-left) - IMPORTANTE: usar touch-none para evitar conflito com scroll */}
       <div
         {...attributes}
         {...listeners}
-        className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+        className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded touch-none"
+        title="Arrastar card"
       >
         <GripVertical size={16} className="text-gray-400" />
       </div>
@@ -151,7 +153,16 @@ export default function DraggableCard({
       )}
 
       {/* Content - Clickable */}
-      <div onClick={onClick} className="cursor-pointer">
+      <div 
+        onClick={(e) => {
+          // Evitar abrir modal quando clicando no menu ou drag handle
+          if (!(e.target as HTMLElement).closest('.action-menu') && 
+              !(e.target as HTMLElement).closest('[data-drag-handle]')) {
+            onClick();
+          }
+        }}
+        className="cursor-pointer"
+      >
         {/* Title */}
         <h4 className="font-semibold text-gray-900 text-sm mb-2 pr-8 pl-6 line-clamp-3">
           {card.title}
@@ -186,7 +197,7 @@ export default function DraggableCard({
       </div>
 
       {/* Actions Menu */}
-      <div className="absolute bottom-2 right-2">
+      <div className="absolute bottom-2 right-2 action-menu">
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -198,35 +209,49 @@ export default function DraggableCard({
         </button>
 
         {showMenu && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            onClick={(e) => e.stopPropagation()}
-            className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-50 min-w-[140px]"
-          >
-            <button
+          <>
+            {/* Backdrop to close menu */}
+            <div
+              className="fixed inset-0 z-30"
               onClick={(e) => {
                 e.stopPropagation();
-                onClick();
                 setShowMenu(false);
               }}
-              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 transition-colors text-left text-xs"
+            />
+            
+            {/* Menu */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-40 min-w-[140px]"
             >
-              <Edit2 size={12} className="text-blue-600" />
-              <span className="font-semibold text-gray-700">Abrir</span>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-                setShowMenu(false);
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-red-50 transition-colors text-left text-xs"
-            >
-              <Trash2 size={12} className="text-red-600" />
-              <span className="font-semibold text-red-600">Deletar</span>
-            </button>
-          </motion.div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                  setShowMenu(false);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 transition-colors text-left text-xs"
+              >
+                <Edit2 size={12} className="text-blue-600" />
+                <span className="font-semibold text-gray-700">Abrir</span>
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm('Tem certeza que deseja deletar este card?')) {
+                    onDelete();
+                  }
+                  setShowMenu(false);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-red-50 transition-colors text-left text-xs"
+              >
+                <Trash2 size={12} className="text-red-600" />
+                <span className="font-semibold text-red-600">Deletar</span>
+              </button>
+            </motion.div>
+          </>
         )}
       </div>
     </div>

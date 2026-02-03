@@ -14,7 +14,6 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useState } from 'react';
-import type { CampaignType, CampaignStatus } from '../../../types/campaigns/campaign.types';
 
 // ============================================
 // TYPES
@@ -22,53 +21,44 @@ import type { CampaignType, CampaignStatus } from '../../../types/campaigns/camp
 
 export type CampaignViewMode = 'grid' | 'list' | 'kanban';
 
-export interface CampaignFiltersData {
-  search: string;
-  status: 'all' | CampaignStatus;
-  type: 'all' | CampaignType;
-  dateFrom: string;
-  dateTo: string;
-}
-
 interface CampaignFiltersProps {
-  filters: CampaignFiltersData;
-  onFiltersChange: (filters: CampaignFiltersData) => void;
-  onClear: () => void;
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (value: string) => void;
+  typeFilter: string;
+  onTypeFilterChange: (value: string) => void;
   viewMode: CampaignViewMode;
   onViewModeChange: (mode: CampaignViewMode) => void;
   onNewCampaign: () => void;
   onExport?: () => void;
   onRefresh?: () => void;
+  onClearFilters: () => void;
   hasActiveFilters: boolean;
   isExporting?: boolean;
   isRefreshing?: boolean;
 }
 
-// ============================================
-// OPTIONS
-// ============================================
-
-const STATUS_OPTIONS: Array<{ value: string; label: string; emoji: string }> = [
+const STATUS_OPTIONS: { value: string; label: string; emoji: string }[] = [
   { value: 'all', label: 'Todos os Status', emoji: '📊' },
-  { value: 'draft', label: 'Rascunho', emoji: '📝' },
-  { value: 'scheduled', label: 'Agendada', emoji: '⏰' },
+  { value: 'draft', label: 'Rascunhos', emoji: '📝' },
+  { value: 'scheduled', label: 'Agendadas', emoji: '⏰' },
   { value: 'sending', label: 'Enviando', emoji: '🚀' },
-  { value: 'sent', label: 'Enviada', emoji: '✅' },
-  { value: 'completed', label: 'Concluída', emoji: '✅' },
-  { value: 'paused', label: 'Pausada', emoji: '⏸️' },
-  { value: 'cancelled', label: 'Cancelada', emoji: '🚫' },
-  { value: 'failed', label: 'Falhou', emoji: '❌' },
+  { value: 'completed', label: 'Concluídas', emoji: '✅' },
+  { value: 'paused', label: 'Pausadas', emoji: '⏸️' },
+  { value: 'cancelled', label: 'Canceladas', emoji: '🚫' },
+  { value: 'failed', label: 'Falharam', emoji: '❌' },
 ];
 
-const TYPE_OPTIONS: Array<{ value: string; label: string; emoji: string }> = [
-  { value: 'all', label: 'Todos os Tipos', emoji: '📋' },
-  { value: 'matricula', label: 'Matrícula', emoji: '🎓' },
-  { value: 'rematricula', label: 'Rematrícula', emoji: '🔄' },
-  { value: 'passei_direto', label: 'Passei Direto', emoji: '🎉' },
-  { value: 'reuniao', label: 'Reunião', emoji: '📅' },
-  { value: 'evento', label: 'Evento', emoji: '🎊' },
-  { value: 'cobranca', label: 'Cobrança', emoji: '💰' },
-  { value: 'comunicado', label: 'Comunicado', emoji: '📢' },
+const TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'all', label: 'Todos os Tipos' },
+  { value: 'matricula', label: '🎓 Matrícula' },
+  { value: 'rematricula', label: '🔄 Rematrícula' },
+  { value: 'passei_direto', label: '🎉 Passei Direto' },
+  { value: 'reuniao', label: '📅 Reunião' },
+  { value: 'evento', label: '🎊 Evento' },
+  { value: 'cobranca', label: '💰 Cobrança' },
+  { value: 'comunicado', label: '📢 Comunicado' },
 ];
 
 // ============================================
@@ -76,31 +66,29 @@ const TYPE_OPTIONS: Array<{ value: string; label: string; emoji: string }> = [
 // ============================================
 
 export default function CampaignFilters({
-  filters,
-  onFiltersChange,
-  onClear,
+  searchTerm,
+  onSearchChange,
+  statusFilter,
+  onStatusFilterChange,
+  typeFilter,
+  onTypeFilterChange,
   viewMode,
   onViewModeChange,
   onNewCampaign,
   onExport,
   onRefresh,
+  onClearFilters,
   hasActiveFilters,
   isExporting = false,
   isRefreshing = false,
 }: CampaignFiltersProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const handleFilterChange = (key: keyof CampaignFiltersData, value: string) => {
-    onFiltersChange({ ...filters, [key]: value });
-  };
-
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
-      
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       {/* Header principal */}
       <div className="p-6 border-b border-gray-100">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          
           {/* Busca */}
           <div className="flex-1 min-w-[300px] max-w-md">
             <div className="relative">
@@ -110,14 +98,14 @@ export default function CampaignFilters({
               />
               <input
                 type="text"
-                placeholder="Buscar por nome, tipo ou descrição..."
-                value={filters.search}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
+                placeholder="Buscar campanhas por nome..."
+                value={searchTerm}
+                onChange={(e) => onSearchChange(e.target.value)}
                 className="w-full pl-12 pr-10 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder:text-gray-400 transition-all"
               />
-              {filters.search && (
+              {searchTerm && (
                 <button
-                  onClick={() => handleFilterChange('search', '')}
+                  onClick={() => onSearchChange('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <X size={18} className="text-gray-400" />
@@ -128,7 +116,6 @@ export default function CampaignFilters({
 
           {/* Ações direita */}
           <div className="flex items-center gap-3">
-            
             {/* Filtros avançados */}
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
@@ -229,16 +216,15 @@ export default function CampaignFilters({
             className="border-b border-gray-100 overflow-hidden"
           >
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Status */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Status
+                    Status da Campanha
                   </label>
                   <select
-                    value={filters.status}
-                    onChange={(e) => handleFilterChange('status', e.target.value)}
+                    value={statusFilter}
+                    onChange={(e) => onStatusFilterChange(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                   >
                     {STATUS_OPTIONS.map((opt) => (
@@ -252,45 +238,19 @@ export default function CampaignFilters({
                 {/* Tipo */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Tipo de Campanha
+                    Tipo da Campanha
                   </label>
                   <select
-                    value={filters.type}
-                    onChange={(e) => handleFilterChange('type', e.target.value)}
+                    value={typeFilter}
+                    onChange={(e) => onTypeFilterChange(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
                   >
                     {TYPE_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
-                        {opt.emoji} {opt.label}
+                        {opt.label}
                       </option>
                     ))}
                   </select>
-                </div>
-
-                {/* Data inicial */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Data Inicial
-                  </label>
-                  <input
-                    type="date"
-                    value={filters.dateFrom}
-                    onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                  />
-                </div>
-
-                {/* Data final */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Data Final
-                  </label>
-                  <input
-                    type="date"
-                    value={filters.dateTo}
-                    onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                  />
                 </div>
               </div>
 
@@ -298,7 +258,7 @@ export default function CampaignFilters({
               {hasActiveFilters && (
                 <div className="flex justify-end pt-2">
                   <button
-                    onClick={onClear}
+                    onClick={onClearFilters}
                     className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors"
                   >
                     <X size={16} />
@@ -317,34 +277,24 @@ export default function CampaignFilters({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-semibold text-blue-700">Filtros ativos:</span>
-              
-              {filters.search && (
+              {searchTerm && (
                 <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                  Busca: "{filters.search.slice(0, 20)}{filters.search.length > 20 ? '...' : ''}"
+                  Busca: "{searchTerm.slice(0, 20)}{searchTerm.length > 20 ? '...' : ''}"
                 </span>
               )}
-              
-              {filters.status !== 'all' && (
+              {statusFilter !== 'all' && (
                 <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
-                  Status: {STATUS_OPTIONS.find(s => s.value === filters.status)?.label}
+                  Status: {STATUS_OPTIONS.find(s => s.value === statusFilter)?.label}
                 </span>
               )}
-              
-              {filters.type !== 'all' && (
+              {typeFilter !== 'all' && (
                 <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                  Tipo: {TYPE_OPTIONS.find(t => t.value === filters.type)?.label}
-                </span>
-              )}
-              
-              {(filters.dateFrom || filters.dateTo) && (
-                <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">
-                  Período: {filters.dateFrom || '...'} até {filters.dateTo || '...'}
+                  Tipo: {TYPE_OPTIONS.find(t => t.value === typeFilter)?.label}
                 </span>
               )}
             </div>
-            
             <button
-              onClick={onClear}
+              onClick={onClearFilters}
               className="text-sm text-blue-600 hover:text-blue-700 font-semibold hover:underline"
             >
               Limpar

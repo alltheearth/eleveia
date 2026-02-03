@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send } from 'lucide-react';
 import CampaignCard from './CampaignCard';
 import { EmptyState } from '../../../components/common';
-import type { Campaign } from '../../../types/campaigns/campaign.types';
+import type { Campaign, CampaignStatus } from '../../../types/campaigns/campaign.types';
 
 // ============================================
 // TYPES
@@ -15,8 +15,7 @@ interface CampaignListViewProps {
   campaigns: Campaign[];
   onEdit: (campaign: Campaign) => void;
   onDelete: (campaign: Campaign) => void;
-  onViewAnalytics?: (campaign: Campaign) => void;
-  onDuplicate?: (campaign: Campaign) => void;
+  onStatusChange?: (campaign: Campaign, newStatus: CampaignStatus) => void;
   onPause?: (campaign: Campaign) => void;
   onResume?: (campaign: Campaign) => void;
   onSend?: (campaign: Campaign) => void;
@@ -31,8 +30,7 @@ export default function CampaignListView({
   campaigns,
   onEdit,
   onDelete,
-  onViewAnalytics,
-  onDuplicate,
+  onStatusChange,
   onPause,
   onResume,
   onSend,
@@ -91,26 +89,16 @@ export default function CampaignListView({
     return acc;
   }, {} as Record<string, Campaign[]>);
 
-  const statusOrder: Campaign['status'][] = [
-    'draft',
-    'scheduled', 
-    'sending',
-    'sent',
-    'completed',
-    'paused',
-    'cancelled',
-    'failed'
-  ];
-
-  const statusLabels: Record<Campaign['status'], { label: string; icon: string; color: string }> = {
+  const statusOrder: CampaignStatus[] = ['draft', 'scheduled', 'sending', 'sent', 'completed', 'paused', 'cancelled', 'failed'];
+  const statusLabels: Record<CampaignStatus, { label: string; icon: string; color: string }> = {
     draft: { label: 'Rascunhos', icon: '📝', color: 'text-gray-600' },
     scheduled: { label: 'Agendadas', icon: '⏰', color: 'text-blue-600' },
-    sending: { label: 'Enviando', icon: '🚀', color: 'text-yellow-600' },
+    sending: { label: 'Em Envio', icon: '🚀', color: 'text-yellow-600' },
     sent: { label: 'Enviadas', icon: '✅', color: 'text-green-600' },
     completed: { label: 'Concluídas', icon: '✅', color: 'text-green-600' },
     paused: { label: 'Pausadas', icon: '⏸️', color: 'text-orange-600' },
     cancelled: { label: 'Canceladas', icon: '🚫', color: 'text-red-600' },
-    failed: { label: 'Falhas', icon: '❌', color: 'text-red-600' },
+    failed: { label: 'Falharam', icon: '❌', color: 'text-red-600' },
   };
 
   // ============================================
@@ -160,8 +148,7 @@ export default function CampaignListView({
                       campaign={campaign}
                       onEdit={onEdit}
                       onDelete={onDelete}
-                      onViewAnalytics={onViewAnalytics}
-                      onDuplicate={onDuplicate}
+                      onStatusChange={onStatusChange}
                       onPause={onPause}
                       onResume={onResume}
                       onSend={onSend}

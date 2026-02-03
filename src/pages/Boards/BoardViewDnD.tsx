@@ -1,12 +1,11 @@
 // src/pages/Boards/BoardViewDnD.tsx
-// 📋 VISUALIZAÇÃO DO BOARD COM DRAG & DROP COMPLETO
+// 📋 VISUALIZAÇÃO DO BOARD COM DRAG & DROP COMPLETO - VERSÃO CORRIGIDA
 
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
-  Plus, 
   MoreVertical, 
   Star, 
   Archive,
@@ -24,14 +23,10 @@ import {
   useSensor,
   useSensors,
   closestCorners,
+  type DragStartEvent,
+  type DragEndEvent,
+  type DragOverEvent,
 } from '@dnd-kit/core';
-
-import type {
-  DragStartEvent,
-  DragEndEvent,
-  DragOverEvent,
-} from '@dnd-kit/core';
-
 import {
   SortableContext,
   horizontalListSortingStrategy,
@@ -231,13 +226,15 @@ export default function BoardViewDnD() {
   const [activeList, setActiveList] = useState<List | null>(null);
 
   // ============================================
-  // DND SETUP
+  // DND SETUP - CONFIGURAÇÃO CORRIGIDA
   // ============================================
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // 8px movement required to start drag
+        distance: 3, // Menor distância = mais sensível
+        tolerance: 5,
+        delay: 0,
       },
     })
   );
@@ -254,12 +251,14 @@ export default function BoardViewDnD() {
   }, [cards, searchTerm]);
 
   // ============================================
-  // DND HANDLERS
+  // DND HANDLERS - CORRIGIDOS
   // ============================================
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const activeData = active.data.current;
+
+    console.log('🚀 Drag Start:', activeData);
 
     if (activeData?.type === 'card') {
       setActiveCard(activeData.card);
@@ -275,12 +274,16 @@ export default function BoardViewDnD() {
     const activeData = active.data.current;
     const overData = over.data.current;
 
-    // Only handle card dragging over lists
+    console.log('🔄 Drag Over:', { activeData, overData });
+
+    // Handle card dragging over lists
     if (activeData?.type === 'card' && overData?.type === 'list') {
       const activeCard = activeData.card as BoardCard;
       const overList = overData.list as List;
 
       if (activeCard.list !== overList.id) {
+        console.log('📦 Moving card to new list');
+        
         setCards(prev => prev.map(card =>
           card.id === activeCard.id
             ? { ...card, list: overList.id }
@@ -292,6 +295,8 @@ export default function BoardViewDnD() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    
+    console.log('✅ Drag End:', { active: active.id, over: over?.id });
     
     setActiveCard(null);
     setActiveList(null);
@@ -306,7 +311,9 @@ export default function BoardViewDnD() {
       const activeCard = activeData.card as BoardCard;
       const overCard = overData.card as BoardCard;
 
-      if (activeCard.id !== overCard.id && activeCard.list === overCard.list) {
+      console.log('🔀 Reordering cards');
+
+      if (activeCard.id !== overCard.id) {
         setCards(prev => {
           const listCards = prev.filter(c => c.list === activeCard.list);
           const oldIndex = listCards.findIndex(c => c.id === activeCard.id);
@@ -321,7 +328,7 @@ export default function BoardViewDnD() {
           ];
         });
         
-        toast.success('Card reordenado!');
+        toast.success('✅ Card reordenado!');
       }
     }
 
@@ -329,6 +336,8 @@ export default function BoardViewDnD() {
     if (activeData?.type === 'list' && overData?.type === 'list') {
       const activeList = activeData.list as List;
       const overList = overData.list as List;
+
+      console.log('🔀 Reordering lists');
 
       if (activeList.id !== overList.id) {
         setLists(prev => {
@@ -339,7 +348,7 @@ export default function BoardViewDnD() {
           return reordered.map((list, index) => ({ ...list, position: index }));
         });
         
-        toast.success('Lista reordenada!');
+        toast.success('✅ Lista reordenada!');
       }
     }
   };
@@ -353,18 +362,18 @@ export default function BoardViewDnD() {
   };
 
   const handleToggleStar = () => {
-    toast.success('Board favoritado!');
+    toast.success('⭐ Board favoritado!');
   };
 
   const handleArchive = () => {
     if (window.confirm('Tem certeza que deseja arquivar este board?')) {
-      toast.success('Board arquivado!');
+      toast.success('📦 Board arquivado!');
       navigate('/boards');
     }
   };
 
   const handleSettings = () => {
-    toast.success('Configurações do board');
+    toast.success('⚙️ Configurações do board');
   };
 
   const handleCreateList = (data: ListFormData) => {
@@ -518,7 +527,7 @@ export default function BoardViewDnD() {
         {/* Drag Overlays */}
         <DragOverlay>
           {activeCard && (
-            <div className="rotate-3 opacity-90">
+            <div className="rotate-3 opacity-90 cursor-grabbing">
               <DraggableCard
                 card={activeCard}
                 onClick={() => {}}

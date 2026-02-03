@@ -1,5 +1,4 @@
 // src/types/campaigns/campaign.types.ts
-// 📊 TIPOS PRINCIPAIS DE CAMPANHAS
 
 export type CampaignType = 
   | 'matricula'
@@ -34,204 +33,202 @@ export interface Campaign {
   tags?: string[];
   
   // Audiência
-  audience_filters: AudienceFilter[];
   audience_count: number;
-  manual_contacts?: number[];
   
   // Canais
   channels: CampaignChannel[];
-  channel_priority: CampaignChannel[];
-  fallback_enabled: boolean;
-  
-  // Mensagem
-  message_template_id?: number;
-  message_content: MessageContent;
-  
-  // Agendamento
-  schedule_type: 'immediate' | 'scheduled' | 'recurring';
-  scheduled_at?: string;
-  recurring_config?: RecurringConfig;
-  
-  // Follow-ups
-  follow_ups: FollowUpRule[];
   
   // Status e métricas
   status: CampaignStatus;
   created_at: string;
   updated_at: string;
-  created_by?: number;
-  created_by_name?: string;
+  scheduled_at?: string;
   sent_at?: string;
   completed_at?: string;
   
-  // Analytics (opcional - vem de endpoint separado)
+  // Analytics
   analytics?: CampaignAnalytics;
 }
 
-export interface MessageContent {
-  whatsapp?: WhatsAppMessage;
-  email?: EmailMessage;
-  sms?: SMSMessage;
-}
-
-export interface WhatsAppMessage {
-  text: string;
-  attachments?: Attachment[];
-  buttons?: MessageButton[];
-  header?: {
-    type: 'text' | 'image' | 'video' | 'document';
-    content: string;
+export interface CampaignAnalytics {
+  // Envios
+  total_recipients: number;
+  messages_sent: number;
+  messages_delivered: number;
+  messages_failed: number;
+  
+  // Engajamento
+  messages_opened: number;
+  messages_clicked: number;
+  messages_responded: number;
+  
+  // Conversão
+  conversions: number;
+  
+  // Taxas
+  delivery_rate: number;      // %
+  open_rate: number;          // %
+  click_rate: number;         // %
+  response_rate: number;      // %
+  conversion_rate: number;    // %
+  
+  // Por canal
+  by_channel: {
+    [key in CampaignChannel]?: ChannelMetrics;
   };
-  footer?: string;
 }
 
-export interface EmailMessage {
-  subject: string;
-  body_html: string;
-  body_text: string;
-  from_name?: string;
-  reply_to?: string;
-  attachments?: Attachment[];
-  custom_headers?: Record<string, string>;
-}
-
-export interface SMSMessage {
-  text: string;
-  sender_id?: string;
-}
-
-export interface MessageButton {
-  type: 'url' | 'quick_reply' | 'phone';
-  text: string;
-  value: string;
-}
-
-export interface Attachment {
-  id: string;
-  type: 'image' | 'document' | 'video' | 'audio';
-  url: string;
-  filename: string;
-  size: number;
-  mime_type?: string;
-}
-
-export interface AudienceFilter {
-  id?: string;
-  field: string;
-  operator: 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'in' | 'not_in' | 'greater_than' | 'less_than' | 'between' | 'is_null' | 'is_not_null';
-  value: any;
-  logic?: 'AND' | 'OR';
-}
-
-export interface FollowUpRule {
-  id: string;
-  name: string;
-  enabled: boolean;
-  trigger: FollowUpTrigger;
-  delay_value: number;
-  delay_unit: 'minutes' | 'hours' | 'days';
-  message_content: MessageContent;
-  conditions?: FollowUpCondition[];
-  max_attempts?: number;
-  stop_on_response?: boolean;
-}
-
-export type FollowUpTrigger = 
-  | 'not_delivered'
-  | 'not_opened'
-  | 'not_clicked'
-  | 'not_responded'
-  | 'responded_negative'
-  | 'custom';
-
-export interface FollowUpCondition {
-  field: string;
-  operator: string;
-  value: any;
-}
-
-export interface RecurringConfig {
-  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
-  interval: number;
-  days_of_week?: number[]; // 0-6 (domingo-sábado)
-  day_of_month?: number;   // 1-31
-  month_of_year?: number;  // 1-12
-  time_of_day?: string;    // HH:MM format
-  timezone?: string;
-  end_type: 'never' | 'after_occurrences' | 'on_date';
-  end_occurrences?: number;
-  end_date?: string;
+export interface ChannelMetrics {
+  sent: number;
+  delivered: number;
+  failed: number;
+  opened: number;
+  clicked: number;
+  responded: number;
 }
 
 export interface CampaignFormData {
-  // Step 1: Basic Info
   name: string;
   type: CampaignType;
   description?: string;
   tags?: string[];
-  
-  // Step 2: Audience
-  audience_filters: AudienceFilter[];
-  manual_contacts?: number[];
-  
-  // Step 3: Channels
   channels: CampaignChannel[];
-  channel_priority: CampaignChannel[];
-  fallback_enabled: boolean;
-  
-  // Step 4: Message
-  message_template_id?: number;
-  message_content: MessageContent;
-  
-  // Step 5: Schedule
-  schedule_type: 'immediate' | 'scheduled' | 'recurring';
   scheduled_at?: string;
-  recurring_config?: RecurringConfig;
-  
-  // Step 6: Follow-ups
-  follow_ups: FollowUpRule[];
-  
-  // Meta
   school: number;
 }
 
-export interface MessageTemplate {
-  id: number;
-  name: string;
-  type: CampaignType;
-  description?: string;
-  category: 'system' | 'custom';
-  message_content: MessageContent;
-  variables: string[]; // Ex: ['nome', 'data', 'horario']
-  preview_data?: Record<string, string>;
-  is_active: boolean;
-  school?: number;
-  created_at: string;
-  updated_at: string;
-}
-
-// Config de tipos e status
-export interface CampaignTypeConfig {
+// Configurações de tipos e status
+export const CAMPAIGN_TYPE_CONFIG: Record<CampaignType, {
   label: string;
   gradient: string;
   bg: string;
   text: string;
   border: string;
   icon: string;
-  description?: string;
-}
+}> = {
+  matricula: {
+    label: 'Matrícula',
+    gradient: 'from-blue-500 to-blue-600',
+    bg: 'bg-blue-50',
+    text: 'text-blue-700',
+    border: 'border-blue-200',
+    icon: '🎓',
+  },
+  rematricula: {
+    label: 'Rematrícula',
+    gradient: 'from-green-500 to-green-600',
+    bg: 'bg-green-50',
+    text: 'text-green-700',
+    border: 'border-green-200',
+    icon: '🔄',
+  },
+  passei_direto: {
+    label: 'Passei Direto',
+    gradient: 'from-purple-500 to-purple-600',
+    bg: 'bg-purple-50',
+    text: 'text-purple-700',
+    border: 'border-purple-200',
+    icon: '🎉',
+  },
+  reuniao: {
+    label: 'Reunião',
+    gradient: 'from-orange-500 to-orange-600',
+    bg: 'bg-orange-50',
+    text: 'text-orange-700',
+    border: 'border-orange-200',
+    icon: '📅',
+  },
+  evento: {
+    label: 'Evento',
+    gradient: 'from-pink-500 to-pink-600',
+    bg: 'bg-pink-50',
+    text: 'text-pink-700',
+    border: 'border-pink-200',
+    icon: '🎊',
+  },
+  cobranca: {
+    label: 'Cobrança',
+    gradient: 'from-red-500 to-red-600',
+    bg: 'bg-red-50',
+    text: 'text-red-700',
+    border: 'border-red-200',
+    icon: '💰',
+  },
+  comunicado: {
+    label: 'Comunicado',
+    gradient: 'from-gray-500 to-gray-600',
+    bg: 'bg-gray-50',
+    text: 'text-gray-700',
+    border: 'border-gray-200',
+    icon: '📢',
+  },
+};
 
-export interface CampaignStatusConfig {
+export const CAMPAIGN_STATUS_CONFIG: Record<CampaignStatus, {
   label: string;
   color: string;
   icon: string;
-  description?: string;
-}
+}> = {
+  draft: {
+    label: 'Rascunho',
+    color: 'bg-gray-100 text-gray-700 border-gray-300',
+    icon: '📝',
+  },
+  scheduled: {
+    label: 'Agendada',
+    color: 'bg-blue-100 text-blue-700 border-blue-300',
+    icon: '⏰',
+  },
+  sending: {
+    label: 'Enviando',
+    color: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+    icon: '🚀',
+  },
+  sent: {
+    label: 'Enviada',
+    color: 'bg-green-100 text-green-700 border-green-300',
+    icon: '✅',
+  },
+  completed: {
+    label: 'Concluída',
+    color: 'bg-green-100 text-green-700 border-green-300',
+    icon: '✅',
+  },
+  paused: {
+    label: 'Pausada',
+    color: 'bg-orange-100 text-orange-700 border-orange-300',
+    icon: '⏸️',
+  },
+  cancelled: {
+    label: 'Cancelada',
+    color: 'bg-red-100 text-red-700 border-red-300',
+    icon: '🚫',
+  },
+  failed: {
+    label: 'Falhou',
+    color: 'bg-red-100 text-red-700 border-red-300',
+    icon: '❌',
+  },
+};
 
-export interface CampaignChannelConfig {
+export const CHANNEL_CONFIG: Record<CampaignChannel, {
   label: string;
   icon: string;
   color: string;
-  description?: string;
-  available: boolean;
-}
+}> = {
+  whatsapp: {
+    label: 'WhatsApp',
+    icon: '💬',
+    color: 'bg-green-100 text-green-700',
+  },
+  email: {
+    label: 'Email',
+    icon: '📧',
+    color: 'bg-blue-100 text-blue-700',
+  },
+  sms: {
+    label: 'SMS',
+    icon: '📱',
+    color: 'bg-purple-100 text-purple-700',
+  },
+};

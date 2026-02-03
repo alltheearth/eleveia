@@ -1,9 +1,9 @@
 // src/pages/Campaigns/index.tsx
-// 📢 PÁGINA DE CAMPANHAS - DESIGN PROFISSIONAL E COMPLETO
+// 📢 PÁGINA DE CAMPANHAS - DESIGN PROFISSIONAL E COERENTE
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, RefreshCw, Download, Plus } from 'lucide-react';
+import { Send, RefreshCw, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Layout
@@ -18,7 +18,7 @@ import {
 
 // Componentes Locais
 import CampaignStats from './components/CampaignStats';
-import CampaignFilters, { type CampaignViewMode, type CampaignFiltersData } from './components/CampaignFilters';
+import CampaignFilters, { type CampaignViewMode } from './components/CampaignFilters';
 import CampaignGridView from './components/CampaignGridView';
 import CampaignListView from './components/CampaignListView';
 import CampaignKanbanView from './components/CampaignKanbanView';
@@ -26,8 +26,17 @@ import CampaignKanbanView from './components/CampaignKanbanView';
 // Types
 import type { Campaign, CampaignType, CampaignStatus } from '../../types/campaigns/campaign.types';
 
+interface CampaignFormData {
+  name: string;
+  type: CampaignType;
+  description: string;
+  channels: string[];
+  audience_count: number;
+  scheduled_at?: string;
+}
+
 // ============================================
-// DADOS MOCADOS (substituir por API depois)
+// DADOS MOCADOS
 // ============================================
 
 const MOCK_CAMPAIGNS: Campaign[] = [
@@ -35,63 +44,31 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     id: 1,
     school: 1,
     school_name: 'Escola ABC',
-    name: 'Campanha de Matrícula 2026',
+    name: 'Matrícula 2026 - Campanha Principal',
     type: 'matricula',
-    description: 'Campanha para captação de novos alunos para o ano letivo de 2026',
-    tags: ['matricula', 'novos-alunos'],
-    audience_filters: [],
+    description: 'Campanha principal de captação de novos alunos para 2026',
+    tags: ['matricula', 'captacao', '2026'],
     audience_count: 450,
     channels: ['whatsapp', 'email'],
-    channel_priority: ['whatsapp', 'email'],
-    fallback_enabled: true,
-    message_content: {
-      whatsapp: {
-        text: 'Olá {{nome}}! Venha fazer parte da nossa escola!',
-      },
-      email: {
-        subject: 'Matrículas Abertas 2026',
-        body_html: '<p>Olá {{nome}}!</p>',
-        body_text: 'Olá {{nome}}!',
-      },
-    },
-    schedule_type: 'scheduled',
-    scheduled_at: '2026-02-10T10:00:00',
-    follow_ups: [],
     status: 'scheduled',
-    created_at: '2026-01-20T14:30:00',
-    updated_at: '2026-01-25T10:00:00',
+    created_at: '2026-01-20T10:00:00',
+    updated_at: '2026-01-30T14:00:00',
+    scheduled_at: '2026-02-05T09:00:00',
     analytics: {
       total_recipients: 450,
-      messages_sent: 450,
-      messages_delivered: 441,
-      messages_failed: 9,
-      messages_opened: 315,
-      messages_clicked: 142,
-      messages_responded: 89,
-      conversions: 67,
-      delivery_rate: 98.0,
-      open_rate: 71.4,
-      click_rate: 32.2,
-      response_rate: 20.2,
-      conversion_rate: 15.2,
-      by_channel: {
-        whatsapp: {
-          sent: 300,
-          delivered: 295,
-          failed: 5,
-          opened: 220,
-          clicked: 98,
-          responded: 65,
-        },
-        email: {
-          sent: 150,
-          delivered: 146,
-          failed: 4,
-          opened: 95,
-          clicked: 44,
-          responded: 24,
-        },
-      },
+      messages_sent: 0,
+      messages_delivered: 0,
+      messages_failed: 0,
+      messages_opened: 0,
+      messages_clicked: 0,
+      messages_responded: 0,
+      conversions: 0,
+      delivery_rate: 0,
+      open_rate: 0,
+      click_rate: 0,
+      response_rate: 0,
+      conversion_rate: 0,
+      by_channel: {},
       timeline: [],
     },
   },
@@ -99,69 +76,98 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     id: 2,
     school: 1,
     school_name: 'Escola ABC',
-    name: 'Lembrete de Reunião de Pais',
-    type: 'reuniao',
-    description: 'Lembrete para reunião trimestral com responsáveis',
-    tags: ['reuniao', 'pais'],
-    audience_filters: [],
-    audience_count: 320,
+    name: 'Rematrícula - Lembrete Final',
+    type: 'rematricula',
+    description: 'Lembrete final para pais que ainda não renovaram matrícula',
+    tags: ['rematricula', 'urgente'],
+    audience_count: 120,
     channels: ['whatsapp', 'sms'],
-    channel_priority: ['whatsapp', 'sms'],
-    fallback_enabled: true,
-    message_content: {
-      whatsapp: {
-        text: 'Olá {{nome}}! Lembramos que a reunião será amanhã às 19h.',
-      },
-    },
-    schedule_type: 'immediate',
-    follow_ups: [],
     status: 'sending',
-    created_at: '2026-02-02T09:00:00',
-    updated_at: '2026-02-02T09:30:00',
-    sent_at: '2026-02-02T10:00:00',
+    created_at: '2026-01-25T08:00:00',
+    updated_at: '2026-02-03T10:30:00',
+    sent_at: '2026-02-03T10:30:00',
+    analytics: {
+      total_recipients: 120,
+      messages_sent: 85,
+      messages_delivered: 82,
+      messages_failed: 3,
+      messages_opened: 65,
+      messages_clicked: 28,
+      messages_responded: 15,
+      conversions: 8,
+      delivery_rate: 96.5,
+      open_rate: 79.3,
+      click_rate: 43.1,
+      response_rate: 23.1,
+      conversion_rate: 12.3,
+      by_channel: {
+        whatsapp: {
+          sent: 60,
+          delivered: 58,
+          failed: 2,
+          opened: 45,
+          clicked: 20,
+          responded: 12,
+        },
+        sms: {
+          sent: 25,
+          delivered: 24,
+          failed: 1,
+          opened: 20,
+          clicked: 8,
+          responded: 3,
+        },
+      },
+      timeline: [],
+    },
   },
   {
     id: 3,
     school: 1,
     school_name: 'Escola ABC',
-    name: 'Comunicado - Volta às Aulas',
-    type: 'comunicado',
-    description: 'Informações importantes sobre o retorno das aulas',
-    tags: ['comunicado', 'inicio-ano'],
-    audience_filters: [],
-    audience_count: 780,
+    name: 'Reunião de Pais - Fevereiro',
+    type: 'reuniao',
+    description: 'Convite para reunião de pais e mestres do mês de fevereiro',
+    tags: ['reuniao', 'pais'],
+    audience_count: 280,
     channels: ['email', 'whatsapp'],
-    channel_priority: ['email', 'whatsapp'],
-    fallback_enabled: false,
-    message_content: {
-      email: {
-        subject: 'Volta às Aulas - Informações Importantes',
-        body_html: '<p>Prezado(a) {{nome}},</p><p>As aulas retornam em 10/02/2026.</p>',
-        body_text: 'Prezado(a) {{nome}}, As aulas retornam em 10/02/2026.',
-      },
-    },
-    schedule_type: 'immediate',
-    follow_ups: [],
     status: 'completed',
-    created_at: '2026-01-28T14:00:00',
-    updated_at: '2026-01-28T15:00:00',
-    sent_at: '2026-01-28T15:00:00',
-    completed_at: '2026-01-28T16:30:00',
+    created_at: '2026-01-15T09:00:00',
+    updated_at: '2026-01-28T16:00:00',
+    sent_at: '2026-01-28T09:00:00',
+    completed_at: '2026-01-28T16:00:00',
     analytics: {
-      total_recipients: 780,
-      messages_sent: 780,
-      messages_delivered: 765,
-      messages_failed: 15,
-      messages_opened: 612,
-      messages_clicked: 245,
-      messages_responded: 128,
-      conversions: 98,
-      delivery_rate: 98.1,
-      open_rate: 80.0,
-      click_rate: 32.0,
-      response_rate: 16.7,
-      conversion_rate: 12.8,
-      by_channel: {},
+      total_recipients: 280,
+      messages_sent: 280,
+      messages_delivered: 275,
+      messages_failed: 5,
+      messages_opened: 245,
+      messages_clicked: 180,
+      messages_responded: 95,
+      conversions: 210,
+      delivery_rate: 98.2,
+      open_rate: 89.1,
+      click_rate: 73.5,
+      response_rate: 38.8,
+      conversion_rate: 85.7,
+      by_channel: {
+        email: {
+          sent: 180,
+          delivered: 177,
+          failed: 3,
+          opened: 155,
+          clicked: 110,
+          responded: 60,
+        },
+        whatsapp: {
+          sent: 100,
+          delivered: 98,
+          failed: 2,
+          opened: 90,
+          clicked: 70,
+          responded: 35,
+        },
+      },
       timeline: [],
     },
   },
@@ -169,52 +175,163 @@ const MOCK_CAMPAIGNS: Campaign[] = [
     id: 4,
     school: 1,
     school_name: 'Escola ABC',
-    name: 'Campanha Passei Direto',
+    name: 'Passei Direto - Vestibular 2026',
     type: 'passei_direto',
-    description: 'Captação via parceria Passei Direto',
-    tags: ['passei-direto', 'parceria'],
-    audience_filters: [],
-    audience_count: 230,
-    channels: ['email'],
-    channel_priority: ['email'],
-    fallback_enabled: false,
-    message_content: {
-      email: {
-        subject: 'Seja bem-vindo à nossa escola!',
-        body_html: '<p>Olá {{nome}}!</p>',
-        body_text: 'Olá {{nome}}!',
-      },
-    },
-    schedule_type: 'immediate',
-    follow_ups: [],
+    description: 'Divulgação dos aprovados no vestibular de 2026',
+    tags: ['passei_direto', 'vestibular'],
+    audience_count: 350,
+    channels: ['whatsapp', 'email', 'sms'],
     status: 'draft',
     created_at: '2026-02-01T11:00:00',
-    updated_at: '2026-02-01T11:30:00',
+    updated_at: '2026-02-03T09:00:00',
+    analytics: {
+      total_recipients: 350,
+      messages_sent: 0,
+      messages_delivered: 0,
+      messages_failed: 0,
+      messages_opened: 0,
+      messages_clicked: 0,
+      messages_responded: 0,
+      conversions: 0,
+      delivery_rate: 0,
+      open_rate: 0,
+      click_rate: 0,
+      response_rate: 0,
+      conversion_rate: 0,
+      by_channel: {},
+      timeline: [],
+    },
   },
   {
     id: 5,
     school: 1,
     school_name: 'Escola ABC',
+    name: 'Evento - Feira de Ciências',
+    type: 'evento',
+    description: 'Convite para a Feira de Ciências anual da escola',
+    tags: ['evento', 'feira', 'ciencias'],
+    audience_count: 520,
+    channels: ['email', 'whatsapp'],
+    status: 'scheduled',
+    created_at: '2026-01-28T14:00:00',
+    updated_at: '2026-02-02T10:00:00',
+    scheduled_at: '2026-02-10T08:00:00',
+    analytics: {
+      total_recipients: 520,
+      messages_sent: 0,
+      messages_delivered: 0,
+      messages_failed: 0,
+      messages_opened: 0,
+      messages_clicked: 0,
+      messages_responded: 0,
+      conversions: 0,
+      delivery_rate: 0,
+      open_rate: 0,
+      click_rate: 0,
+      response_rate: 0,
+      conversion_rate: 0,
+      by_channel: {},
+      timeline: [],
+    },
+  },
+  {
+    id: 6,
+    school: 1,
+    school_name: 'Escola ABC',
     name: 'Cobrança - Mensalidade Janeiro',
     type: 'cobranca',
-    description: 'Lembrete de vencimento da mensalidade',
-    tags: ['cobranca', 'financeiro'],
-    audience_filters: [],
-    audience_count: 125,
-    channels: ['whatsapp', 'email', 'sms'],
-    channel_priority: ['whatsapp', 'email', 'sms'],
-    fallback_enabled: true,
-    message_content: {
-      whatsapp: {
-        text: 'Olá {{nome}}! Sua mensalidade vence amanhã.',
+    description: 'Lembrete de pagamento da mensalidade de janeiro',
+    tags: ['cobranca', 'mensalidade'],
+    audience_count: 85,
+    channels: ['whatsapp', 'email'],
+    status: 'completed',
+    created_at: '2026-01-10T08:00:00',
+    updated_at: '2026-01-15T18:00:00',
+    sent_at: '2026-01-15T09:00:00',
+    completed_at: '2026-01-15T18:00:00',
+    analytics: {
+      total_recipients: 85,
+      messages_sent: 85,
+      messages_delivered: 84,
+      messages_failed: 1,
+      messages_opened: 75,
+      messages_clicked: 65,
+      messages_responded: 50,
+      conversions: 72,
+      delivery_rate: 98.8,
+      open_rate: 89.3,
+      click_rate: 86.7,
+      response_rate: 66.7,
+      conversion_rate: 96.0,
+      by_channel: {
+        whatsapp: {
+          sent: 60,
+          delivered: 60,
+          failed: 0,
+          opened: 55,
+          clicked: 48,
+          responded: 40,
+        },
+        email: {
+          sent: 25,
+          delivered: 24,
+          failed: 1,
+          opened: 20,
+          clicked: 17,
+          responded: 10,
+        },
       },
+      timeline: [],
     },
-    schedule_type: 'scheduled',
-    scheduled_at: '2026-02-05T08:00:00',
-    follow_ups: [],
+  },
+  {
+    id: 7,
+    school: 1,
+    school_name: 'Escola ABC',
+    name: 'Comunicado - Volta às Aulas',
+    type: 'comunicado',
+    description: 'Informações importantes sobre o retorno das aulas',
+    tags: ['comunicado', 'volta_aulas'],
+    audience_count: 650,
+    channels: ['email', 'whatsapp'],
     status: 'paused',
-    created_at: '2026-02-01T16:00:00',
-    updated_at: '2026-02-02T10:00:00',
+    created_at: '2026-01-18T10:00:00',
+    updated_at: '2026-01-22T15:00:00',
+    sent_at: '2026-01-22T09:00:00',
+    analytics: {
+      total_recipients: 650,
+      messages_sent: 320,
+      messages_delivered: 315,
+      messages_failed: 5,
+      messages_opened: 280,
+      messages_clicked: 150,
+      messages_responded: 45,
+      conversions: 0,
+      delivery_rate: 98.4,
+      open_rate: 88.9,
+      click_rate: 47.6,
+      response_rate: 14.3,
+      conversion_rate: 0,
+      by_channel: {
+        email: {
+          sent: 200,
+          delivered: 197,
+          failed: 3,
+          opened: 175,
+          clicked: 95,
+          responded: 30,
+        },
+        whatsapp: {
+          sent: 120,
+          delivered: 118,
+          failed: 2,
+          opened: 105,
+          clicked: 55,
+          responded: 15,
+        },
+      },
+      timeline: [],
+    },
   },
 ];
 
@@ -231,18 +348,20 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>(MOCK_CAMPAIGNS);
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState<CampaignViewMode>('kanban');
-  
-  const [filters, setFilters] = useState<CampaignFiltersData>({
-    search: '',
-    status: 'all',
-    type: 'all',
-    dateFrom: '',
-    dateTo: '',
-  });
-
-  const [showWizard, setShowWizard] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [showForm, setShowForm] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
+
+  const [formData, setFormData] = useState<CampaignFormData>({
+    name: '',
+    type: 'matricula',
+    description: '',
+    channels: ['whatsapp'],
+    audience_count: 0,
+  });
 
   // ============================================
   // COMPUTED
@@ -251,149 +370,191 @@ export default function CampaignsPage() {
   const filteredCampaigns = useMemo(() => {
     return campaigns.filter((campaign) => {
       const matchesSearch =
-        filters.search === '' ||
-        campaign.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-        campaign.description?.toLowerCase().includes(filters.search.toLowerCase());
+        searchTerm === '' ||
+        campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (campaign.description && campaign.description.toLowerCase().includes(searchTerm.toLowerCase()));
 
-      const matchesStatus = filters.status === 'all' || campaign.status === filters.status;
-      const matchesType = filters.type === 'all' || campaign.type === filters.type;
+      const matchesStatus = statusFilter === 'all' || campaign.status === statusFilter;
+      const matchesType = typeFilter === 'all' || campaign.type === typeFilter;
 
-      const matchesDateFrom = 
-        !filters.dateFrom || 
-        new Date(campaign.created_at) >= new Date(filters.dateFrom);
-
-      const matchesDateTo = 
-        !filters.dateTo || 
-        new Date(campaign.created_at) <= new Date(filters.dateTo);
-
-      return matchesSearch && matchesStatus && matchesType && matchesDateFrom && matchesDateTo;
+      return matchesSearch && matchesStatus && matchesType;
     });
-  }, [campaigns, filters]);
+  }, [campaigns, searchTerm, statusFilter, typeFilter]);
 
   const stats = useMemo(() => {
-    const allCampaigns = campaigns;
-    
-    // Calcular médias de analytics
-    const campaignsWithAnalytics = allCampaigns.filter(c => c.analytics);
-    const avgDeliveryRate = campaignsWithAnalytics.length > 0
-      ? campaignsWithAnalytics.reduce((sum, c) => sum + (c.analytics?.delivery_rate || 0), 0) / campaignsWithAnalytics.length
-      : 0;
-    const avgOpenRate = campaignsWithAnalytics.length > 0
-      ? campaignsWithAnalytics.reduce((sum, c) => sum + (c.analytics?.open_rate || 0), 0) / campaignsWithAnalytics.length
-      : 0;
-    const avgClickRate = campaignsWithAnalytics.length > 0
-      ? campaignsWithAnalytics.reduce((sum, c) => sum + (c.analytics?.click_rate || 0), 0) / campaignsWithAnalytics.length
-      : 0;
-    const avgConversionRate = campaignsWithAnalytics.length > 0
-      ? campaignsWithAnalytics.reduce((sum, c) => sum + (c.analytics?.conversion_rate || 0), 0) / campaignsWithAnalytics.length
+    const allAnalytics = campaigns
+      .filter(c => c.analytics)
+      .map(c => c.analytics!);
+
+    const avgDelivery = allAnalytics.length > 0
+      ? allAnalytics.reduce((sum, a) => sum + a.delivery_rate, 0) / allAnalytics.length
       : 0;
 
-    // Enviadas hoje
+    const avgOpen = allAnalytics.length > 0
+      ? allAnalytics.reduce((sum, a) => sum + a.open_rate, 0) / allAnalytics.length
+      : 0;
+
+    const avgConversion = allAnalytics.length > 0
+      ? allAnalytics.reduce((sum, a) => sum + a.conversion_rate, 0) / allAnalytics.length
+      : 0;
+
     const today = new Date().toISOString().split('T')[0];
-    const sentToday = allCampaigns.filter(c => 
+    const sentToday = campaigns.filter(c => 
       c.sent_at && c.sent_at.split('T')[0] === today
     ).length;
 
     return {
-      total: allCampaigns.length,
-      draft: allCampaigns.filter(c => c.status === 'draft').length,
-      scheduled: allCampaigns.filter(c => c.status === 'scheduled').length,
-      sending: allCampaigns.filter(c => c.status === 'sending').length,
-      completed: allCampaigns.filter(c => c.status === 'completed').length,
-      failed: allCampaigns.filter(c => c.status === 'failed').length,
-      avg_delivery_rate: avgDeliveryRate,
-      avg_open_rate: avgOpenRate,
-      avg_click_rate: avgClickRate,
-      avg_conversion_rate: avgConversionRate,
+      total: campaigns.length,
+      draft: campaigns.filter(c => c.status === 'draft').length,
+      scheduled: campaigns.filter(c => c.status === 'scheduled').length,
+      sending: campaigns.filter(c => c.status === 'sending').length,
+      completed: campaigns.filter(c => c.status === 'completed').length,
+      paused: campaigns.filter(c => c.status === 'paused').length,
+      cancelled: campaigns.filter(c => c.status === 'cancelled').length,
+      failed: campaigns.filter(c => c.status === 'failed').length,
+      avg_delivery_rate: avgDelivery,
+      avg_open_rate: avgOpen,
+      avg_conversion_rate: avgConversion,
       sent_today: sentToday,
-      active_campaigns: allCampaigns.filter(c => 
-        ['scheduled', 'sending', 'sent'].includes(c.status)
-      ).length,
     };
   }, [campaigns]);
 
-  const hasActiveFilters = 
-    filters.search !== '' || 
-    filters.status !== 'all' || 
-    filters.type !== 'all' ||
-    filters.dateFrom !== '' ||
-    filters.dateTo !== '';
+  const hasActiveFilters = searchTerm !== '' || statusFilter !== 'all' || typeFilter !== 'all';
 
   // ============================================
   // HANDLERS
   // ============================================
   
+  const resetForm = (): void => {
+    setFormData({
+      name: '',
+      type: 'matricula',
+      description: '',
+      channels: ['whatsapp'],
+      audience_count: 0,
+    });
+    setEditingCampaign(null);
+    setShowForm(false);
+  };
+
+  const validate = (): string | null => {
+    if (!formData.name.trim()) return 'Nome é obrigatório';
+    if (formData.name.trim().length < 3) return 'Nome deve ter no mínimo 3 caracteres';
+    if (formData.channels.length === 0) return 'Selecione pelo menos um canal';
+    if (formData.audience_count <= 0) return 'Audiência deve ser maior que zero';
+    return null;
+  };
+
+  const handleSubmit = (): void => {
+    const error = validate();
+    if (error) {
+      toast.error(error);
+      return;
+    }
+
+    if (editingCampaign) {
+      setCampaigns(prev => prev.map(c => 
+        c.id === editingCampaign.id 
+          ? { 
+              ...c, 
+              name: formData.name,
+              type: formData.type,
+              description: formData.description,
+              channels: formData.channels as any,
+              audience_count: formData.audience_count,
+              scheduled_at: formData.scheduled_at,
+              updated_at: new Date().toISOString(),
+            } 
+          : c
+      ));
+      toast.success('✅ Campanha atualizada com sucesso!');
+    } else {
+      const newCampaign: Campaign = {
+        id: Math.max(...campaigns.map(c => c.id)) + 1,
+        school: 1,
+        school_name: 'Escola ABC',
+        name: formData.name,
+        type: formData.type,
+        description: formData.description,
+        channels: formData.channels as any,
+        audience_count: formData.audience_count,
+        status: 'draft',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        scheduled_at: formData.scheduled_at,
+        analytics: {
+          total_recipients: formData.audience_count,
+          messages_sent: 0,
+          messages_delivered: 0,
+          messages_failed: 0,
+          messages_opened: 0,
+          messages_clicked: 0,
+          messages_responded: 0,
+          conversions: 0,
+          delivery_rate: 0,
+          open_rate: 0,
+          click_rate: 0,
+          response_rate: 0,
+          conversion_rate: 0,
+          by_channel: {},
+          timeline: [],
+        },
+      };
+      setCampaigns(prev => [newCampaign, ...prev]);
+      toast.success('✅ Campanha criada com sucesso!');
+    }
+    resetForm();
+  };
+
   const handleEdit = (campaign: Campaign): void => {
+    setFormData({
+      name: campaign.name,
+      type: campaign.type,
+      description: campaign.description || '',
+      channels: campaign.channels,
+      audience_count: campaign.audience_count,
+      scheduled_at: campaign.scheduled_at,
+    });
     setEditingCampaign(campaign);
-    setShowWizard(true);
+    setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = async (): Promise<void> => {
+  const handleDelete = (): void => {
     if (!campaignToDelete) return;
-    
     setCampaigns(prev => prev.filter(c => c.id !== campaignToDelete.id));
     toast.success('✅ Campanha deletada com sucesso!');
     setCampaignToDelete(null);
   };
 
-  const handleDuplicate = (campaign: Campaign): void => {
-    const newCampaign: Campaign = {
-      ...campaign,
-      id: Math.max(...campaigns.map(c => c.id)) + 1,
-      name: `${campaign.name} (Cópia)`,
-      status: 'draft',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      sent_at: undefined,
-      completed_at: undefined,
-      analytics: undefined,
-    };
-    setCampaigns(prev => [newCampaign, ...prev]);
-    toast.success('✅ Campanha duplicada com sucesso!');
-  };
-
-  const handlePause = (campaign: Campaign): void => {
+  const handleStatusChange = (campaign: Campaign, newStatus: CampaignStatus): void => {
     setCampaigns(prev => prev.map(c => 
-      c.id === campaign.id ? { ...c, status: 'paused' as CampaignStatus } : c
-    ));
-    toast.success('⏸️ Campanha pausada!');
-  };
-
-  const handleResume = (campaign: Campaign): void => {
-    setCampaigns(prev => prev.map(c => 
-      c.id === campaign.id ? { ...c, status: 'sending' as CampaignStatus } : c
-    ));
-    toast.success('▶️ Campanha retomada!');
-  };
-
-  const handleSend = (campaign: Campaign): void => {
-    setCampaigns(prev => prev.map(c => 
-      c.id === campaign.id 
-        ? { 
-            ...c, 
-            status: 'sending' as CampaignStatus,
-            sent_at: new Date().toISOString() 
-          } 
-        : c
-    ));
-    toast.success('🚀 Campanha enviada!');
-  };
-
-  const handleViewAnalytics = (campaign: Campaign): void => {
-    toast.success(`📊 Abrindo analytics de "${campaign.name}"`);
-    // TODO: Implementar modal/página de analytics
-  };
-
-  const handleChangeStatus = (id: number, _fromStatus: string, toStatus: string): void => {
-    setCampaigns(prev => prev.map(c => 
-      c.id === id ? { ...c, status: toStatus as CampaignStatus } : c
+      c.id === campaign.id ? { ...c, status: newStatus, updated_at: new Date().toISOString() } : c
     ));
     toast.success('✅ Status atualizado!');
   };
 
+  const handleStatusChangeKanban = (id: number, _fromStatus: string, toStatus: string): void => {
+    setCampaigns(prev => prev.map(c => 
+      c.id === id ? { ...c, status: toStatus as CampaignStatus, updated_at: new Date().toISOString() } : c
+    ));
+    toast.success('✅ Campanha movida com sucesso!');
+  };
+
+  const handlePause = (campaign: Campaign): void => {
+    handleStatusChange(campaign, 'paused');
+  };
+
+  const handleResume = (campaign: Campaign): void => {
+    handleStatusChange(campaign, 'sending');
+  };
+
+  const handleSend = (campaign: Campaign): void => {
+    handleStatusChange(campaign, 'sending');
+    toast.success('🚀 Campanha iniciada!');
+  };
+
   const handleExport = (): void => {
-    // Simular exportação
     const csv = convertToCSV(filteredCampaigns);
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -414,13 +575,9 @@ export default function CampaignsPage() {
   };
 
   const handleClearFilters = (): void => {
-    setFilters({
-      search: '',
-      status: 'all',
-      type: 'all',
-      dateFrom: '',
-      dateTo: '',
-    });
+    setSearchTerm('');
+    setStatusFilter('all');
+    setTypeFilter('all');
   };
 
   // ============================================
@@ -428,13 +585,14 @@ export default function CampaignsPage() {
   // ============================================
 
   const convertToCSV = (data: Campaign[]): string => {
-    const headers = ['ID', 'Nome', 'Tipo', 'Status', 'Audiência', 'Criada Em'];
+    const headers = ['ID', 'Nome', 'Tipo', 'Status', 'Audiência', 'Canais', 'Criada Em'];
     const rows = data.map(c => [
       c.id,
       c.name,
       c.type,
       c.status,
       c.audience_count,
+      c.channels.join('; '),
       new Date(c.created_at).toLocaleDateString('pt-BR'),
     ]);
     return [headers, ...rows].map(row => row.join(',')).join('\n');
@@ -473,7 +631,7 @@ export default function CampaignsPage() {
             </h1>
             <p className="text-gray-600 flex items-center gap-2">
               <Send size={16} />
-              Gerencie suas campanhas multicanal de forma profissional
+              Gerencie suas campanhas de WhatsApp, Email e SMS
             </p>
           </div>
 
@@ -503,14 +661,18 @@ export default function CampaignsPage() {
 
       {/* Filters */}
       <CampaignFilters
-        filters={filters}
-        onFiltersChange={setFilters}
-        onClear={handleClearFilters}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        typeFilter={typeFilter}
+        onTypeFilterChange={setTypeFilter}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        onNewCampaign={() => setShowWizard(true)}
+        onNewCampaign={() => setShowForm(true)}
         onExport={handleExport}
         onRefresh={handleRefresh}
+        onClearFilters={handleClearFilters}
         hasActiveFilters={hasActiveFilters}
         isExporting={false}
         isRefreshing={isLoading}
@@ -529,8 +691,7 @@ export default function CampaignsPage() {
               campaigns={filteredCampaigns}
               onEdit={handleEdit}
               onDelete={setCampaignToDelete}
-              onViewAnalytics={handleViewAnalytics}
-              onDuplicate={handleDuplicate}
+              onStatusChange={handleStatusChange}
               onPause={handlePause}
               onResume={handleResume}
               onSend={handleSend}
@@ -550,8 +711,7 @@ export default function CampaignsPage() {
               campaigns={filteredCampaigns}
               onEdit={handleEdit}
               onDelete={setCampaignToDelete}
-              onViewAnalytics={handleViewAnalytics}
-              onDuplicate={handleDuplicate}
+              onStatusChange={handleStatusChange}
               onPause={handlePause}
               onResume={handleResume}
               onSend={handleSend}
@@ -570,7 +730,7 @@ export default function CampaignsPage() {
             <CampaignKanbanView
               campaigns={filteredCampaigns}
               onCampaignClick={handleEdit}
-              onChangeStatus={handleChangeStatus}
+              onChangeStatus={handleStatusChangeKanban}
             />
           </motion.div>
         )}
@@ -593,38 +753,23 @@ export default function CampaignsPage() {
         </motion.div>
       )}
 
-      {/* Wizard Modal (placeholder) */}
-      {showWizard && (
+      {/* Form Modal */}
+      {showForm && (
         <FormModal
-          isOpen={showWizard}
+          isOpen={showForm}
           title={editingCampaign ? '✏️ Editar Campanha' : '➕ Nova Campanha'}
-          subtitle={editingCampaign ? 'Atualize as informações da campanha' : 'Crie uma nova campanha passo a passo'}
-          onClose={() => {
-            setShowWizard(false);
-            setEditingCampaign(null);
-          }}
-          size="xl"
+          subtitle={editingCampaign ? 'Atualize as informações da campanha' : 'Preencha os dados da nova campanha'}
+          onClose={resetForm}
+          size="lg"
         >
-          <div className="p-8 text-center">
-            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Plus className="text-blue-600" size={40} />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              Wizard em Desenvolvimento
-            </h3>
-            <p className="text-gray-600 mb-6">
-              O wizard de criação de campanhas será implementado nos próximos passos.
-            </p>
-            <button
-              onClick={() => {
-                setShowWizard(false);
-                setEditingCampaign(null);
-              }}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-all"
-            >
-              Entendido
-            </button>
-          </div>
+          <CampaignForm
+            formData={formData}
+            onChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
+            onSubmit={handleSubmit}
+            onCancel={resetForm}
+            isLoading={false}
+            isEditing={!!editingCampaign}
+          />
         </FormModal>
       )}
 
@@ -643,5 +788,168 @@ export default function CampaignsPage() {
         />
       )}
     </PageModel>
+  );
+}
+
+// ============================================
+// CAMPAIGN FORM COMPONENT
+// ============================================
+
+interface CampaignFormProps {
+  formData: CampaignFormData;
+  onChange: (field: keyof CampaignFormData, value: any) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  isLoading?: boolean;
+  isEditing?: boolean;
+}
+
+function CampaignForm({
+  formData,
+  onChange,
+  onSubmit,
+  onCancel,
+  isLoading = false,
+  isEditing = false,
+}: CampaignFormProps) {
+  return (
+    <div className="space-y-6">
+      
+      {/* Nome */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Nome da Campanha *
+        </label>
+        <input
+          type="text"
+          placeholder="Ex: Matrícula 2026 - Campanha Principal"
+          value={formData.name}
+          onChange={(e) => onChange('name', e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+        />
+      </div>
+
+      {/* Tipo e Audiência */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Tipo de Campanha
+          </label>
+          <select
+            value={formData.type}
+            onChange={(e) => onChange('type', e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+          >
+            <option value="matricula">🎓 Matrícula</option>
+            <option value="rematricula">🔄 Rematrícula</option>
+            <option value="passei_direto">🎉 Passei Direto</option>
+            <option value="reuniao">📅 Reunião</option>
+            <option value="evento">🎊 Evento</option>
+            <option value="cobranca">💰 Cobrança</option>
+            <option value="comunicado">📢 Comunicado</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Tamanho da Audiência *
+          </label>
+          <input
+            type="number"
+            placeholder="Ex: 450"
+            value={formData.audience_count || ''}
+            onChange={(e) => onChange('audience_count', parseInt(e.target.value) || 0)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+          />
+        </div>
+      </div>
+
+      {/* Descrição */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Descrição
+        </label>
+        <textarea
+          placeholder="Descreva o objetivo da campanha..."
+          value={formData.description}
+          onChange={(e) => onChange('description', e.target.value)}
+          rows={4}
+          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 resize-none"
+        />
+      </div>
+
+      {/* Canais */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Canais de Comunicação *
+        </label>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {(['whatsapp', 'email', 'sms'] as const).map((channel) => (
+            <label
+              key={channel}
+              className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                formData.channels.includes(channel)
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={formData.channels.includes(channel)}
+                onChange={(e) => {
+                  const newChannels = e.target.checked
+                    ? [...formData.channels, channel]
+                    : formData.channels.filter(c => c !== channel);
+                  onChange('channels', newChannels);
+                }}
+                className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="flex-1">
+                <p className="font-semibold text-gray-900">
+                  {channel === 'whatsapp' && '💬 WhatsApp'}
+                  {channel === 'email' && '📧 Email'}
+                  {channel === 'sms' && '📱 SMS'}
+                </p>
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Agendamento */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Agendar Envio (Opcional)
+        </label>
+        <input
+          type="datetime-local"
+          value={formData.scheduled_at || ''}
+          onChange={(e) => onChange('scheduled_at', e.target.value)}
+          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+        />
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3 pt-4 border-t border-gray-200">
+        <button
+          onClick={onSubmit}
+          disabled={isLoading}
+          className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all disabled:opacity-50"
+        >
+          {isLoading 
+            ? (isEditing ? 'Atualizando...' : 'Criando...')
+            : (isEditing ? 'Atualizar Campanha' : 'Criar Campanha')
+          }
+        </button>
+
+        <button
+          onClick={onCancel}
+          disabled={isLoading}
+          className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all disabled:opacity-50"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
   );
 }

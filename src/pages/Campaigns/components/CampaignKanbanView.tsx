@@ -2,26 +2,19 @@
 // 📊 VISUALIZAÇÃO KANBAN DE CAMPANHAS - PROFISSIONAL E MODERNA
 
 import { useMemo } from 'react';
-import { Calendar, Users, Eye, MousePointerClick, TrendingUp } from 'lucide-react';
+import { Calendar, Users, Send, TrendingUp, Target } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Kanban from '../../../components/common/Kanban';
 import { Badge } from '../../../components/common';
 import type { Campaign, CampaignStatus } from '../../../types/campaigns/campaign.types';
 import type { KanbanColumn, KanbanCard } from '../../../components/common/Kanban/types';
-
-// ============================================
-// TYPES
-// ============================================
+import { CAMPAIGN_STATUS_CONFIG, CHANNEL_CONFIG } from '../../../types/campaigns/campaign.types';
 
 interface CampaignKanbanViewProps {
   campaigns: Campaign[];
   onCampaignClick?: (campaign: Campaign) => void;
-  onChangeStatus: (campaignId: number, fromStatus: string, toStatus: string) => void;
+  onChangeStatus: (cardId: number, fromStatus: string, toStatus: string) => void;
 }
-
-// ============================================
-// COMPONENT
-// ============================================
 
 export default function CampaignKanbanView({
   campaigns,
@@ -33,7 +26,7 @@ export default function CampaignKanbanView({
   // CONFIGURAÇÃO DOS STATUS
   // ============================================
   
-  const CAMPAIGN_STATUS_CONFIG = [
+  const CAMPAIGN_STATUS_KANBAN = [
     { 
       id: 'draft', 
       title: 'Rascunhos', 
@@ -50,17 +43,10 @@ export default function CampaignKanbanView({
     },
     { 
       id: 'sending', 
-      title: 'Enviando', 
+      title: 'Em Envio', 
       color: 'bg-yellow-100 text-yellow-700', 
       icon: <span className="text-2xl">🚀</span>,
       gradient: 'from-yellow-500 to-yellow-600',
-    },
-    { 
-      id: 'sent', 
-      title: 'Enviadas', 
-      color: 'bg-green-100 text-green-700', 
-      icon: <span className="text-2xl">✅</span>,
-      gradient: 'from-green-500 to-green-600',
     },
     { 
       id: 'completed', 
@@ -69,30 +55,21 @@ export default function CampaignKanbanView({
       icon: <span className="text-2xl">✅</span>,
       gradient: 'from-green-500 to-green-600',
     },
+    { 
+      id: 'paused', 
+      title: 'Pausadas', 
+      color: 'bg-orange-100 text-orange-700', 
+      icon: <span className="text-2xl">⏸️</span>,
+      gradient: 'from-orange-500 to-orange-600',
+    },
   ];
-
-  const TYPE_ICONS: Record<string, string> = {
-    matricula: '🎓',
-    rematricula: '🔄',
-    passei_direto: '🎉',
-    reuniao: '📅',
-    evento: '🎊',
-    cobranca: '💰',
-    comunicado: '📢',
-  };
-
-  const CHANNEL_ICONS: Record<string, string> = {
-    whatsapp: '💬',
-    email: '📧',
-    sms: '📱',
-  };
 
   // ============================================
   // TRANSFORMAR CAMPANHAS EM COLUNAS KANBAN
   // ============================================
   
   const kanbanColumns: KanbanColumn[] = useMemo(() => {
-    return CAMPAIGN_STATUS_CONFIG.map(statusConfig => ({
+    return CAMPAIGN_STATUS_KANBAN.map(statusConfig => ({
       id: statusConfig.id,
       title: statusConfig.title,
       color: statusConfig.color,
@@ -105,12 +82,10 @@ export default function CampaignKanbanView({
           description: campaign.description || 'Sem descrição',
           columnId: campaign.status,
           metadata: {
-            type: campaign.type,
-            channels: campaign.channels,
             audience_count: campaign.audience_count,
-            created_at: campaign.created_at,
+            channels: campaign.channels,
             scheduled_at: campaign.scheduled_at,
-            analytics: campaign.analytics,
+            created_at: campaign.created_at,
             campaign: campaign,
           },
         })),
@@ -135,24 +110,8 @@ export default function CampaignKanbanView({
   // ============================================
   
   const renderCampaignCard = (card: KanbanCard) => {
-    const { 
-      type, 
-      channels, 
-      audience_count, 
-      created_at, 
-      scheduled_at,
-      analytics 
-    } = card.metadata || {};
-    
-    const statusConfig = CAMPAIGN_STATUS_CONFIG.find(s => s.id === card.columnId);
-    const typeIcon = TYPE_ICONS[type as string] || '📋';
-
-    const formatDate = (dateString: string) => {
-      return new Date(dateString).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'short',
-      });
-    };
+    const { audience_count, channels, scheduled_at, created_at } = card.metadata || {};
+    const statusConfig = CAMPAIGN_STATUS_KANBAN.find(s => s.id === card.columnId);
 
     return (
       <motion.div
@@ -162,88 +121,71 @@ export default function CampaignKanbanView({
       >
         {/* Header do card */}
         <div className="flex items-start justify-between mb-3">
-          <div className="flex-1 min-w-0">
-            <h4 className="font-bold text-gray-900 text-sm line-clamp-2 mb-1">
-              {card.title}
-            </h4>
-          </div>
+          <h4 className="font-bold text-gray-900 text-sm line-clamp-2 flex-1">
+            {card.title}
+          </h4>
           {statusConfig && (
-            <div className={`w-10 h-10 bg-gradient-to-br ${statusConfig.gradient} rounded-lg flex items-center justify-center flex-shrink-0 ml-2 shadow-md`}>
-              <span className="text-xl">{typeIcon}</span>
+            <div className={`w-8 h-8 bg-gradient-to-br ${statusConfig.gradient} rounded-lg flex items-center justify-center flex-shrink-0 ml-2 shadow-md`}>
+              <span className="text-white text-xs font-bold">
+                {card.title.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+              </span>
             </div>
           )}
         </div>
 
         {/* Descrição */}
-        {card.description && card.description !== 'Sem descrição' && (
-          <p className="text-xs text-gray-600 mb-3 line-clamp-2 leading-relaxed">
-            {card.description}
-          </p>
-        )}
+        <p className="text-sm text-gray-600 mb-3 line-clamp-2 leading-relaxed">
+          {card.description}
+        </p>
         
-        {/* Métricas (se disponível) */}
-        {analytics && (
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <div className="text-center p-2 bg-green-50 rounded-lg">
-              <Eye size={12} className="text-green-600 mx-auto mb-1" />
-              <p className="text-xs font-bold text-green-600">
-                {analytics.open_rate.toFixed(0)}%
-              </p>
+        {/* Informações */}
+        <div className="space-y-2 mb-3">
+          {/* Audiência */}
+          {audience_count !== undefined && (
+            <div className="flex items-center gap-2 text-xs text-gray-600 bg-purple-50 p-2 rounded-lg">
+              <Users size={14} className="text-purple-600 flex-shrink-0" />
+              <span className="font-semibold">{audience_count} pessoas</span>
             </div>
-            <div className="text-center p-2 bg-blue-50 rounded-lg">
-              <MousePointerClick size={12} className="text-blue-600 mx-auto mb-1" />
-              <p className="text-xs font-bold text-blue-600">
-                {analytics.click_rate.toFixed(0)}%
-              </p>
+          )}
+          
+          {/* Canais */}
+          {channels && channels.length > 0 && (
+            <div className="flex items-center gap-1 flex-wrap">
+              {channels.map((channel: string) => {
+                const config = CHANNEL_CONFIG[channel as keyof typeof CHANNEL_CONFIG];
+                return config ? (
+                  <Badge key={channel} variant="blue" size="sm">
+                    {config.icon} {config.label}
+                  </Badge>
+                ) : null;
+              })}
             </div>
-            <div className="text-center p-2 bg-purple-50 rounded-lg">
-              <TrendingUp size={12} className="text-purple-600 mx-auto mb-1" />
-              <p className="text-xs font-bold text-purple-600">
-                {analytics.conversion_rate.toFixed(0)}%
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Audiência */}
-        <div className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 p-2 rounded-lg mb-3">
-          <Users size={14} className="text-gray-400 flex-shrink-0" />
-          <span className="font-semibold">{audience_count} contatos</span>
+          )}
         </div>
-
-        {/* Canais */}
-        {channels && Array.isArray(channels) && (
-          <div className="flex items-center gap-1 mb-3">
-            {channels.map((channel: string) => (
-              <span 
-                key={channel}
-                className="text-sm"
-                title={channel}
-              >
-                {CHANNEL_ICONS[channel]}
-              </span>
-            ))}
-          </div>
-        )}
 
         {/* Footer do card */}
         <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-          {scheduled_at && card.columnId === 'scheduled' ? (
-            <div className="flex items-center gap-1 text-xs text-blue-600 font-semibold">
+          {scheduled_at && (
+            <div className="flex items-center gap-1 text-xs text-orange-600 font-semibold">
               <Calendar size={12} />
-              <span>{formatDate(scheduled_at)}</span>
+              <span>
+                {new Date(scheduled_at).toLocaleDateString('pt-BR', { 
+                  day: '2-digit', 
+                  month: 'short' 
+                })}
+              </span>
             </div>
-          ) : created_at ? (
+          )}
+          {created_at && !scheduled_at && (
             <div className="flex items-center gap-1 text-xs text-gray-500">
               <Calendar size={12} />
-              <span>{formatDate(created_at)}</span>
+              <span>
+                {new Date(created_at).toLocaleDateString('pt-BR', { 
+                  day: '2-digit', 
+                  month: 'short' 
+                })}
+              </span>
             </div>
-          ) : null}
-          
-          {type && (
-            <Badge variant="blue" size="sm">
-              {type}
-            </Badge>
           )}
         </div>
 
@@ -256,18 +198,16 @@ export default function CampaignKanbanView({
   };
 
   // ============================================
-  // CALCULAR ESTATÍSTICAS DO PIPELINE
+  // CALCULAR ESTATÍSTICAS
   // ============================================
   
-  const totalCampaigns = campaigns.length;
-  const activeCampaigns = campaigns.filter(c => 
-    ['scheduled', 'sending', 'sent'].includes(c.status)
+  const totalAtivas = campaigns.filter(c => 
+    c.status !== 'cancelled' && c.status !== 'failed'
   ).length;
-
-  const avgOpenRate = campaigns
-    .filter(c => c.analytics)
-    .reduce((sum, c) => sum + (c.analytics?.open_rate || 0), 0) / 
-    (campaigns.filter(c => c.analytics).length || 1);
+  
+  const taxaConversao = totalAtivas > 0 
+    ? ((kanbanColumns.find(c => c.id === 'completed')?.cards.length || 0) / totalAtivas * 100).toFixed(1)
+    : 0;
 
   // ============================================
   // RENDER
@@ -276,7 +216,7 @@ export default function CampaignKanbanView({
   return (
     <div className="space-y-6">
       
-      {/* Stats Summary com visual melhorado */}
+      {/* Stats Summary */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -287,14 +227,14 @@ export default function CampaignKanbanView({
           {/* Info principal */}
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <TrendingUp className="text-white" size={28} />
+              <Target className="text-white" size={28} />
             </div>
             <div>
               <p className="text-sm text-gray-600 font-semibold uppercase tracking-wider">
                 Pipeline de Campanhas
               </p>
               <p className="text-3xl font-bold text-gray-900">
-                {totalCampaigns} campanhas
+                {campaigns.length} campanhas
               </p>
             </div>
           </div>
@@ -302,10 +242,8 @@ export default function CampaignKanbanView({
           {/* Stats das colunas */}
           <div className="flex gap-6 flex-wrap">
             {kanbanColumns.map(col => {
-              const config = CAMPAIGN_STATUS_CONFIG.find(s => s.id === col.id);
-              const percentage = totalCampaigns > 0 
-                ? ((col.cards.length / totalCampaigns) * 100).toFixed(0) 
-                : 0;
+              const config = CAMPAIGN_STATUS_KANBAN.find(s => s.id === col.id);
+              const percentage = totalAtivas > 0 ? ((col.cards.length / totalAtivas) * 100).toFixed(0) : 0;
               
               return (
                 <div key={col.id} className="text-center">
@@ -326,16 +264,12 @@ export default function CampaignKanbanView({
             })}
           </div>
 
-          {/* Métricas agregadas */}
+          {/* Taxa de conclusão */}
           <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="text-center">
-              <p className="text-xs text-gray-600 font-medium">Campanhas Ativas</p>
-              <p className="text-2xl font-bold text-blue-600">{activeCampaigns}</p>
-            </div>
-            <div className="h-12 w-px bg-gray-300" />
-            <div className="text-center">
-              <p className="text-xs text-gray-600 font-medium">Taxa Abertura Média</p>
-              <p className="text-2xl font-bold text-green-600">{avgOpenRate.toFixed(0)}%</p>
+            <TrendingUp className="text-green-600" size={24} />
+            <div>
+              <p className="text-xs text-gray-600 font-medium">Taxa de Conclusão</p>
+              <p className="text-2xl font-bold text-green-600">{taxaConversao}%</p>
             </div>
           </div>
         </div>

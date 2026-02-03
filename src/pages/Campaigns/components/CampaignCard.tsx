@@ -1,5 +1,5 @@
 // src/pages/Campaigns/components/CampaignCard.tsx
-// 📊 CARD DE CAMPANHA PROFISSIONAL - DESIGN MODERNO
+// 💬 CARD DE CAMPANHA PROFISSIONAL
 
 import { motion } from 'framer-motion';
 import { 
@@ -11,14 +11,14 @@ import {
   Send,
   Eye,
   MousePointerClick,
-  Target,
-  Play,
+  TrendingUp,
   Pause,
-  Copy,
-  BarChart3
+  Play,
+  CheckCircle2
 } from 'lucide-react';
 import { useState } from 'react';
 import type { Campaign, CampaignType, CampaignStatus } from '../../../types/campaigns/campaign.types';
+import { CAMPAIGN_TYPE_CONFIG, CAMPAIGN_STATUS_CONFIG, CHANNEL_CONFIG } from '../../../types/campaigns/campaign.types';
 
 // ============================================
 // TYPES
@@ -28,136 +28,12 @@ interface CampaignCardProps {
   campaign: Campaign;
   onEdit: (campaign: Campaign) => void;
   onDelete: (campaign: Campaign) => void;
-  onViewAnalytics?: (campaign: Campaign) => void;
-  onDuplicate?: (campaign: Campaign) => void;
+  onStatusChange?: (campaign: Campaign, newStatus: CampaignStatus) => void;
   onPause?: (campaign: Campaign) => void;
   onResume?: (campaign: Campaign) => void;
   onSend?: (campaign: Campaign) => void;
   variant?: 'default' | 'compact';
 }
-
-// ============================================
-// TYPE & STATUS CONFIG (Seguindo padrão do projeto)
-// ============================================
-
-const CAMPAIGN_TYPE_CONFIG: Record<CampaignType, {
-  label: string;
-  gradient: string;
-  bg: string;
-  text: string;
-  border: string;
-  icon: string;
-}> = {
-  matricula: {
-    label: 'Matrícula',
-    gradient: 'from-blue-500 to-blue-600',
-    bg: 'bg-blue-50',
-    text: 'text-blue-700',
-    border: 'border-blue-200',
-    icon: '🎓',
-  },
-  rematricula: {
-    label: 'Rematrícula',
-    gradient: 'from-green-500 to-green-600',
-    bg: 'bg-green-50',
-    text: 'text-green-700',
-    border: 'border-green-200',
-    icon: '🔄',
-  },
-  passei_direto: {
-    label: 'Passei Direto',
-    gradient: 'from-purple-500 to-purple-600',
-    bg: 'bg-purple-50',
-    text: 'text-purple-700',
-    border: 'border-purple-200',
-    icon: '🎉',
-  },
-  reuniao: {
-    label: 'Reunião',
-    gradient: 'from-orange-500 to-orange-600',
-    bg: 'bg-orange-50',
-    text: 'text-orange-700',
-    border: 'border-orange-200',
-    icon: '📅',
-  },
-  evento: {
-    label: 'Evento',
-    gradient: 'from-pink-500 to-pink-600',
-    bg: 'bg-pink-50',
-    text: 'text-pink-700',
-    border: 'border-pink-200',
-    icon: '🎊',
-  },
-  cobranca: {
-    label: 'Cobrança',
-    gradient: 'from-red-500 to-red-600',
-    bg: 'bg-red-50',
-    text: 'text-red-700',
-    border: 'border-red-200',
-    icon: '💰',
-  },
-  comunicado: {
-    label: 'Comunicado',
-    gradient: 'from-gray-500 to-gray-600',
-    bg: 'bg-gray-50',
-    text: 'text-gray-700',
-    border: 'border-gray-200',
-    icon: '📢',
-  },
-};
-
-const CAMPAIGN_STATUS_CONFIG: Record<CampaignStatus, {
-  label: string;
-  color: string;
-  icon: string;
-}> = {
-  draft: {
-    label: 'Rascunho',
-    color: 'bg-gray-100 text-gray-700 border-gray-300',
-    icon: '📝',
-  },
-  scheduled: {
-    label: 'Agendada',
-    color: 'bg-blue-100 text-blue-700 border-blue-300',
-    icon: '⏰',
-  },
-  sending: {
-    label: 'Enviando',
-    color: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-    icon: '🚀',
-  },
-  sent: {
-    label: 'Enviada',
-    color: 'bg-green-100 text-green-700 border-green-300',
-    icon: '✅',
-  },
-  completed: {
-    label: 'Concluída',
-    color: 'bg-green-100 text-green-700 border-green-300',
-    icon: '✅',
-  },
-  paused: {
-    label: 'Pausada',
-    color: 'bg-orange-100 text-orange-700 border-orange-300',
-    icon: '⏸️',
-  },
-  cancelled: {
-    label: 'Cancelada',
-    color: 'bg-red-100 text-red-700 border-red-300',
-    icon: '🚫',
-  },
-  failed: {
-    label: 'Falhou',
-    color: 'bg-red-100 text-red-700 border-red-300',
-    icon: '❌',
-  },
-};
-
-const CHANNEL_ICONS = {
-  whatsapp: '💬',
-  email: '📧',
-  sms: '📱',
-};
 
 // ============================================
 // COMPONENT
@@ -167,8 +43,7 @@ export default function CampaignCard({
   campaign,
   onEdit,
   onDelete,
-  onViewAnalytics,
-  onDuplicate,
+  onStatusChange,
   onPause,
   onResume,
   onSend,
@@ -200,7 +75,7 @@ export default function CampaignCard({
         className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer group"
       >
         <div className="flex items-center gap-4">
-          {/* Ícone do tipo */}
+          {/* Avatar com gradiente */}
           <div className={`w-12 h-12 bg-gradient-to-br ${typeConfig.gradient} rounded-xl flex items-center justify-center text-2xl shadow-md flex-shrink-0`}>
             {typeConfig.icon}
           </div>
@@ -216,45 +91,30 @@ export default function CampaignCard({
               </span>
             </div>
             
-            <div className="flex items-center gap-3 text-xs text-gray-600 mb-2">
-              <span className="flex items-center gap-1">
-                <Users size={12} />
-                {campaign.audience_count} contatos
+            {campaign.description && (
+              <p className="text-sm text-gray-600 mb-2 line-clamp-1">
+                {campaign.description}
+              </p>
+            )}
+
+            <div className="flex items-center gap-3 text-xs">
+              <span className={`px-2 py-0.5 rounded-full border ${typeConfig.border} ${typeConfig.bg} ${typeConfig.text} font-semibold flex items-center gap-1`}>
+                <span>{typeConfig.icon}</span>
+                {typeConfig.label}
               </span>
-              <span className="flex items-center gap-1">
+              <span className="text-gray-500 flex items-center gap-1">
+                <Users size={12} />
+                {campaign.audience_count}
+              </span>
+              <span className="text-gray-500 flex items-center gap-1">
                 <Calendar size={12} />
                 {formatDate(campaign.created_at)}
               </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className={`px-2 py-0.5 rounded-full border ${typeConfig.border} ${typeConfig.bg} ${typeConfig.text} font-semibold text-xs`}>
-                {typeConfig.label}
-              </span>
-              <div className="flex items-center gap-1">
-                {campaign.channels.map(channel => (
-                  <span key={channel} className="text-sm">
-                    {CHANNEL_ICONS[channel]}
-                  </span>
-                ))}
-              </div>
             </div>
           </div>
 
           {/* Ações */}
           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-            {onViewAnalytics && ['sent', 'completed'].includes(campaign.status) && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onViewAnalytics(campaign);
-                }}
-                className="p-2 hover:bg-purple-50 rounded-lg transition-colors"
-                title="Ver Analytics"
-              >
-                <BarChart3 size={16} className="text-purple-600" />
-              </button>
-            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -329,22 +189,8 @@ export default function CampaignCard({
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 className="absolute right-0 top-12 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-10 min-w-[180px]"
               >
-                {/* Analytics */}
-                {onViewAnalytics && ['sent', 'completed'].includes(campaign.status) && (
-                  <button
-                    onClick={() => {
-                      onViewAnalytics(campaign);
-                      setShowActions(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-purple-50 transition-colors text-left"
-                  >
-                    <BarChart3 size={16} className="text-purple-600" />
-                    <span className="text-sm font-semibold text-gray-700">Ver Analytics</span>
-                  </button>
-                )}
-
-                {/* Send (se draft ou scheduled) */}
-                {onSend && ['draft', 'scheduled'].includes(campaign.status) && (
+                {/* Ações específicas por status */}
+                {campaign.status === 'draft' && onSend && (
                   <button
                     onClick={() => {
                       onSend(campaign);
@@ -353,12 +199,11 @@ export default function CampaignCard({
                     className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-green-50 transition-colors text-left"
                   >
                     <Send size={16} className="text-green-600" />
-                    <span className="text-sm font-semibold text-gray-700">Enviar Agora</span>
+                    <span className="text-sm font-semibold text-green-600">Enviar Agora</span>
                   </button>
                 )}
 
-                {/* Pause/Resume */}
-                {onPause && campaign.status === 'sending' && (
+                {campaign.status === 'sending' && onPause && (
                   <button
                     onClick={() => {
                       onPause(campaign);
@@ -367,11 +212,11 @@ export default function CampaignCard({
                     className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 transition-colors text-left"
                   >
                     <Pause size={16} className="text-orange-600" />
-                    <span className="text-sm font-semibold text-gray-700">Pausar</span>
+                    <span className="text-sm font-semibold text-orange-600">Pausar</span>
                   </button>
                 )}
 
-                {onResume && campaign.status === 'paused' && (
+                {campaign.status === 'paused' && onResume && (
                   <button
                     onClick={() => {
                       onResume(campaign);
@@ -380,27 +225,12 @@ export default function CampaignCard({
                     className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-green-50 transition-colors text-left"
                   >
                     <Play size={16} className="text-green-600" />
-                    <span className="text-sm font-semibold text-gray-700">Retomar</span>
-                  </button>
-                )}
-
-                {/* Duplicate */}
-                {onDuplicate && (
-                  <button
-                    onClick={() => {
-                      onDuplicate(campaign);
-                      setShowActions(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors text-left"
-                  >
-                    <Copy size={16} className="text-blue-600" />
-                    <span className="text-sm font-semibold text-gray-700">Duplicar</span>
+                    <span className="text-sm font-semibold text-green-600">Retomar</span>
                   </button>
                 )}
 
                 <div className="h-px bg-gray-200 my-2" />
 
-                {/* Edit */}
                 <button
                   onClick={() => {
                     onEdit(campaign);
@@ -411,8 +241,6 @@ export default function CampaignCard({
                   <Edit2 size={16} className="text-blue-600" />
                   <span className="text-sm font-semibold text-gray-700">Editar</span>
                 </button>
-
-                {/* Delete */}
                 <button
                   onClick={() => {
                     onDelete(campaign);
@@ -431,69 +259,87 @@ export default function CampaignCard({
 
       {/* Conteúdo */}
       <div className="p-6">
-        {/* Título */}
+        {/* Nome */}
         <h3 className="text-xl font-bold text-gray-900 mb-3 leading-tight">
           {campaign.name}
         </h3>
 
         {/* Descrição */}
         {campaign.description && (
-          <p className="text-sm text-gray-600 leading-relaxed line-clamp-2 mb-4">
+          <p className="text-sm text-gray-600 mb-4 leading-relaxed line-clamp-2">
             {campaign.description}
           </p>
         )}
 
-        {/* Métricas rápidas */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="text-center p-3 bg-blue-50 rounded-lg">
-            <Users size={16} className="text-blue-600 mx-auto mb-1" />
-            <p className="text-lg font-bold text-blue-600">{campaign.audience_count}</p>
-            <p className="text-xs text-blue-700 font-semibold">Contatos</p>
-          </div>
-
-          {campaign.analytics && (
-            <>
-              <div className="text-center p-3 bg-green-50 rounded-lg">
-                <Eye size={16} className="text-green-600 mx-auto mb-1" />
-                <p className="text-lg font-bold text-green-600">
-                  {campaign.analytics.open_rate.toFixed(0)}%
-                </p>
-                <p className="text-xs text-green-700 font-semibold">Abertura</p>
-              </div>
-
-              <div className="text-center p-3 bg-purple-50 rounded-lg">
-                <MousePointerClick size={16} className="text-purple-600 mx-auto mb-1" />
-                <p className="text-lg font-bold text-purple-600">
-                  {campaign.analytics.click_rate.toFixed(0)}%
-                </p>
-                <p className="text-xs text-purple-700 font-semibold">Cliques</p>
-              </div>
-            </>
-          )}
-
-          {!campaign.analytics && campaign.status === 'draft' && (
-            <div className="col-span-2 text-center p-3 bg-gray-50 rounded-lg">
-              <Target size={16} className="text-gray-600 mx-auto mb-1" />
-              <p className="text-xs text-gray-600 font-semibold">Sem dados ainda</p>
+        {/* Informações */}
+        <div className="space-y-3 mb-4">
+          {/* Audiência */}
+          <div className="flex items-center gap-2 text-sm text-gray-700">
+            <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
+              <Users size={16} className="text-purple-600" />
             </div>
-          )}
-        </div>
+            <div className="flex-1">
+              <p className="text-xs text-gray-500">Público-Alvo</p>
+              <p className="font-semibold">{campaign.audience_count} pessoas</p>
+            </div>
+          </div>
 
-        {/* Canais */}
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-xs text-gray-600 font-semibold">Canais:</span>
-          <div className="flex items-center gap-1">
-            {campaign.channels.map(channel => (
-              <span 
-                key={channel}
-                className="px-2 py-1 bg-gray-100 rounded-full text-xs font-semibold text-gray-700 flex items-center gap-1"
-              >
-                <span>{CHANNEL_ICONS[channel]}</span>
-                {channel}
-              </span>
-            ))}
+          {/* Canais */}
+          <div className="flex items-center gap-2 text-sm text-gray-700">
+            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+              <Send size={16} className="text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-gray-500">Canais</p>
+              <div className="flex gap-1 flex-wrap">
+                {campaign.channels.map(channel => {
+                  const config = CHANNEL_CONFIG[channel];
+                  return (
+                    <span
+                      key={channel}
+                      className={`px-2 py-0.5 rounded-full text-xs font-semibold ${config.color}`}
+                    >
+                      {config.icon} {config.label}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Analytics (se disponível) */}
+        {campaign.analytics && (
+          <div className="grid grid-cols-3 gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 text-xs text-gray-500 mb-1">
+                <CheckCircle2 size={12} />
+                <span>Entregues</span>
+              </div>
+              <p className="text-lg font-bold text-gray-900">
+                {campaign.analytics.delivery_rate.toFixed(0)}%
+              </p>
+            </div>
+            <div className="text-center border-x border-gray-300">
+              <div className="flex items-center justify-center gap-1 text-xs text-gray-500 mb-1">
+                <Eye size={12} />
+                <span>Abertura</span>
+              </div>
+              <p className="text-lg font-bold text-gray-900">
+                {campaign.analytics.open_rate.toFixed(0)}%
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 text-xs text-gray-500 mb-1">
+                <MousePointerClick size={12} />
+                <span>Conversão</span>
+              </div>
+              <p className="text-lg font-bold text-gray-900">
+                {campaign.analytics.conversion_rate.toFixed(0)}%
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-100">
@@ -502,13 +348,17 @@ export default function CampaignCard({
             <span>Criada em {formatDate(campaign.created_at)}</span>
           </div>
           
-          {campaign.scheduled_at && campaign.status === 'scheduled' && (
-            <span className="text-xs text-blue-600 font-semibold">
-              ⏰ Agendada: {formatDate(campaign.scheduled_at)}
-            </span>
+          {campaign.scheduled_at && (
+            <div className="flex items-center gap-1 text-xs text-orange-600 font-semibold">
+              <Calendar size={12} />
+              <span>Agendada: {formatDate(campaign.scheduled_at)}</span>
+            </div>
           )}
         </div>
       </div>
+
+      {/* Hover indicator */}
+      <div className="h-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
     </motion.div>
   );
 }

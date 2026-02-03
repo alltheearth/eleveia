@@ -4,15 +4,14 @@
 import { motion } from 'framer-motion';
 import { 
   Send, 
-  CheckCircle2, 
-  Clock,
-  TrendingUp,
+  TrendingUp, 
+  CheckCircle2,
   ArrowUpRight,
   ArrowDownRight,
-  Eye,
-  MousePointerClick,
   Target,
-  Zap
+  Zap,
+  BarChart3,
+  Clock
 } from 'lucide-react';
 
 // ============================================
@@ -26,29 +25,29 @@ interface CampaignStatsProps {
     scheduled: number;
     sending: number;
     completed: number;
+    paused: number;
+    cancelled: number;
     failed: number;
     avg_delivery_rate: number;
     avg_open_rate: number;
-    avg_click_rate: number;
     avg_conversion_rate: number;
     sent_today: number;
-    active_campaigns: number;
   };
   loading?: boolean;
 }
 
 interface StatCardProps {
   label: string;
-  value: number | string;
+  value: number;
   change?: number;
   icon: React.ReactNode;
   color: 'blue' | 'green' | 'orange' | 'purple' | 'red' | 'yellow';
   subtitle?: string;
-  percentage?: boolean;
+  percentage?: number;
 }
 
 // ============================================
-// COLOR CONFIG (Seguindo padrão do projeto)
+// COLOR CONFIG
 // ============================================
 
 const colorConfigs = {
@@ -101,7 +100,7 @@ function StatCard({
   icon,
   color,
   subtitle,
-  percentage = false,
+  percentage,
 }: StatCardProps) {
   const config = colorConfigs[color];
   const isPositive = change !== undefined && change >= 0;
@@ -142,10 +141,28 @@ function StatCard({
           {label}
         </p>
         <p className="text-4xl font-bold text-gray-900 mb-1">
-          {percentage ? `${value}%` : value}
+          {value}
         </p>
         {subtitle && (
           <p className="text-xs text-gray-500">{subtitle}</p>
+        )}
+        
+        {/* Barra de progresso */}
+        {percentage !== undefined && (
+          <div className="mt-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-gray-500">Do total</span>
+              <span className="text-xs font-bold text-gray-700">{percentage}%</span>
+            </div>
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${percentage}%` }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
+                className={`h-full bg-gradient-to-r ${config.gradient}`}
+              />
+            </div>
+          </div>
         )}
       </div>
     </motion.div>
@@ -157,14 +174,9 @@ function StatCard({
 // ============================================
 
 export default function CampaignStats({ stats, loading = false }: CampaignStatsProps) {
-  
-  // ============================================
-  // LOADING STATE
-  // ============================================
-  
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
           <div
             key={i}
@@ -181,52 +193,58 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
     );
   }
 
-  // ============================================
-  // RENDER
-  // ============================================
+  // Calcular percentuais
+  const totalAtivas = stats.total - stats.cancelled - stats.failed;
+  const pctCompleted = totalAtivas > 0 ? Number(((stats.completed / totalAtivas) * 100).toFixed(0)) : 0;
+  const pctScheduled = totalAtivas > 0 ? Number(((stats.scheduled / totalAtivas) * 100).toFixed(0)) : 0;
+  const pctSending = totalAtivas > 0 ? Number(((stats.sending / totalAtivas) * 100).toFixed(0)) : 0;
+  const pctDraft = totalAtivas > 0 ? Number(((stats.draft / totalAtivas) * 100).toFixed(0)) : 0;
 
   return (
-    <div className="space-y-6 mb-6">
-      
-      {/* Stats principais - Overview de campanhas */}
+    <div className="space-y-6">
+      {/* Stats principais - Funil */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          label="Total de Campanhas"
-          value={stats.total}
+          label="Rascunhos"
+          value={stats.draft}
           icon={<Send className="text-blue-600" size={24} />}
           color="blue"
-          subtitle="Criadas no sistema"
-        />
-
-        <StatCard
-          label="Concluídas"
-          value={stats.completed}
-          change={12}
-          icon={<CheckCircle2 className="text-green-600" size={24} />}
-          color="green"
-          subtitle="Envios finalizados"
-        />
-
-        <StatCard
-          label="Em Andamento"
-          value={stats.active_campaigns}
-          icon={<Zap className="text-orange-600" size={24} />}
-          color="orange"
-          subtitle="Ativas no momento"
+          subtitle="Aguardando configuração"
+          percentage={pctDraft}
         />
 
         <StatCard
           label="Agendadas"
           value={stats.scheduled}
-          icon={<Clock className="text-purple-600" size={24} />}
-          color="purple"
-          subtitle="Aguardando envio"
+          change={8}
+          icon={<Clock className="text-orange-600" size={24} />}
+          color="orange"
+          subtitle="Prontas para envio"
+          percentage={pctScheduled}
+        />
+
+        <StatCard
+          label="Em Envio"
+          value={stats.sending}
+          icon={<Zap className="text-yellow-600" size={24} />}
+          color="yellow"
+          subtitle="Sendo processadas"
+          percentage={pctSending}
+        />
+
+        <StatCard
+          label="Concluídas"
+          value={stats.completed}
+          change={15}
+          icon={<CheckCircle2 className="text-green-600" size={24} />}
+          color="green"
+          subtitle="Envios finalizados"
+          percentage={pctCompleted}
         />
       </div>
 
-      {/* Performance metrics detalhadas */}
+      {/* Cards de Performance */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
         {/* Taxa de Entrega */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -274,7 +292,7 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
         >
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Eye className="text-white" size={24} />
+              <BarChart3 className="text-white" size={24} />
             </div>
             <div className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 rounded-full">
               <ArrowUpRight size={14} className="text-blue-600" />
@@ -297,13 +315,13 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${stats.avg_open_rate}%` }}
-              transition={{ duration: 1, ease: 'easeOut', delay: 0.1 }}
+              transition={{ duration: 1, ease: 'easeOut' }}
               className="h-full bg-gradient-to-r from-blue-500 to-blue-600 shadow-md"
             />
           </div>
         </motion.div>
 
-        {/* Taxa de Clique */}
+        {/* Taxa de Conversão */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -312,7 +330,7 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
         >
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-              <MousePointerClick className="text-white" size={24} />
+              <Target className="text-white" size={24} />
             </div>
             <div className="flex items-center gap-1 px-3 py-1.5 bg-purple-50 rounded-full">
               <ArrowUpRight size={14} className="text-purple-600" />
@@ -321,28 +339,28 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
           </div>
 
           <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">
-            Taxa de Clique Média
+            Taxa de Conversão Média
           </p>
           <p className="text-4xl font-bold text-gray-900 mb-1">
-            {stats.avg_click_rate.toFixed(1)}%
+            {stats.avg_conversion_rate.toFixed(1)}%
           </p>
           <p className="text-xs text-gray-500">
-            Links clicados pelos destinatários
+            Ações completadas com sucesso
           </p>
 
           {/* Barra de progresso */}
           <div className="mt-4 h-3 bg-gray-100 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
-              animate={{ width: `${stats.avg_click_rate}%` }}
-              transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }}
+              animate={{ width: `${stats.avg_conversion_rate}%` }}
+              transition={{ duration: 1, ease: 'easeOut' }}
               className="h-full bg-gradient-to-r from-purple-500 to-purple-600 shadow-md"
             />
           </div>
         </motion.div>
       </div>
 
-      {/* Stats adicionais - Conversão e atividade */}
+      {/* Resumo do Pipeline */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -352,53 +370,45 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <Target className="text-orange-600" size={20} />
-              Performance Geral
+              <TrendingUp className="text-blue-600" size={20} />
+              Pipeline de Campanhas
             </h3>
-            <p className="text-sm text-gray-500 mt-1">
-              Métricas consolidadas de todas as campanhas
-            </p>
+            <p className="text-sm text-gray-500 mt-1">Status de todas as campanhas</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-600 font-semibold">Total Ativo</p>
+            <p className="text-2xl font-bold text-gray-900">{totalAtivas}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {/* Taxa de Conversão */}
-          <div className="text-center p-4 bg-orange-50 rounded-xl border border-orange-100 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center text-2xl mx-auto mb-3 shadow-lg">
-              🎯
+        {/* Pipeline visual */}
+        <div className="space-y-3">
+          {[
+            { label: 'Rascunhos', value: stats.draft, color: 'from-blue-500 to-blue-600', width: 100, icon: '📝' },
+            { label: 'Agendadas', value: stats.scheduled, color: 'from-orange-500 to-orange-600', width: 75, icon: '⏰' },
+            { label: 'Em Envio', value: stats.sending, color: 'from-yellow-500 to-yellow-600', width: 50, icon: '🚀' },
+            { label: 'Concluídas', value: stats.completed, color: 'from-green-500 to-green-600', width: 30, icon: '✅' },
+          ].map((stage, index) => (
+            <div key={stage.label} className="relative">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <span className="text-lg">{stage.icon}</span>
+                  {stage.label}
+                </span>
+                <span className="text-sm font-bold text-gray-900">{stage.value}</span>
+              </div>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${stage.width}%` }}
+                transition={{ duration: 0.8, delay: index * 0.1 }}
+                className={`h-10 bg-gradient-to-r ${stage.color} rounded-xl flex items-center justify-end px-4 shadow-md`}
+              >
+                <span className="text-white font-bold">
+                  {totalAtivas > 0 ? ((stage.value / totalAtivas) * 100).toFixed(0) : 0}%
+                </span>
+              </motion.div>
             </div>
-            <p className="text-3xl font-bold text-orange-600 mb-1">
-              {stats.avg_conversion_rate.toFixed(1)}%
-            </p>
-            <p className="text-sm text-orange-700 font-semibold">Taxa de Conversão</p>
-          </div>
-
-          {/* Enviadas Hoje */}
-          <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-100 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-2xl mx-auto mb-3 shadow-lg">
-              📤
-            </div>
-            <p className="text-3xl font-bold text-blue-600 mb-1">{stats.sent_today}</p>
-            <p className="text-sm text-blue-700 font-semibold">Enviadas Hoje</p>
-          </div>
-
-          {/* Rascunhos */}
-          <div className="text-center p-4 bg-gray-50 rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl flex items-center justify-center text-2xl mx-auto mb-3 shadow-lg">
-              📝
-            </div>
-            <p className="text-3xl font-bold text-gray-600 mb-1">{stats.draft}</p>
-            <p className="text-sm text-gray-700 font-semibold">Rascunhos</p>
-          </div>
-
-          {/* Falhas */}
-          <div className="text-center p-4 bg-red-50 rounded-xl border border-red-100 hover:shadow-md transition-shadow">
-            <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center text-2xl mx-auto mb-3 shadow-lg">
-              ⚠️
-            </div>
-            <p className="text-3xl font-bold text-red-600 mb-1">{stats.failed}</p>
-            <p className="text-sm text-red-700 font-semibold">Falhas</p>
-          </div>
+          ))}
         </div>
       </motion.div>
     </div>

@@ -1,5 +1,5 @@
 // src/pages/Leads/index.tsx
-// 💼 PÁGINA DE LEADS - DESIGN PROFISSIONAL E COERENTE
+// 💼 PÁGINA DE LEADS - DESIGN PROFISSIONAL E COERENTE (FIXED)
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,21 +23,8 @@ import LeadGridView from './components/LeadGridView';
 import LeadListView from './components/LeadListView';
 import LeadsKanbanView from './components/LeadsKanbanView';
 
-// Types
-interface Lead {
-  id: number;
-  nome: string;
-  email: string;
-  telefone: string;
-  status: 'novo' | 'contato' | 'qualificado' | 'conversao' | 'perdido';
-  origem: 'site' | 'whatsapp' | 'indicacao' | 'ligacao' | 'email' | 'facebook' | 'instagram';
-  origem_display: string;
-  observacoes?: string;
-  criado_em: string;
-  escola_nome?: string;
-  escola: number;
-  interesses?: Record<string, any>;
-}
+// ✅ IMPORTAR TIPO DA API
+import type { Lead } from '../../services';
 
 interface LeadFormData {
   nome: string;
@@ -49,139 +36,189 @@ interface LeadFormData {
 }
 
 // ============================================
-// DADOS MOCADOS
+// DADOS MOCADOS (COM TODOS OS CAMPOS DA API)
 // ============================================
 
 const MOCK_LEADS: Lead[] = [
   {
     id: 1,
+    escola: 1,
+    escola_nome: 'Escola ABC',
     nome: 'Maria Silva Santos',
     email: 'maria.silva@email.com',
     telefone: '11999998888',
     status: 'novo',
+    status_display: 'Novo',
     origem: 'site',
     origem_display: 'Site',
     observacoes: 'Interessada em turma de manhã para o filho de 5 anos',
+    interesses: {},
+    contatado_em: null,
+    convertido_em: null,
     criado_em: '2026-01-31T10:00:00',
-    escola_nome: 'Escola ABC',
-    escola: 1,
+    atualizado_em: '2026-01-31T10:00:00',
   },
   {
     id: 2,
+    escola: 1,
+    escola_nome: 'Escola ABC',
     nome: 'João Pedro Oliveira',
     email: 'joao.pedro@email.com',
     telefone: '11988887777',
     status: 'contato',
+    status_display: 'Em Contato',
     origem: 'whatsapp',
     origem_display: 'WhatsApp',
     observacoes: 'Quer conhecer a estrutura da escola',
+    interesses: {},
+    contatado_em: '2026-01-30T15:00:00',
+    convertido_em: null,
     criado_em: '2026-01-30T14:30:00',
-    escola_nome: 'Escola ABC',
-    escola: 1,
+    atualizado_em: '2026-01-30T15:00:00',
   },
   {
     id: 3,
+    escola: 1,
+    escola_nome: 'Escola ABC',
     nome: 'Ana Carolina Lima',
     email: 'ana.lima@email.com',
     telefone: '11977776666',
     status: 'qualificado',
+    status_display: 'Qualificado',
     origem: 'indicacao',
     origem_display: 'Indicação',
     observacoes: 'Indicada pela mãe do Pedro. Muito interessada.',
+    interesses: {},
+    contatado_em: '2026-01-29T10:00:00',
+    convertido_em: null,
     criado_em: '2026-01-29T09:15:00',
-    escola_nome: 'Escola ABC',
-    escola: 1,
+    atualizado_em: '2026-01-29T10:00:00',
   },
   {
     id: 4,
+    escola: 1,
+    escola_nome: 'Escola ABC',
     nome: 'Carlos Eduardo Costa',
     email: 'carlos.costa@email.com',
     telefone: '11966665555',
     status: 'conversao',
+    status_display: 'Convertido',
     origem: 'facebook',
     origem_display: 'Facebook',
     observacoes: 'Matrícula confirmada para turma integral',
+    interesses: {},
+    contatado_em: '2026-01-28T17:00:00',
+    convertido_em: '2026-01-29T14:00:00',
     criado_em: '2026-01-28T16:45:00',
-    escola_nome: 'Escola ABC',
-    escola: 1,
+    atualizado_em: '2026-01-29T14:00:00',
   },
   {
     id: 5,
+    escola: 1,
+    escola_nome: 'Escola ABC',
     nome: 'Juliana Fernandes',
     email: 'juliana.f@email.com',
     telefone: '11955554444',
     status: 'novo',
+    status_display: 'Novo',
     origem: 'instagram',
     origem_display: 'Instagram',
     observacoes: 'Perguntou sobre valores e horários',
+    interesses: {},
+    contatado_em: null,
+    convertido_em: null,
     criado_em: '2026-01-31T11:20:00',
-    escola_nome: 'Escola ABC',
-    escola: 1,
+    atualizado_em: '2026-01-31T11:20:00',
   },
   {
     id: 6,
+    escola: 1,
+    escola_nome: 'Escola ABC',
     nome: 'Roberto Almeida',
     email: 'roberto.almeida@email.com',
     telefone: '11944443333',
     status: 'contato',
+    status_display: 'Em Contato',
     origem: 'ligacao',
     origem_display: 'Ligação',
     observacoes: 'Agendada visita para próxima semana',
+    interesses: {},
+    contatado_em: '2026-01-30T11:00:00',
+    convertido_em: null,
     criado_em: '2026-01-30T10:00:00',
-    escola_nome: 'Escola ABC',
-    escola: 1,
+    atualizado_em: '2026-01-30T11:00:00',
   },
   {
     id: 7,
+    escola: 1,
+    escola_nome: 'Escola ABC',
     nome: 'Patrícia Souza',
     email: 'patricia.souza@email.com',
     telefone: '11933332222',
     status: 'qualificado',
+    status_display: 'Qualificado',
     origem: 'site',
     origem_display: 'Site',
     observacoes: 'Preencheu formulário completo. Alta chance de conversão.',
+    interesses: {},
+    contatado_em: '2026-01-29T16:00:00',
+    convertido_em: null,
     criado_em: '2026-01-29T15:30:00',
-    escola_nome: 'Escola ABC',
-    escola: 1,
+    atualizado_em: '2026-01-29T16:00:00',
   },
   {
     id: 8,
+    escola: 1,
+    escola_nome: 'Escola ABC',
     nome: 'Fernando Rocha',
     email: 'fernando.rocha@email.com',
     telefone: '11922221111',
     status: 'conversao',
+    status_display: 'Convertido',
     origem: 'whatsapp',
     origem_display: 'WhatsApp',
     observacoes: 'Matrícula efetivada. Pagamento confirmado.',
+    interesses: {},
+    contatado_em: '2026-01-27T14:30:00',
+    convertido_em: '2026-01-28T10:00:00',
     criado_em: '2026-01-27T14:00:00',
-    escola_nome: 'Escola ABC',
-    escola: 1,
+    atualizado_em: '2026-01-28T10:00:00',
   },
   {
     id: 9,
+    escola: 1,
+    escola_nome: 'Escola ABC',
     nome: 'Amanda Torres',
     email: 'amanda.torres@email.com',
     telefone: '11911110000',
     status: 'perdido',
+    status_display: 'Perdido',
     origem: 'email',
     origem_display: 'Email',
     observacoes: 'Optou por outra escola devido à localização',
+    interesses: {},
+    contatado_em: '2026-01-26T10:00:00',
+    convertido_em: null,
     criado_em: '2026-01-26T09:00:00',
-    escola_nome: 'Escola ABC',
-    escola: 1,
+    atualizado_em: '2026-01-26T12:00:00',
   },
   {
     id: 10,
+    escola: 1,
+    escola_nome: 'Escola ABC',
     nome: 'Ricardo Mendes',
     email: 'ricardo.mendes@email.com',
     telefone: '11900009999',
     status: 'novo',
+    status_display: 'Novo',
     origem: 'facebook',
     origem_display: 'Facebook',
     observacoes: 'Respondeu anúncio sobre período integral',
+    interesses: {},
+    contatado_em: null,
+    convertido_em: null,
     criado_em: '2026-01-31T08:00:00',
-    escola_nome: 'Escola ABC',
-    escola: 1,
+    atualizado_em: '2026-01-31T08:00:00',
   },
 ];
 
@@ -287,13 +324,22 @@ export default function LeadsPage() {
       return;
     }
 
+    const now = new Date().toISOString();
+
     if (editingLead) {
       setLeads(prev => prev.map(l => 
         l.id === editingLead.id 
           ? { 
               ...l, 
-              ...formData,
-              origem_display: getOrigemDisplay(formData.origem)
+              nome: formData.nome,
+              email: formData.email,
+              telefone: formData.telefone,
+              status: formData.status,
+              status_display: getStatusDisplay(formData.status),
+              origem: formData.origem,
+              origem_display: getOrigemDisplay(formData.origem),
+              observacoes: formData.observacoes,
+              atualizado_em: now,
             } 
           : l
       ));
@@ -301,11 +347,21 @@ export default function LeadsPage() {
     } else {
       const newLead: Lead = {
         id: Math.max(...leads.map(l => l.id)) + 1,
-        ...formData,
-        origem_display: getOrigemDisplay(formData.origem),
-        criado_em: new Date().toISOString(),
-        escola_nome: 'Escola ABC',
         escola: 1,
+        escola_nome: 'Escola ABC',
+        nome: formData.nome,
+        email: formData.email,
+        telefone: formData.telefone,
+        status: formData.status,
+        status_display: getStatusDisplay(formData.status),
+        origem: formData.origem,
+        origem_display: getOrigemDisplay(formData.origem),
+        observacoes: formData.observacoes,
+        interesses: {},
+        contatado_em: null,
+        convertido_em: null,
+        criado_em: now,
+        atualizado_em: now,
       };
       setLeads(prev => [newLead, ...prev]);
       toast.success('✅ Lead criado com sucesso!');
@@ -335,21 +391,36 @@ export default function LeadsPage() {
   };
 
   const handleStatusChange = (lead: Lead, newStatus: Lead['status']): void => {
+    const now = new Date().toISOString();
     setLeads(prev => prev.map(l => 
-      l.id === lead.id ? { ...l, status: newStatus } : l
+      l.id === lead.id ? { 
+        ...l, 
+        status: newStatus,
+        status_display: getStatusDisplay(newStatus),
+        atualizado_em: now,
+        contatado_em: newStatus === 'contato' && !l.contatado_em ? now : l.contatado_em,
+        convertido_em: newStatus === 'conversao' ? now : l.convertido_em,
+      } : l
     ));
     toast.success('✅ Status atualizado!');
   };
 
   const handleStatusChangeKanban = (id: number, _fromStatus: string, toStatus: string): void => {
+    const now = new Date().toISOString();
     setLeads(prev => prev.map(l => 
-      l.id === id ? { ...l, status: toStatus as Lead['status'] } : l
+      l.id === id ? { 
+        ...l, 
+        status: toStatus as Lead['status'],
+        status_display: getStatusDisplay(toStatus as Lead['status']),
+        atualizado_em: now,
+        contatado_em: toStatus === 'contato' && !l.contatado_em ? now : l.contatado_em,
+        convertido_em: toStatus === 'conversao' ? now : l.convertido_em,
+      } : l
     ));
     toast.success('✅ Lead movido com sucesso!');
   };
 
   const handleExport = (): void => {
-    // Simular exportação
     const csv = convertToCSV(filteredLeads);
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -392,6 +463,17 @@ export default function LeadsPage() {
     return map[origem];
   };
 
+  const getStatusDisplay = (status: Lead['status']): string => {
+    const map: Record<Lead['status'], string> = {
+      novo: 'Novo',
+      contato: 'Em Contato',
+      qualificado: 'Qualificado',
+      conversao: 'Convertido',
+      perdido: 'Perdido',
+    };
+    return map[status];
+  };
+
   const convertToCSV = (data: Lead[]): string => {
     const headers = ['ID', 'Nome', 'Email', 'Telefone', 'Status', 'Origem', 'Criado Em'];
     const rows = data.map(l => [
@@ -399,7 +481,7 @@ export default function LeadsPage() {
       l.nome,
       l.email,
       l.telefone,
-      l.status,
+      l.status_display,
       l.origem_display,
       new Date(l.criado_em).toLocaleDateString('pt-BR'),
     ]);
