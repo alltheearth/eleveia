@@ -1,33 +1,42 @@
 // src/services/campaignsApi.ts
-// 🔌 EXEMPLO DE INTEGRAÇÃO COM BACKEND - RTK Query
 
-import { apiSlice } from './apiSlice';
-import type { 
-  Campaign, 
+import { apiSlice } from '../apiSlice'
+import type {
+  Campaign,
   CampaignFormData,
   CampaignAnalytics,
+  MessageTemplate,
+  AudienceFilter,
+  CampaignStatus,
+  CampaignType,
 } from '../../types/campaigns/campaign.types';
-import type { MessageTemplate } from '../../types/campaigns/message.types';
-import type { AudienceFilter } from '../../types/campaigns/audience.types';
 
-// ============================================
-// INTERFACES DE QUERY PARAMS
-// ============================================
+// ============================================================================
+// TYPES PARA QUERIES
+// ============================================================================
 
 interface GetCampaignsParams {
-  status?: string;
-  type?: string;
+  status?: CampaignStatus;
+  type?: CampaignType;
   search?: string;
   page?: number;
   page_size?: number;
+  ordering?: string;
 }
 
-interface PreviewAudienceParams {
+interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+interface AudiencePreviewRequest {
   filters: AudienceFilter[];
   school: number;
 }
 
-interface PreviewAudienceResponse {
+interface AudiencePreviewResponse {
   count: number;
   sample_contacts: Array<{
     id: number;
@@ -37,43 +46,79 @@ interface PreviewAudienceResponse {
   }>;
 }
 
-// ============================================
-// API ENDPOINTS
-// ============================================
+// ============================================================================
+// CAMPAIGNS API
+// ============================================================================
 
 export const campaignsApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     
-    // ============================================
-    // CAMPANHAS CRUD
-    // ============================================
+    // ========================================================================
+    // CAMPAIGNS CRUD
+    // ========================================================================
     
-    getCampaigns: builder.query<{ results: Campaign[] }, GetCampaignsParams>({
-      query: (params) => ({
+    /**
+     * Buscar campanhas com filtros e paginação
+     */
+    getCampaigns: builder.query<PaginatedResponse<Campaign>, GetCampaignsParams | void>({
+      query: (params = {}) => ({
         url: '/campaigns/',
         params,
       }),
-      providesTags: ['Campaigns'],
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.results.map(({ id }) => ({ type: 'Campaigns' as const, id })),
+              { type: 'Campaigns', id: 'LIST' },
+            ]
+          : [{ type: 'Campaigns', id: 'LIST' }],
+      // Configuração de cache
+      keepUnusedDataFor: 60, // 60 segundos
     }),
     
+    /**
+     * Buscar campanha específica por ID
+     */
     getCampaign: builder.query<Campaign, number>({
       query: (id) => `/campaigns/${id}/`,
       providesTags: (result, error, id) => [{ type: 'Campaigns', id }],
     }),
     
+    /**
+     * Criar nova campanha
+     */
     createCampaign: builder.mutation<Campaign, CampaignFormData>({
       query: (data) => ({
         url: '/campaigns/',
         method: 'POST',
         body: data,
       }),
-      invalidatesTags: ['Campaigns'],
+      invalidatesTags: [{ type: 'Campaigns', id: 'LIST' }],
+      // Optimistic update
+      async onQueryStarted(data, { dispatch, queryFulfilled }) {
+        try {
+          const { data: newCampaign } = await queryFulfilled;
+          
+          // Atualiza cache da lista
+          dispatch(
+            campaignsApi.util.updateQueryData('getCampaigns', undefined, (draft) => {
+              draft.results.unshift(newCampaign);
+              draft.count += 1;
+            })
+          );
+        } catch {
+          // Erro já tratado pelo RTK Query
+        }
+      },
     }),
     
-    updateCampaign: builder.mutation<Campaign, { 
-      id: number; 
-      data: Partial<CampaignFormData> 
-    }>({
+    /**
+     * Atualizar campanha existente
+     */
+    updateCampaign: builder.mutation<
+      Campaign,
+      { id: number; data: Partial<CampaignFormData> }
+    >({
       query: ({ id, data }) => ({
         url: `/campaigns/${id}/`,
         method: 'PATCH',
@@ -81,22 +126,63 @@ export const campaignsApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: 'Campaigns', id },
-        'Campaigns',
+        { type: 'Campaigns', id: 'LIST' },
       ],
+      // Optimistic update
+      async onQueryStarted({ id, data }, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          campaignsApi.util.updateQueryData('getCampaign', id, (draft) => {
+            Object.assign(draft, data);
+          })
+        );
+        
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
     }),
     
+    /**
+     * Deletar campanha
+     */
     deleteCampaign: builder.mutation<void, number>({
       query: (id) => ({
         url: `/campaigns/${id}/`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Campaigns'],
+      invalidatesTags: (result, error, id) => [
+        { type: 'Campaigns', id },
+        { type: 'Campaigns', id: 'LIST' },
+      ],
+      // Optimistic update
+      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          campaignsApi.util.updateQueryData('getCampaigns', undefined, (draft) => {
+            const index = draft.results.findIndex((c) => c.id === id);
+            if (index !== -1) {
+              draft.results.splice(index, 1);
+              draft.count -= 1;
+            }
+          })
+        );
+        
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
     }),
     
-    // ============================================
-    // AÇÕES DE CAMPANHA
-    // ============================================
+    // ========================================================================
+    // CAMPAIGN ACTIONS
+    // ========================================================================
     
+    /**
+     * Enviar campanha
+     */
     sendCampaign: builder.mutation<Campaign, number>({
       query: (id) => ({
         url: `/campaigns/${id}/send/`,
@@ -104,30 +190,64 @@ export const campaignsApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (result, error, id) => [
         { type: 'Campaigns', id },
-        'Campaigns',
+        { type: 'Campaigns', id: 'LIST' },
+        { type: 'CampaignAnalytics', id },
       ],
     }),
     
+    /**
+     * Pausar campanha
+     */
     pauseCampaign: builder.mutation<Campaign, number>({
       query: (id) => ({
         url: `/campaigns/${id}/pause/`,
         method: 'POST',
       }),
-      invalidatesTags: (result, error, id) => [
-        { type: 'Campaigns', id },
-      ],
+      invalidatesTags: (result, error, id) => [{ type: 'Campaigns', id }],
+      // Optimistic update
+      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          campaignsApi.util.updateQueryData('getCampaign', id, (draft) => {
+            draft.status = 'paused';
+          })
+        );
+        
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
     }),
     
+    /**
+     * Retomar campanha
+     */
     resumeCampaign: builder.mutation<Campaign, number>({
       query: (id) => ({
         url: `/campaigns/${id}/resume/`,
         method: 'POST',
       }),
-      invalidatesTags: (result, error, id) => [
-        { type: 'Campaigns', id },
-      ],
+      invalidatesTags: (result, error, id) => [{ type: 'Campaigns', id }],
+      // Optimistic update
+      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          campaignsApi.util.updateQueryData('getCampaign', id, (draft) => {
+            draft.status = 'sending';
+          })
+        );
+        
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
     }),
     
+    /**
+     * Cancelar campanha
+     */
     cancelCampaign: builder.mutation<Campaign, number>({
       query: (id) => ({
         url: `/campaigns/${id}/cancel/`,
@@ -135,26 +255,58 @@ export const campaignsApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (result, error, id) => [
         { type: 'Campaigns', id },
-        'Campaigns',
+        { type: 'Campaigns', id: 'LIST' },
       ],
     }),
     
-    // ============================================
-    // ANALYTICS
-    // ============================================
+    /**
+     * Duplicar campanha
+     */
+    duplicateCampaign: builder.mutation<Campaign, number>({
+      query: (id) => ({
+        url: `/campaigns/${id}/duplicate/`,
+        method: 'POST',
+      }),
+      invalidatesTags: [{ type: 'Campaigns', id: 'LIST' }],
+    }),
     
+    // ========================================================================
+    // ANALYTICS
+    // ========================================================================
+    
+    /**
+     * Buscar analytics da campanha
+     */
     getCampaignAnalytics: builder.query<CampaignAnalytics, number>({
       query: (id) => `/campaigns/${id}/analytics/`,
-      providesTags: (result, error, id) => [
-        { type: 'CampaignAnalytics', id }
-      ],
+      providesTags: (result, error, id) => [{ type: 'CampaignAnalytics', id }],
+      // Polling automático para campanhas em andamento
+      // pollingInterval: 30000, // 30 segundos
     }),
     
-    // ============================================
-    // PREVIEW DE AUDIÊNCIA
-    // ============================================
+    /**
+     * Exportar relatório de analytics
+     */
+    exportCampaignReport: builder.mutation<Blob, {
+      id: number;
+      format: 'pdf' | 'csv' | 'xlsx';
+    }>({
+      query: ({ id, format }) => ({
+        url: `/campaigns/${id}/export/`,
+        method: 'POST',
+        body: { format },
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
     
-    previewAudience: builder.mutation<PreviewAudienceResponse, PreviewAudienceParams>({
+    // ========================================================================
+    // AUDIENCE
+    // ========================================================================
+    
+    /**
+     * Preview da audiência baseado nos filtros
+     */
+    previewAudience: builder.mutation<AudiencePreviewResponse, AudiencePreviewRequest>({
       query: (data) => ({
         url: '/campaigns/preview-audience/',
         method: 'POST',
@@ -162,39 +314,81 @@ export const campaignsApi = apiSlice.injectEndpoints({
       }),
     }),
     
-    // ============================================
-    // TEMPLATES
-    // ============================================
+    /**
+     * Salvar segmento de audiência
+     */
+    saveAudienceSegment: builder.mutation<
+      { id: number; name: string; filters: AudienceFilter[] },
+      { name: string; filters: AudienceFilter[] }
+    >({
+      query: (data) => ({
+        url: '/audience-segments/',
+        method: 'POST',
+        body: data,
+      }),
+    }),
     
-    getTemplates: builder.query<{ results: MessageTemplate[] }, {
-      type?: string;
-      search?: string;
-    }>({
-      query: (params) => ({
+    /**
+     * Buscar segmentos salvos
+     */
+    getAudienceSegments: builder.query<
+      Array<{ id: number; name: string; filters: AudienceFilter[]; count: number }>,
+      void
+    >({
+      query: () => '/audience-segments/',
+    }),
+    
+    // ========================================================================
+    // TEMPLATES
+    // ========================================================================
+    
+    /**
+     * Buscar templates de mensagem
+     */
+    getTemplates: builder.query<
+      PaginatedResponse<MessageTemplate>,
+      { type?: string; search?: string } | void
+    >({
+      query: (params = {}) => ({
         url: '/campaign-templates/',
         params,
       }),
-      providesTags: ['Templates'],
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.results.map(({ id }) => ({ type: 'Templates' as const, id })),
+              { type: 'Templates', id: 'LIST' },
+            ]
+          : [{ type: 'Templates', id: 'LIST' }],
     }),
     
+    /**
+     * Buscar template específico
+     */
     getTemplate: builder.query<MessageTemplate, number>({
       query: (id) => `/campaign-templates/${id}/`,
       providesTags: (result, error, id) => [{ type: 'Templates', id }],
     }),
     
+    /**
+     * Criar template
+     */
     createTemplate: builder.mutation<MessageTemplate, Partial<MessageTemplate>>({
       query: (data) => ({
         url: '/campaign-templates/',
         method: 'POST',
         body: data,
       }),
-      invalidatesTags: ['Templates'],
+      invalidatesTags: [{ type: 'Templates', id: 'LIST' }],
     }),
     
-    updateTemplate: builder.mutation<MessageTemplate, {
-      id: number;
-      data: Partial<MessageTemplate>;
-    }>({
+    /**
+     * Atualizar template
+     */
+    updateTemplate: builder.mutation<
+      MessageTemplate,
+      { id: number; data: Partial<MessageTemplate> }
+    >({
       query: ({ id, data }) => ({
         url: `/campaign-templates/${id}/`,
         method: 'PATCH',
@@ -202,44 +396,76 @@ export const campaignsApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: 'Templates', id },
-        'Templates',
+        { type: 'Templates', id: 'LIST' },
       ],
     }),
     
+    /**
+     * Deletar template
+     */
     deleteTemplate: builder.mutation<void, number>({
       query: (id) => ({
         url: `/campaign-templates/${id}/`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Templates'],
+      invalidatesTags: (result, error, id) => [
+        { type: 'Templates', id },
+        { type: 'Templates', id: 'LIST' },
+      ],
+    }),
+    
+    // ========================================================================
+    // STATISTICS
+    // ========================================================================
+    
+    /**
+     * Buscar estatísticas gerais de campanhas
+     */
+    getCampaignStats: builder.query<{
+      total: number;
+      draft: number;
+      scheduled: number;
+      sending: number;
+      completed: number;
+      avg_delivery_rate: number;
+      avg_open_rate: number;
+      avg_conversion_rate: number;
+      sent_today: number;
+    }, void>({
+      query: () => '/campaigns/stats/',
+      providesTags: ['Campaigns'],
     }),
     
   }),
 });
 
-// ============================================
-// EXPORTS DOS HOOKS
-// ============================================
+// ============================================================================
+// EXPORT HOOKS
+// ============================================================================
 
 export const {
-  // Campanhas
+  // Campaigns CRUD
   useGetCampaignsQuery,
   useGetCampaignQuery,
   useCreateCampaignMutation,
   useUpdateCampaignMutation,
   useDeleteCampaignMutation,
   
-  // Ações
+  // Campaign Actions
   useSendCampaignMutation,
   usePauseCampaignMutation,
   useResumeCampaignMutation,
   useCancelCampaignMutation,
+  useDuplicateCampaignMutation,
   
   // Analytics
   useGetCampaignAnalyticsQuery,
+  useExportCampaignReportMutation,
   
-  // Audiência
+  // Audience
   usePreviewAudienceMutation,
+  useSaveAudienceSegmentMutation,
+  useGetAudienceSegmentsQuery,
   
   // Templates
   useGetTemplatesQuery,
@@ -247,4 +473,7 @@ export const {
   useCreateTemplateMutation,
   useUpdateTemplateMutation,
   useDeleteTemplateMutation,
+  
+  // Statistics
+  useGetCampaignStatsQuery,
 } = campaignsApi;
