@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import CampaignCard from './CampaignCard';
-import type { Campaign, CampaignStatus } from '../../types/campaign.types';
+import type { Campaign, CampaignStatus } from '../../../types/campaigns/campaign.types';
 
 interface CampaignKanbanViewProps {
   campaigns: Campaign[];

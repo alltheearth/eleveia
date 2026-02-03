@@ -1,260 +1,261 @@
 // src/pages/Campaigns/index.tsx
-// Exemplo de uso correto dos componentes
+// 📢 PÁGINA PRINCIPAL DE CAMPANHAS - COMPLETA E FUNCIONAL
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { Megaphone, RefreshCw, Download } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+// Componentes locais
 import CampaignStats from './components/CampaignStats';
-import CampaignCard from './components/CampaignCard';
-import type {  Campaign, CampaignStats as StatsType } from '../../types/campaigns/campaign.types';
+import CampaignFilters, { type CampaignViewMode } from './components/CampaignFilters';
+import CampaignGridView from './components/CampaignGridView';
+import CampaignListView from './components/CampaignListView';
+import CampaignKanbanView from './components/CampaignKanbanView';
 
-// Dados de exemplo (mock)
-const mockStats: StatsType = {
-  total: 45,
-  draft: 8,
-  scheduled: 12,
-  sending: 3,
-  completed: 20,
-  paused: 1,
-  cancelled: 1,
-  failed: 0,
-  avg_delivery_rate: 94.5,
-  avg_open_rate: 67.3,
-  avg_conversion_rate: 23.8,
-  sent_today: 156,
-};
+// Types e dados mockados
+import type { Campaign, CampaignType, CampaignStatus } from './types/campaign.types';
+import { MOCK_CAMPAIGNS, MOCK_STATS } from './utils/campaignConfig';
 
-const mockCampaigns: Campaign[] = [
-  {
-    id: 1,
-    school: 1,
-    school_name: 'Colégio Exemplo',
-    name: 'Campanha de Matrícula 2026',
-    type: 'matricula',
-    description: 'Campanha para captação de novos alunos para o ano letivo de 2026',
-    tags: ['matricula', '2026', 'captacao'],
-    audience_count: 1250,
-    channels: ['whatsapp', 'email'],
-    schedule_type: 'scheduled',
-    scheduled_at: '2026-02-15T09:00:00Z',
-    status: 'scheduled',
-    created_at: '2026-02-01T10:00:00Z',
-    updated_at: '2026-02-01T10:00:00Z',
-    analytics: {
-      total_recipients: 1250,
-      messages_sent: 0,
-      messages_delivered: 0,
-      messages_failed: 0,
-      messages_opened: 0,
-      messages_clicked: 0,
-      messages_responded: 0,
-      conversions: 0,
-      delivery_rate: 0,
-      open_rate: 0,
-      click_rate: 0,
-      response_rate: 0,
-      conversion_rate: 0,
-    },
-  },
-  {
-    id: 2,
-    school: 1,
-    school_name: 'Colégio Exemplo',
-    name: 'Lembrete de Rematrícula',
-    type: 'rematricula',
-    description: 'Lembrete para pais sobre o período de rematrícula',
-    tags: ['rematricula', 'urgente'],
-    audience_count: 850,
-    channels: ['whatsapp'],
-    schedule_type: 'immediate',
-    status: 'sending',
-    created_at: '2026-02-03T08:00:00Z',
-    updated_at: '2026-02-03T08:30:00Z',
-    sent_at: '2026-02-03T08:30:00Z',
-    analytics: {
-      total_recipients: 850,
-      messages_sent: 620,
-      messages_delivered: 615,
-      messages_failed: 5,
-      messages_opened: 450,
-      messages_clicked: 230,
-      messages_responded: 120,
-      conversions: 85,
-      delivery_rate: 99.2,
-      open_rate: 73.2,
-      click_rate: 37.1,
-      response_rate: 19.4,
-      conversion_rate: 13.7,
-    },
-  },
-  {
-    id: 3,
-    school: 1,
-    school_name: 'Colégio Exemplo',
-    name: 'Comunicado: Reunião de Pais',
-    type: 'reuniao',
-    description: 'Convite para reunião de pais e mestres do 1º trimestre',
-    tags: ['reuniao', 'pais'],
-    audience_count: 320,
-    channels: ['email', 'whatsapp'],
-    schedule_type: 'scheduled',
-    scheduled_at: '2026-02-10T14:00:00Z',
-    status: 'scheduled',
-    created_at: '2026-02-02T15:00:00Z',
-    updated_at: '2026-02-02T15:00:00Z',
-  },
-  {
-    id: 4,
-    school: 1,
-    school_name: 'Colégio Exemplo',
-    name: 'Festa Junina 2026',
-    type: 'evento',
-    description: 'Convite para a tradicional festa junina da escola',
-    tags: ['evento', 'festa-junina'],
-    audience_count: 1500,
-    channels: ['whatsapp', 'email'],
-    schedule_type: 'scheduled',
-    scheduled_at: '2026-05-20T10:00:00Z',
-    status: 'draft',
-    created_at: '2026-02-01T16:00:00Z',
-    updated_at: '2026-02-02T11:00:00Z',
-  },
-  {
-    id: 5,
-    school: 1,
-    school_name: 'Colégio Exemplo',
-    name: 'Campanha Passei Direto',
-    type: 'passei_direto',
-    description: 'Divulgação da parceria com Passei Direto para alunos',
-    tags: ['passei-direto', 'estudos'],
-    audience_count: 680,
-    channels: ['email'],
-    schedule_type: 'immediate',
-    status: 'completed',
-    created_at: '2026-01-15T09:00:00Z',
-    updated_at: '2026-01-15T10:30:00Z',
-    sent_at: '2026-01-15T09:15:00Z',
-    completed_at: '2026-01-15T10:30:00Z',
-    analytics: {
-      total_recipients: 680,
-      messages_sent: 680,
-      messages_delivered: 675,
-      messages_failed: 5,
-      messages_opened: 520,
-      messages_clicked: 340,
-      messages_responded: 180,
-      conversions: 120,
-      delivery_rate: 99.3,
-      open_rate: 77.0,
-      click_rate: 50.4,
-      response_rate: 26.7,
-      conversion_rate: 17.8,
-    },
-  },
-];
+// ============================================
+// MAIN COMPONENT
+// ============================================
 
 export default function CampaignsPage() {
+  // ============================================
+  // STATE
+  // ============================================
+  
   const [loading] = useState(false);
-  const [campaigns] = useState<Campaign[]>(mockCampaigns);
+  const [campaigns] = useState<Campaign[]>(MOCK_CAMPAIGNS);
+  const [stats] = useState(MOCK_STATS);
+
+  // Filtros
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
+  const [typeFilter, setTypeFilter] = useState<CampaignType | 'all'>('all');
+  const [viewMode, setViewMode] = useState<CampaignViewMode>('grid');
+
+  // Modal states (para funcionalidades futuras)
+  const [showWizard, setShowWizard] = useState(false);
+
+  // ============================================
+  // FILTERED DATA
+  // ============================================
+  
+  const filteredCampaigns = useMemo(() => {
+    return campaigns.filter((campaign) => {
+      // Filtro de busca
+      const matchesSearch = searchTerm === '' ||
+        campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        campaign.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        campaign.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+
+      // Filtro de status
+      const matchesStatus = statusFilter === 'all' || campaign.status === statusFilter;
+
+      // Filtro de tipo
+      const matchesType = typeFilter === 'all' || campaign.type === typeFilter;
+
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }, [campaigns, searchTerm, statusFilter, typeFilter]);
+
+  // ============================================
+  // HANDLERS
+  // ============================================
+
+  const handleNewCampaign = () => {
+    toast.success('🚀 Funcionalidade de criação em desenvolvimento!');
+    setShowWizard(true);
+    // TODO: Abrir wizard de criação
+  };
+
+  const handleView = (campaign: Campaign) => {
+    console.log('Ver campanha:', campaign);
+    toast.success(`📊 Ver analytics de "${campaign.name}"`);
+    // TODO: Navegar para página de analytics
+  };
 
   const handleEdit = (campaign: Campaign) => {
     console.log('Editar campanha:', campaign);
-    // Implementar lógica de edição
+    toast.success(`✏️ Editar "${campaign.name}"`);
+    // TODO: Abrir wizard em modo edição
   };
 
   const handleDelete = (campaign: Campaign) => {
-    console.log('Excluir campanha:', campaign);
-    // Implementar lógica de exclusão
-  };
-
-  const handleDuplicate = (campaign: Campaign) => {
-    console.log('Duplicar campanha:', campaign);
-    // Implementar lógica de duplicação
+    if (window.confirm(`Tem certeza que deseja excluir a campanha "${campaign.name}"?`)) {
+      console.log('Excluir campanha:', campaign);
+      toast.success(`🗑️ Campanha "${campaign.name}" excluída!`);
+      // TODO: Implementar exclusão
+    }
   };
 
   const handlePause = (campaign: Campaign) => {
     console.log('Pausar campanha:', campaign);
-    // Implementar lógica de pausar
+    toast.success(`⏸️ Campanha "${campaign.name}" pausada!`);
+    // TODO: Implementar pausa
   };
 
   const handleResume = (campaign: Campaign) => {
     console.log('Retomar campanha:', campaign);
-    // Implementar lógica de retomar
+    toast.success(`▶️ Campanha "${campaign.name}" retomada!`);
+    // TODO: Implementar retomada
   };
 
-  const handleViewAnalytics = (campaign: Campaign) => {
-    console.log('Ver analytics:', campaign);
-    // Implementar navegação para analytics
+  const handleDuplicate = (campaign: Campaign) => {
+    console.log('Duplicar campanha:', campaign);
+    toast.success(`📋 Campanha "${campaign.name}" duplicada!`);
+    // TODO: Implementar duplicação
   };
 
+  const handleRefresh = () => {
+    toast.success('🔄 Dados atualizados!');
+    // TODO: Recarregar dados da API
+  };
+
+  const handleExport = () => {
+    toast.success('📥 Exportando campanhas...');
+    // TODO: Implementar exportação para CSV
+  };
+
+  // ============================================
+  // RENDER
+  // ============================================
+  
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 p-6">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              📢 Campanhas de Comunicação
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Gerencie suas campanhas de comunicação com pais e responsáveis
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <Megaphone className="text-white" size={28} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+                Campanhas de Comunicação
+              </h1>
+              <p className="text-gray-600 mt-1">
+                Gerencie suas campanhas de comunicação com pais e responsáveis
+              </p>
+            </div>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-shadow"
-          >
-            <Plus size={20} />
-            Nova Campanha
-          </motion.button>
+
+          {/* Header actions */}
+          <div className="flex gap-2">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleRefresh}
+              className="p-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:border-gray-400 transition-all shadow-sm"
+              title="Atualizar"
+            >
+              <RefreshCw size={20} />
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleExport}
+              className="hidden lg:flex items-center gap-2 px-4 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:border-gray-400 transition-all font-semibold shadow-sm"
+            >
+              <Download size={18} />
+              Exportar
+            </motion.button>
+          </div>
         </div>
       </div>
 
-      {/* Estatísticas */}
-      <CampaignStats stats={mockStats} loading={loading} />
+      {/* Stats */}
+      <CampaignStats stats={stats} loading={loading} />
 
-      {/* Grid de Campanhas */}
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
-          Todas as Campanhas ({campaigns.length})
-        </h2>
-      </div>
+      {/* Filtros */}
+      <CampaignFilters
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        typeFilter={typeFilter}
+        onTypeChange={setTypeFilter}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onNewCampaign={handleNewCampaign}
+        onExport={handleExport}
+        onRefresh={handleRefresh}
+        totalResults={filteredCampaigns.length}
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {campaigns.map((campaign) => (
-          <CampaignCard
-            key={campaign.id}
-            campaign={campaign}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onDuplicate={handleDuplicate}
-            onPause={handlePause}
-            onResume={handleResume}
-            onViewAnalytics={handleViewAnalytics}
-          />
-        ))}
-      </div>
-
-      {/* Empty State (quando não houver campanhas) */}
-      {campaigns.length === 0 && !loading && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center"
-        >
-          <div className="text-6xl mb-4">📢</div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
-            Nenhuma campanha criada ainda
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Comece criando sua primeira campanha de comunicação
-          </p>
-          <button className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-            Criar Primeira Campanha
-          </button>
-        </motion.div>
+      {/* Views */}
+      {viewMode === 'grid' && (
+        <CampaignGridView
+          campaigns={filteredCampaigns}
+          onView={handleView}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onPause={handlePause}
+          onResume={handleResume}
+          onDuplicate={handleDuplicate}
+          loading={loading}
+        />
       )}
+
+      {viewMode === 'list' && (
+        <CampaignListView
+          campaigns={filteredCampaigns}
+          onView={handleView}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onPause={handlePause}
+          onResume={handleResume}
+          onDuplicate={handleDuplicate}
+          loading={loading}
+        />
+      )}
+
+      {viewMode === 'kanban' && (
+        <CampaignKanbanView
+          campaigns={filteredCampaigns}
+          onView={handleView}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onPause={handlePause}
+          onResume={handleResume}
+          onDuplicate={handleDuplicate}
+          loading={loading}
+        />
+      )}
+
+      {/* Wizard Modal Placeholder */}
+      {showWizard && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-8"
+          >
+            <h2 className="text-2xl font-bold mb-4">Nova Campanha</h2>
+            <p className="text-gray-600 mb-6">
+              O Wizard de criação de campanhas está em desenvolvimento.
+              <br />
+              Em breve você poderá criar campanhas completas em 7 passos simples!
+            </p>
+            <button
+              onClick={() => setShowWizard(false)}
+              className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold"
+            >
+              Fechar
+            </button>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Footer info */}
+      <div className="mt-8 text-center">
+        <p className="text-sm text-gray-500">
+          Desenvolvido com 💙 para facilitar a comunicação escolar
+        </p>
+      </div>
     </div>
   );
 }

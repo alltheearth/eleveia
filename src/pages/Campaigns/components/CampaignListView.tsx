@@ -1,23 +1,34 @@
 // src/pages/Campaigns/components/CampaignListView.tsx
+// 📋 VISUALIZAÇÃO EM LISTA
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  MoreVertical, 
-  Eye, 
-  Edit, 
-  Trash2, 
-  Pause, 
-  Play,
-  Copy,
-  Calendar,
-  Users,
-  Inbox
-} from 'lucide-react';
 import { useState } from 'react';
-import {  format } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import type { Campaign } from '../../../types/campaigns/campaign.types';
-import { CAMPAIGN_TYPE_CONFIG, CAMPAIGN_STATUS_CONFIG, CHANNEL_CONFIG } from '../config/campaign.config';
+import {
+  List,
+  MoreVertical,
+  Eye,
+  Edit2,
+  Trash2,
+  Copy,
+  Play,
+  Pause,
+  Users,
+  TrendingUp,
+} from 'lucide-react';
+
+import {
+  CAMPAIGN_TYPE_CONFIG,
+  CAMPAIGN_STATUS_CONFIG,
+  CHANNEL_CONFIG,
+} from '../utils/campaignConfig';
+
+import type { Campaign } from '../types/campaign.types';
+
+// ============================================
+// TYPES
+// ============================================
 
 interface CampaignListViewProps {
   campaigns: Campaign[];
@@ -27,6 +38,7 @@ interface CampaignListViewProps {
   onPause?: (campaign: Campaign) => void;
   onResume?: (campaign: Campaign) => void;
   onDuplicate?: (campaign: Campaign) => void;
+  loading?: boolean;
 }
 
 function CampaignRow({
@@ -50,6 +62,9 @@ function CampaignRow({
   
   const typeConfig = CAMPAIGN_TYPE_CONFIG[campaign.type];
   const statusConfig = CAMPAIGN_STATUS_CONFIG[campaign.status];
+
+  const canBePaused = ['sending', 'scheduled'].includes(campaign.status);
+  const canBeResumed = campaign.status === 'paused';
 
   return (
     <motion.tr
@@ -114,7 +129,7 @@ function CampaignRow({
       {/* Performance */}
       <td className="px-6 py-4">
         {campaign.analytics && campaign.analytics.messages_sent > 0 ? (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <div className="text-center">
               <p className="text-sm font-bold text-gray-900">
                 {campaign.analytics.delivery_rate.toFixed(0)}%
@@ -135,21 +150,23 @@ function CampaignRow({
             </div>
           </div>
         ) : (
-          <span className="text-sm text-gray-400">—</span>
+          <span className="text-xs text-gray-400">Sem dados</span>
         )}
       </td>
 
       {/* Data */}
       <td className="px-6 py-4">
-        <div className="flex items-center gap-2">
-          <Calendar className="text-gray-400" size={16} />
-          <span className="text-sm text-gray-900">
+        <div>
+          <p className="text-sm font-semibold text-gray-900">
             {format(
               new Date(campaign.scheduled_at || campaign.created_at),
-              'dd/MM/yy',
+              'dd/MM/yyyy',
               { locale: ptBR }
             )}
-          </span>
+          </p>
+          <p className="text-xs text-gray-500">
+            {campaign.scheduled_at ? 'Agendado' : 'Criado'}
+          </p>
         </div>
       </td>
 
@@ -158,9 +175,9 @@ function CampaignRow({
         <div className="relative">
           <button
             onClick={() => setShowActions(!showActions)}
-            className="w-8 h-8 flex items-center justify-center hover:bg-gray-200 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <MoreVertical className="text-gray-600" size={18} />
+            <MoreVertical size={18} className="text-gray-600" />
           </button>
 
           {showActions && (
@@ -191,7 +208,7 @@ function CampaignRow({
                   }}
                   className="w-full px-4 py-2 flex items-center gap-3 hover:bg-gray-50 text-gray-700 text-sm font-medium"
                 >
-                  <Edit size={16} />
+                  <Edit2 size={16} />
                   Editar
                 </button>
                 <button
@@ -204,41 +221,40 @@ function CampaignRow({
                   <Copy size={16} />
                   Duplicar
                 </button>
-                
-                {campaign.status === 'sending' && (
+
+                {canBePaused && (
                   <button
                     onClick={() => {
                       onPause?.(campaign);
                       setShowActions(false);
                     }}
-                    className="w-full px-4 py-2 flex items-center gap-3 hover:bg-orange-50 text-orange-600 text-sm font-medium"
+                    className="w-full px-4 py-2 flex items-center gap-3 hover:bg-orange-50 text-orange-700 text-sm font-medium"
                   >
                     <Pause size={16} />
                     Pausar
                   </button>
                 )}
 
-                {campaign.status === 'paused' && (
+                {canBeResumed && (
                   <button
                     onClick={() => {
                       onResume?.(campaign);
                       setShowActions(false);
                     }}
-                    className="w-full px-4 py-2 flex items-center gap-3 hover:bg-green-50 text-green-600 text-sm font-medium"
+                    className="w-full px-4 py-2 flex items-center gap-3 hover:bg-green-50 text-green-700 text-sm font-medium"
                   >
                     <Play size={16} />
                     Retomar
                   </button>
                 )}
 
-                <div className="my-2 border-t border-gray-200" />
-                
+                <div className="border-t border-gray-200 my-2" />
                 <button
                   onClick={() => {
                     onDelete?.(campaign);
                     setShowActions(false);
                   }}
-                  className="w-full px-4 py-2 flex items-center gap-3 hover:bg-red-50 text-red-600 text-sm font-medium"
+                  className="w-full px-4 py-2 flex items-center gap-3 hover:bg-red-50 text-red-700 text-sm font-medium"
                 >
                   <Trash2 size={16} />
                   Excluir
@@ -252,6 +268,10 @@ function CampaignRow({
   );
 }
 
+// ============================================
+// MAIN COMPONENT
+// ============================================
+
 export default function CampaignListView({
   campaigns,
   onView,
@@ -260,61 +280,142 @@ export default function CampaignListView({
   onPause,
   onResume,
   onDuplicate,
+  loading = false,
 }: CampaignListViewProps) {
+  
+  // ============================================
+  // LOADING STATE
+  // ============================================
+  
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                Campanha
+              </th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                Canais
+              </th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                Público
+              </th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                Performance
+              </th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                Data
+              </th>
+              <th className="px-6 py-4"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...Array(5)].map((_, i) => (
+              <tr key={i} className="border-b border-gray-100 animate-pulse">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-200 rounded-xl" />
+                    <div className="space-y-2">
+                      <div className="h-4 bg-gray-200 rounded w-40" />
+                      <div className="h-3 bg-gray-200 rounded w-24" />
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="h-6 bg-gray-200 rounded-full w-24" />
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex gap-2">
+                    <div className="h-6 w-8 bg-gray-200 rounded" />
+                    <div className="h-6 w-8 bg-gray-200 rounded" />
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="h-4 bg-gray-200 rounded w-16" />
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex gap-4">
+                    <div className="h-8 bg-gray-200 rounded w-12" />
+                    <div className="h-8 bg-gray-200 rounded w-12" />
+                    <div className="h-8 bg-gray-200 rounded w-12" />
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="h-4 bg-gray-200 rounded w-20" />
+                </td>
+                <td className="px-6 py-4">
+                  <div className="h-8 w-8 bg-gray-200 rounded-lg" />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  // ============================================
+  // EMPTY STATE
+  // ============================================
+  
   if (campaigns.length === 0) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-300"
       >
-        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Inbox className="text-gray-400" size={40} />
+        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <List className="h-10 w-10 text-gray-400" />
         </div>
         <h3 className="text-xl font-bold text-gray-900 mb-2">
           Nenhuma campanha encontrada
         </h3>
-        <p className="text-gray-600 mb-6">
-          Não há campanhas que correspondam aos seus filtros atuais.
+        <p className="text-gray-600 text-center max-w-md mb-6">
+          Não há campanhas cadastradas ou nenhuma campanha corresponde aos filtros selecionados.
         </p>
-        <button className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors">
-          Criar Nova Campanha
-        </button>
       </motion.div>
     );
   }
 
+  // ============================================
+  // MAIN RENDER
+  // ============================================
+  
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                 Campanha
               </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                 Canais
               </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                 Público
               </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                 Performance
               </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                 Data
               </th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                Ações
-              </th>
+              <th className="px-6 py-4"></th>
             </tr>
           </thead>
           <tbody>
-            <AnimatePresence mode="popLayout">
+            <AnimatePresence>
               {campaigns.map((campaign) => (
                 <CampaignRow
                   key={campaign.id}

@@ -1,9 +1,10 @@
 // src/pages/Campaigns/components/CampaignStats.tsx
+// 📊 ESTATÍSTICAS DE CAMPANHAS
 
 import { motion } from 'framer-motion';
-import { 
-  Send, 
-  CheckCircle2, 
+import {
+  Send,
+  CheckCircle2,
   XCircle,
   TrendingUp,
   ArrowUpRight,
@@ -11,12 +12,18 @@ import {
   Eye,
   MousePointerClick,
   Clock,
-  Pause
+  Pause,
+  FileEdit,
 } from 'lucide-react';
-import type { CampaignStats as CampaignStatsType } from '../../../types/campaigns/campaign.types';
+
+import type { CampaignStats } from '../types/campaign.types';
+
+// ============================================
+// TYPES
+// ============================================
 
 interface CampaignStatsProps {
-  stats: CampaignStatsType;
+  stats: CampaignStats;
   loading?: boolean;
 }
 
@@ -29,6 +36,10 @@ interface StatCardProps {
   subtitle?: string;
   percentage?: boolean;
 }
+
+// ============================================
+// COLOR CONFIG
+// ============================================
 
 const colorConfigs = {
   blue: {
@@ -67,6 +78,10 @@ const colorConfigs = {
     text: 'text-gray-600',
   },
 };
+
+// ============================================
+// STAT CARD
+// ============================================
 
 function StatCard({
   label,
@@ -126,24 +141,25 @@ function StatCard({
   );
 }
 
-function SkeletonCard() {
-  return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-pulse">
-      <div className="bg-gray-200 h-24" />
-      <div className="p-5 space-y-3">
-        <div className="h-3 bg-gray-200 rounded w-20" />
-        <div className="h-8 bg-gray-200 rounded w-16" />
-      </div>
-    </div>
-  );
-}
+// ============================================
+// MAIN COMPONENT
+// ============================================
 
 export default function CampaignStats({ stats, loading = false }: CampaignStatsProps) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         {[...Array(8)].map((_, i) => (
-          <SkeletonCard key={i} />
+          <div
+            key={i}
+            className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-pulse"
+          >
+            <div className="bg-gray-200 h-24" />
+            <div className="p-5 space-y-3">
+              <div className="h-3 bg-gray-200 rounded w-20" />
+              <div className="h-8 bg-gray-200 rounded w-16" />
+            </div>
+          </div>
         ))}
       </div>
     );
@@ -151,11 +167,11 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
 
   return (
     <div className="space-y-6 mb-6">
-      {/* Stats principais */}
+      {/* Stats principais - Linha 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           label="Total de Campanhas"
-          value={stats.total || 0}
+          value={stats.total}
           icon={<Send className="text-blue-600" size={24} />}
           color="blue"
           subtitle="Criadas no sistema"
@@ -163,7 +179,7 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
 
         <StatCard
           label="Concluídas"
-          value={stats.completed || 0}
+          value={stats.completed}
           change={12}
           icon={<CheckCircle2 className="text-green-600" size={24} />}
           color="green"
@@ -172,7 +188,7 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
 
         <StatCard
           label="Em Andamento"
-          value={stats.sending || 0}
+          value={stats.sending}
           icon={<TrendingUp className="text-orange-600" size={24} />}
           color="orange"
           subtitle="Sendo enviadas agora"
@@ -180,51 +196,50 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
 
         <StatCard
           label="Agendadas"
-          value={stats.scheduled || 0}
+          value={stats.scheduled}
           icon={<Clock className="text-purple-600" size={24} />}
           color="purple"
           subtitle="Aguardando envio"
         />
       </div>
 
-      {/* Stats secundárias */}
+      {/* Stats secundárias - Linha 2 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           label="Rascunhos"
-          value={stats.draft || 0}
-          icon={<Send className="text-gray-600" size={24} />}
+          value={stats.draft}
+          icon={<FileEdit className="text-gray-600" size={24} />}
           color="gray"
-          subtitle="Em criação"
+          subtitle="Em edição"
         />
 
         <StatCard
           label="Pausadas"
-          value={stats.paused || 0}
+          value={stats.paused}
           icon={<Pause className="text-yellow-600" size={24} />}
           color="yellow"
-          subtitle="Temporariamente pausadas"
+          subtitle="Temporariamente suspensas"
         />
 
         <StatCard
           label="Canceladas"
-          value={stats.cancelled || 0}
+          value={stats.cancelled}
           icon={<XCircle className="text-red-600" size={24} />}
           color="red"
-          subtitle="Canceladas pelo usuário"
+          subtitle="Não enviadas"
         />
 
         <StatCard
-          label="Enviadas Hoje"
-          value={stats.sent_today || 0}
-          change={8}
-          icon={<Send className="text-green-600" size={24} />}
-          color="green"
-          subtitle="Mensagens enviadas"
+          label="Com Erro"
+          value={stats.failed}
+          icon={<XCircle className="text-red-600" size={24} />}
+          color="red"
+          subtitle="Falharam no envio"
         />
       </div>
 
-      {/* Performance metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Performance metrics - Linha 3 */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -245,7 +260,7 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
             Taxa de Entrega Média
           </p>
           <p className="text-4xl font-bold text-gray-900 mb-1">
-            {(stats.avg_delivery_rate || 0).toFixed(1)}%
+            {stats.avg_delivery_rate.toFixed(1)}%
           </p>
           <p className="text-xs text-gray-500">
             Mensagens entregues com sucesso
@@ -254,7 +269,7 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
           <div className="mt-4 h-3 bg-gray-100 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
-              animate={{ width: `${stats.avg_delivery_rate || 0}%` }}
+              animate={{ width: `${stats.avg_delivery_rate}%` }}
               transition={{ duration: 1, ease: 'easeOut' }}
               className="h-full bg-gradient-to-r from-green-500 to-green-600"
             />
@@ -281,7 +296,7 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
             Taxa de Abertura Média
           </p>
           <p className="text-4xl font-bold text-gray-900 mb-1">
-            {(stats.avg_open_rate || 0).toFixed(1)}%
+            {stats.avg_open_rate.toFixed(1)}%
           </p>
           <p className="text-xs text-gray-500">
             Mensagens abertas pelos destinatários
@@ -290,7 +305,7 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
           <div className="mt-4 h-3 bg-gray-100 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
-              animate={{ width: `${stats.avg_open_rate || 0}%` }}
+              animate={{ width: `${stats.avg_open_rate}%` }}
               transition={{ duration: 1, ease: 'easeOut' }}
               className="h-full bg-gradient-to-r from-blue-500 to-blue-600"
             />
@@ -314,10 +329,46 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
           </div>
 
           <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">
+            Taxa de Cliques Média
+          </p>
+          <p className="text-4xl font-bold text-gray-900 mb-1">
+            {stats.avg_click_rate.toFixed(1)}%
+          </p>
+          <p className="text-xs text-gray-500">
+            Cliques em links das mensagens
+          </p>
+
+          <div className="mt-4 h-3 bg-gray-100 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${stats.avg_click_rate}%` }}
+              transition={{ duration: 1, ease: 'easeOut' }}
+              className="h-full bg-gradient-to-r from-purple-500 to-purple-600"
+            />
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+              <TrendingUp className="text-white" size={24} />
+            </div>
+            <div className="flex items-center gap-1 px-3 py-1.5 bg-orange-50 rounded-full">
+              <ArrowUpRight size={14} className="text-orange-600" />
+              <span className="text-xs font-bold text-orange-600">+12%</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">
             Taxa de Conversão Média
           </p>
           <p className="text-4xl font-bold text-gray-900 mb-1">
-            {(stats.avg_conversion_rate || 0).toFixed(1)}%
+            {stats.avg_conversion_rate.toFixed(1)}%
           </p>
           <p className="text-xs text-gray-500">
             Ações completadas com sucesso
@@ -326,9 +377,9 @@ export default function CampaignStats({ stats, loading = false }: CampaignStatsP
           <div className="mt-4 h-3 bg-gray-100 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
-              animate={{ width: `${stats.avg_conversion_rate || 0}%` }}
+              animate={{ width: `${stats.avg_conversion_rate}%` }}
               transition={{ duration: 1, ease: 'easeOut' }}
-              className="h-full bg-gradient-to-r from-purple-500 to-purple-600"
+              className="h-full bg-gradient-to-r from-orange-500 to-orange-600"
             />
           </div>
         </motion.div>
