@@ -1,19 +1,17 @@
+// EXEMPLO: LeadStats.tsx REFATORADO
 // src/pages/Leads/components/LeadStats.tsx
-// 📊 ESTATÍSTICAS VISUAIS DE LEADS - DESIGN ATUALIZADO
 
-import { motion } from 'framer-motion';
+import { StatCard } from '../../../components/common';
 import { 
   Users, 
   TrendingUp, 
-  CheckCircle2,
-  ArrowUpRight,
-  ArrowDownRight,
-  Target,
   Phone,
   UserCheck,
+  CheckCircle2,
   XCircle,
   Sparkles
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 // ============================================
 // TYPES
@@ -33,142 +31,16 @@ interface LeadStatsProps {
   loading?: boolean;
 }
 
-interface StatCardProps {
-  label: string;
-  value: number;
-  change?: number;
-  icon: React.ReactNode;
-  color: 'blue' | 'yellow' | 'purple' | 'green' | 'red';
-  subtitle?: string;
-  percentage?: number;
-}
-
 // ============================================
-// COLOR CONFIG (Seguindo padrão do projeto)
-// ============================================
-
-const colorConfigs = {
-  blue: {
-    gradient: 'from-blue-500 to-blue-600',
-    light: 'bg-blue-50',
-    text: 'text-blue-600',
-    border: 'border-blue-200',
-  },
-  yellow: {
-    gradient: 'from-yellow-500 to-yellow-600',
-    light: 'bg-yellow-50',
-    text: 'text-yellow-600',
-    border: 'border-yellow-200',
-  },
-  purple: {
-    gradient: 'from-purple-500 to-purple-600',
-    light: 'bg-purple-50',
-    text: 'text-purple-600',
-    border: 'border-purple-200',
-  },
-  green: {
-    gradient: 'from-green-500 to-green-600',
-    light: 'bg-green-50',
-    text: 'text-green-600',
-    border: 'border-green-200',
-  },
-  red: {
-    gradient: 'from-red-500 to-red-600',
-    light: 'bg-red-50',
-    text: 'text-red-600',
-    border: 'border-red-200',
-  },
-};
-
-// ============================================
-// STAT CARD COMPONENT
-// ============================================
-
-function StatCard({
-  label,
-  value,
-  change,
-  icon,
-  color,
-  subtitle,
-  percentage,
-}: StatCardProps) {
-  const config = colorConfigs[color];
-  const isPositive = change !== undefined && change >= 0;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, boxShadow: '0 12px 24px -8px rgba(0,0,0,0.1)' }}
-      transition={{ duration: 0.2 }}
-      className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
-    >
-      {/* Header com gradiente */}
-      <div className={`bg-gradient-to-r ${config.gradient} px-5 pt-5 pb-4`}>
-        <div className="flex items-start justify-between">
-          <div className={`w-12 h-12 ${config.light} rounded-xl flex items-center justify-center shadow-lg`}>
-            {icon}
-          </div>
-          
-          {change !== undefined && (
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full ${config.light}`}>
-              {isPositive ? (
-                <ArrowUpRight size={14} className={config.text} />
-              ) : (
-                <ArrowDownRight size={14} className="text-red-600" />
-              )}
-              <span className={`text-xs font-bold ${isPositive ? config.text : 'text-red-600'}`}>
-                {Math.abs(change)}%
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Conteúdo */}
-      <div className="px-5 py-4">
-        <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">
-          {label}
-        </p>
-        <p className="text-4xl font-bold text-gray-900 mb-1">
-          {value}
-        </p>
-        {subtitle && (
-          <p className="text-xs text-gray-500">{subtitle}</p>
-        )}
-        
-        {/* Barra de progresso */}
-        {percentage !== undefined && (
-          <div className="mt-3">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-gray-500">Do total</span>
-              <span className="text-xs font-bold text-gray-700">{percentage}%</span>
-            </div>
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${percentage}%` }}
-                transition={{ duration: 0.8, ease: 'easeOut' }}
-                className={`h-full bg-gradient-to-r ${config.gradient}`}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-// ============================================
-// MAIN COMPONENT
+// COMPONENT
 // ============================================
 
 export default function LeadStats({ stats, loading = false }: LeadStatsProps) {
+  
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        {[...Array(8)].map((_, i) => (
           <div
             key={i}
             className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-pulse"
@@ -184,179 +56,107 @@ export default function LeadStats({ stats, loading = false }: LeadStatsProps) {
     );
   }
 
-  // Calcular percentuais
   const totalAtivos = stats.total - stats.perdido;
-  const pctNovo = totalAtivos > 0 ? Number(((stats.novo / totalAtivos) * 100).toFixed(0)) : 0;
-  const pctContato = totalAtivos > 0 ? Number(((stats.contato / totalAtivos) * 100).toFixed(0)) : 0;
-  const pctQualificado = totalAtivos > 0 ? Number(((stats.qualificado / totalAtivos) * 100).toFixed(0)) : 0;
-  const pctConversao = totalAtivos > 0 ? Number(((stats.conversao / totalAtivos) * 100).toFixed(0)) : 0;
 
   return (
-    <div className="space-y-6">
-      {/* Stats principais - Funil */}
+    <div className="space-y-6 mb-6">
+      
+      {/* ========================================== */}
+      {/* STATS PRINCIPAIS - Linha 1 */}
+      {/* ========================================== */}
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        {/* Total de Leads */}
+        <StatCard
+          label="Total de Leads"
+          value={stats.total}
+          icon={<Users size={24} className="text-blue-600" />}
+          color="blue"
+          subtitle="Todos os leads cadastrados"
+        />
+
+        {/* Novos Leads */}
         <StatCard
           label="Novos Leads"
           value={stats.novo}
-          change={15}
-          icon={<Users className="text-blue-600" size={24} />}
-          color="blue"
-          subtitle="Aguardando primeiro contato"
-          percentage={pctNovo}
+          change={12}
+          icon={<Sparkles size={24} className="text-yellow-600" />}
+          color="yellow"
+          subtitle={`${stats.novos_hoje} novos hoje`}
         />
 
+        {/* Em Contato */}
         <StatCard
           label="Em Contato"
           value={stats.contato}
-          change={8}
-          icon={<Phone className="text-yellow-600" size={24} />}
-          color="yellow"
+          icon={<Phone size={24} className="text-purple-600" />}
+          color="purple"
           subtitle="Sendo trabalhados"
-          percentage={pctContato}
         />
 
+        {/* Qualificados */}
         <StatCard
           label="Qualificados"
           value={stats.qualificado}
-          change={12}
-          icon={<UserCheck className="text-purple-600" size={24} />}
-          color="purple"
+          change={8}
+          icon={<UserCheck size={24} className="text-orange-600" />}
+          color="orange"
           subtitle="Prontos para conversão"
-          percentage={pctQualificado}
         />
+      </div>
 
+      {/* ========================================== */}
+      {/* STATS PRINCIPAIS - Linha 2 */}
+      {/* ========================================== */}
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        {/* Convertidos */}
         <StatCard
           label="Convertidos"
           value={stats.conversao}
-          change={20}
-          icon={<CheckCircle2 className="text-green-600" size={24} />}
+          change={15}
+          icon={<CheckCircle2 size={24} className="text-green-600" />}
           color="green"
           subtitle="Matrículas confirmadas"
-          percentage={pctConversao}
+        />
+
+        {/* Taxa de Conversão */}
+        <StatCard
+          label="Taxa de Conversão"
+          value={stats.taxa_conversao}
+          percentage
+          change={3}
+          icon={<TrendingUp size={24} className="text-blue-600" />}
+          color="blue"
+          subtitle={`${stats.conversao} de ${stats.total}`}
+        />
+
+        {/* Leads Ativos */}
+        <StatCard
+          label="Leads Ativos"
+          value={totalAtivos}
+          icon={<Users size={24} className="text-purple-600" />}
+          color="purple"
+          subtitle="Em processo"
+        />
+
+        {/* Perdidos */}
+        <StatCard
+          label="Perdidos"
+          value={stats.perdido}
+          change={-5}
+          icon={<XCircle size={24} className="text-red-600" />}
+          color="red"
+          subtitle={`${((stats.perdido / stats.total) * 100).toFixed(1)}% do total`}
         />
       </div>
 
-      {/* Cards de Performance (Seguindo padrão do Dashboard) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Taxa de Conversão */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Target className="text-white" size={24} />
-            </div>
-            <div className="flex items-center gap-1 px-3 py-1.5 bg-green-50 rounded-full">
-              <ArrowUpRight size={14} className="text-green-600" />
-              <span className="text-xs font-bold text-green-600">+5%</span>
-            </div>
-          </div>
-
-          <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">
-            Taxa de Conversão
-          </p>
-          <p className="text-4xl font-bold text-gray-900 mb-1">
-            {stats.taxa_conversao}%
-          </p>
-          <p className="text-xs text-gray-500">
-            {stats.conversao} de {stats.total} leads
-          </p>
-
-          {/* Barra de progresso */}
-          <div className="mt-4 h-3 bg-gray-100 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${stats.taxa_conversao}%` }}
-              transition={{ duration: 1, ease: 'easeOut' }}
-              className="h-full bg-gradient-to-r from-green-500 to-green-600 shadow-md"
-            />
-          </div>
-        </motion.div>
-
-        {/* Novos Hoje */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Sparkles className="text-white" size={24} />
-            </div>
-            <div className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 rounded-full">
-              <ArrowUpRight size={14} className="text-blue-600" />
-              <span className="text-xs font-bold text-blue-600">+3</span>
-            </div>
-          </div>
-
-          <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">
-            Novos Hoje
-          </p>
-          <p className="text-4xl font-bold text-gray-900 mb-1">
-            {stats.novos_hoje}
-          </p>
-          <p className="text-xs text-gray-500">
-            Captados nas últimas 24h
-          </p>
-
-          {/* Mini chart visual */}
-          <div className="mt-4 flex items-end gap-1 h-12">
-            {[40, 60, 45, 80, 55, 75, 90].map((height, i) => (
-              <motion.div
-                key={i}
-                initial={{ height: 0 }}
-                animate={{ height: `${height}%` }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="flex-1 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t"
-              />
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Leads Perdidos */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
-              <XCircle className="text-white" size={24} />
-            </div>
-            <div className="flex items-center gap-1 px-3 py-1.5 bg-red-50 rounded-full">
-              <ArrowDownRight size={14} className="text-red-600" />
-              <span className="text-xs font-bold text-red-600">-2%</span>
-            </div>
-          </div>
-
-          <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">
-            Leads Perdidos
-          </p>
-          <p className="text-4xl font-bold text-gray-900 mb-1">
-            {stats.perdido}
-          </p>
-          <p className="text-xs text-gray-500">
-            {((stats.perdido / stats.total) * 100).toFixed(1)}% do total
-          </p>
-
-          {/* Indicador visual */}
-          <div className="mt-4 flex items-center justify-between text-xs">
-            <span className="text-gray-500">Meta: &lt;15%</span>
-            <span className={`font-bold ${
-              (stats.perdido / stats.total) * 100 < 15 ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {((stats.perdido / stats.total) * 100).toFixed(1)}%
-            </span>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Funil Visual (Seguindo padrão das outras páginas) */}
+      {/* ========================================== */}
+      {/* FUNIL VISUAL (Permanece específico) */}
+      {/* ========================================== */}
+      
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
