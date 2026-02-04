@@ -7,7 +7,7 @@ import { Plus, MoreVertical, Edit2, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Components
-import BoardCardComponent from '../Card/BoardCard';
+import BoardCardComponent from '../Board/BoardCard';
 
 // Types
 import type { BoardList as List, BoardCard, CardFormData } from '../../../../types/boards';
