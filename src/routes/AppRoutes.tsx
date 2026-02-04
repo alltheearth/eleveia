@@ -22,6 +22,7 @@ import BoardsPage from '../pages/Boards';
 // import BoardView from '../pages/Boards/BoardView';
 import BoardViewDnD from '../pages/Boards/BoardViewDnD';
 import CampaignsPage from '../pages/Campaigns';
+import CampaignView from '../pages/Campaigns/CampaignView';
 
 const AppRoutes = () => {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
@@ -51,6 +52,8 @@ const AppRoutes = () => {
           <Route path="/boards" element={<BoardsPage />} />
           <Route path="/boards/:id" element={<BoardViewDnD />} />
           <Route path="/campanhas" element={<CampaignsPage />} />
+          <Route path="/campanhas/:id" element={<CampaignView />} />
+          
         </Route>
       </Route>
 
