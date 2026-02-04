@@ -1,306 +1,227 @@
 // src/pages/Boards/components/Board/BoardCard.tsx
-// 🎴 COMPONENTE DE CARD - VERSÃO ULTRA-DEFENSIVA (100% À PROVA DE ERROS)
+// 🎴 CARD DE BOARD - Para listagem de boards (NÃO confundir com cards do Kanban!)
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Calendar, 
+  Star, 
+  MoreVertical, 
   Edit2, 
-  Trash2, 
-  MoreVertical,
-  Clock,
-  AlertCircle,
-  MessageSquare,
-  Paperclip,
-  CheckSquare,
+  Trash2,
+  Calendar,
+  TrendingUp,
+  Archive,
 } from 'lucide-react';
-
-// Types
-import type { BoardCard, CardPriority } from '../../../../types/boards';
+import type { Board } from '../../../../types/boards';
 
 // ============================================
-// CONFIGURAÇÃO DE PRIORIDADE LOCAL (SEMPRE DISPONÍVEL)
+// CONFIGURAÇÃO DE CORES DOS BOARDS
 // ============================================
-const PRIORITY_CONFIG_LOCAL: Record<string, { label: string; color: string; icon: string }> = {
-  low: {
-    label: 'Baixa',
-    color: 'bg-gray-100 text-gray-700',
-    icon: '⬇️',
+const BOARD_COLORS: Record<string, { bg: string; gradient: string; text: string; ring: string }> = {
+  blue: {
+    bg: 'bg-blue-500',
+    gradient: 'from-blue-500 to-blue-600',
+    text: 'text-blue-600',
+    ring: 'ring-blue-500',
   },
-  medium: {
-    label: 'Média',
-    color: 'bg-yellow-100 text-yellow-700',
-    icon: '➡️',
+  purple: {
+    bg: 'bg-purple-500',
+    gradient: 'from-purple-500 to-purple-600',
+    text: 'text-purple-600',
+    ring: 'ring-purple-500',
   },
-  high: {
-    label: 'Alta',
-    color: 'bg-red-100 text-red-700',
-    icon: '⬆️',
+  green: {
+    bg: 'bg-green-500',
+    gradient: 'from-green-500 to-green-600',
+    text: 'text-green-600',
+    ring: 'ring-green-500',
   },
-  urgent: {
-    label: 'Urgente',
-    color: 'bg-red-500 text-white',
-    icon: '🔴',
+  orange: {
+    bg: 'bg-orange-500',
+    gradient: 'from-orange-500 to-orange-600',
+    text: 'text-orange-600',
+    ring: 'ring-orange-500',
+  },
+  pink: {
+    bg: 'bg-pink-500',
+    gradient: 'from-pink-500 to-pink-600',
+    text: 'text-pink-600',
+    ring: 'ring-pink-500',
+  },
+  red: {
+    bg: 'bg-red-500',
+    gradient: 'from-red-500 to-red-600',
+    text: 'text-red-600',
+    ring: 'ring-red-500',
+  },
+  gray: {
+    bg: 'bg-gray-500',
+    gradient: 'from-gray-500 to-gray-600',
+    text: 'text-gray-600',
+    ring: 'ring-gray-500',
   },
 };
 
 // ============================================
-// FUNÇÃO 100% SEGURA PARA PEGAR PRIORITY CONFIG
+// TYPES
 // ============================================
-function getPriorityConfig(card: any): { label: string; color: string; icon: string } | null {
-  // Verificação 1: card existe?
-  if (!card) {
-    console.warn('⚠️ Card é null ou undefined');
-    return null;
-  }
-
-  // Verificação 2: card tem a propriedade priority?
-  if (!('priority' in card)) {
-    // Sem prioridade é OK, só retorna null
-    return null;
-  }
-
-  // Verificação 3: priority tem valor?
-  const priority = card.priority;
-  if (!priority || typeof priority !== 'string') {
-    // Priority vazio ou tipo errado
-    return null;
-  }
-
-  // Verificação 4: priority existe no config local?
-  if (!(priority in PRIORITY_CONFIG_LOCAL)) {
-    console.warn('⚠️ Prioridade não encontrada:', priority);
-    return null;
-  }
-
-  // Tudo OK! Retorna o config
-  return PRIORITY_CONFIG_LOCAL[priority];
-}
-
-// ============================================
-// LABEL COMPONENT
-// ============================================
-
-interface LabelProps {
-  name: string;
-}
-
-function Label({ name }: LabelProps) {
-  const colors: Record<string, string> = {
-    'Urgente': 'bg-red-500',
-    'Bug': 'bg-orange-500',
-    'Feature': 'bg-blue-500',
-    'Importante': 'bg-purple-500',
-    'Aprovado': 'bg-green-500',
-    'Em Revisão': 'bg-yellow-500',
-    'Bloqueado': 'bg-gray-500',
-    'Design': 'bg-pink-500',
-  };
-
-  const color = colors[name] || 'bg-gray-500';
-
-  return (
-    <span className={`${color} text-white text-xs px-2 py-1 rounded-md font-semibold shadow-sm`}>
-      {name}
-    </span>
-  );
+interface BoardCardProps {
+  board: Board;
+  onClick: (board: Board) => void;
+  onEdit: (board: Board) => void;
+  onDelete: (board: Board) => void;
+  onToggleStar: (board: Board) => void;
+  isStarred: boolean;
 }
 
 // ============================================
 // MAIN COMPONENT
 // ============================================
-
-interface BoardCardProps {
-  card: BoardCard;
-  onClick: () => void;
-  onUpdate: (data: Partial<BoardCard>) => void;
-  onDelete: () => void;
-}
-
-export default function BoardCardComponent({ 
-  card, 
-  onClick, 
-  onUpdate, 
-  onDelete 
+export default function BoardCard({
+  board,
+  onClick,
+  onEdit,
+  onDelete,
+  onToggleStar,
+  isStarred,
 }: BoardCardProps) {
   const [showMenu, setShowMenu] = useState(false);
 
-  // ✅ USA A FUNÇÃO SUPER SEGURA - NUNCA VAI DAR ERRO
-  const priorityConfig = getPriorityConfig(card);
+  // Pega a configuração de cor do board
+  const colorConfig = BOARD_COLORS[board.color || 'blue'];
 
+  // Formata a data de criação
   const formatDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const cardDate = new Date(dateStr);
-      cardDate.setHours(0, 0, 0, 0);
-
-      const diffTime = cardDate.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      let color = 'text-gray-600 bg-gray-100';
-      let icon = <Calendar size={12} />;
-
-      if (diffDays < 0) {
-        color = 'text-red-700 bg-red-100';
-        icon = <AlertCircle size={12} />;
-      } else if (diffDays === 0) {
-        color = 'text-orange-700 bg-orange-100';
-        icon = <Clock size={12} />;
-      } else if (diffDays <= 3) {
-        color = 'text-yellow-700 bg-yellow-100';
-        icon = <Calendar size={12} />;
-      }
-
-      return {
-        text: date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
-        color,
-        icon,
-        isOverdue: diffDays < 0,
-        isToday: diffDays === 0,
-        isSoon: diffDays > 0 && diffDays <= 3,
-      };
-    } catch (e) {
-      console.warn('⚠️ Erro ao formatar data:', e);
-      return null;
+      return date.toLocaleDateString('pt-BR', { 
+        day: '2-digit', 
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch {
+      return '';
     }
   };
 
-  const dueDate = card?.due_date ? formatDate(card.due_date) : null;
-
-  // Mock data para features futuras
-  const hasComments = false;
-  const hasAttachments = false;
-  const hasChecklist = false;
-  const checklistProgress = 0;
-
-  // Garantir que card existe
-  if (!card) {
-    return null;
-  }
-
   return (
     <motion.div
-      whileHover={{ scale: 1.02, y: -2 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-200 group relative"
+      whileHover={{ y: -4, boxShadow: '0 12px 24px -8px rgba(0,0,0,0.15)' }}
+      onClick={() => onClick(board)}
+      className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden cursor-pointer group relative"
     >
-      {/* Priority Badge */}
-      {priorityConfig && (
-        <div className={`absolute -top-1 -right-1 px-2 py-0.5 rounded-full text-xs font-bold ${priorityConfig.color} shadow-md`}>
-          {priorityConfig.icon}
-        </div>
-      )}
-
-      {/* Title */}
-      <h4 className="font-semibold text-gray-900 text-sm mb-2 pr-6 line-clamp-3 leading-tight">
-        {card.title || 'Sem título'}
-      </h4>
-
-      {/* Description */}
-      {card.description && (
-        <p className="text-xs text-gray-600 mb-3 line-clamp-2 leading-relaxed">
-          {card.description}
-        </p>
-      )}
-
-      {/* Labels */}
-      {card.labels && Array.isArray(card.labels) && card.labels.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {card.labels.slice(0, 3).map((label, index) => (
-            <Label key={index} name={label} />
-          ))}
-          {card.labels.length > 3 && (
-            <span className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded-md font-semibold">
-              +{card.labels.length - 3}
-            </span>
+      {/* Header colorido */}
+      <div className={`h-32 bg-gradient-to-br ${colorConfig.gradient} relative`}>
+        {/* Star Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleStar(board);
+          }}
+          className="absolute top-3 right-3 p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg transition-all"
+        >
+          {isStarred ? (
+            <Star size={18} className="text-white fill-white" />
+          ) : (
+            <Star size={18} className="text-white" />
           )}
-        </div>
-      )}
+        </button>
 
-      {/* Footer */}
-      <div className="flex items-center justify-between mt-3">
-        <div className="flex items-center gap-3">
-          {/* Due Date */}
-          {dueDate && (
-            <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold ${dueDate.color}`}>
-              {dueDate.icon}
-              <span>{dueDate.text}</span>
-            </div>
-          )}
+        {/* Archive Badge */}
+        {board.is_archived && (
+          <div className="absolute top-3 left-3 px-3 py-1 bg-orange-500 text-white rounded-full text-xs font-bold flex items-center gap-1">
+            <Archive size={12} />
+            Arquivado
+          </div>
+        )}
+      </div>
 
-          {/* Comments */}
-          {hasComments && (
-            <div className="flex items-center gap-1 text-gray-500">
-              <MessageSquare size={14} />
-              <span className="text-xs font-semibold">3</span>
-            </div>
-          )}
+      {/* Content */}
+      <div className="p-5">
+        {/* Title */}
+        <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 leading-tight">
+          {board.title}
+        </h3>
 
-          {/* Attachments */}
-          {hasAttachments && (
-            <div className="flex items-center gap-1 text-gray-500">
-              <Paperclip size={14} />
-              <span className="text-xs font-semibold">2</span>
-            </div>
-          )}
+        {/* Description */}
+        {board.description && (
+          <p className="text-sm text-gray-600 mb-4 line-clamp-2 leading-relaxed">
+            {board.description}
+          </p>
+        )}
 
-          {/* Checklist */}
-          {hasChecklist && (
-            <div className="flex items-center gap-1 text-gray-500">
-              <CheckSquare size={14} />
-              <span className="text-xs font-semibold">{checklistProgress}/5</span>
-            </div>
-          )}
-        </div>
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+          {/* Created Date */}
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Calendar size={14} />
+            <span>{formatDate(board.created_at)}</span>
+          </div>
 
-        {/* Actions Menu */}
-        <div className="relative ml-auto">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowMenu(!showMenu);
-            }}
-            className="p-1 hover:bg-gray-100 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <MoreVertical size={14} className="text-gray-600" />
-          </button>
-
-          {showMenu && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              onClick={(e) => e.stopPropagation()}
-              className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-50 min-w-[140px]"
+          {/* Actions Menu */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(!showMenu);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
             >
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClick();
-                  setShowMenu(false);
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 transition-colors text-left text-xs"
+              <MoreVertical size={16} className="text-gray-600" />
+            </button>
+
+            {showMenu && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                onClick={(e) => e.stopPropagation()}
+                className="absolute right-0 bottom-full mb-2 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50 min-w-[160px]"
               >
-                <Edit2 size={12} className="text-blue-600" />
-                <span className="font-semibold text-gray-700">Abrir</span>
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                  setShowMenu(false);
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-red-50 transition-colors text-left text-xs"
-              >
-                <Trash2 size={12} className="text-red-600" />
-                <span className="font-semibold text-red-600">Deletar</span>
-              </button>
-            </motion.div>
-          )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClick(board);
+                    setShowMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors text-left"
+                >
+                  <TrendingUp size={14} className="text-blue-600" />
+                  <span className="text-sm font-semibold text-gray-700">Abrir</span>
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(board);
+                    setShowMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                >
+                  <Edit2 size={14} className="text-gray-600" />
+                  <span className="text-sm font-semibold text-gray-700">Editar</span>
+                </button>
+
+                <div className="border-t border-gray-200 my-2" />
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(board);
+                    setShowMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 transition-colors text-left"
+                >
+                  <Trash2 size={14} className="text-red-600" />
+                  <span className="text-sm font-semibold text-red-600">Deletar</span>
+                </button>
+              </motion.div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Hover Ring Effect */}
+      <div className={`absolute inset-0 rounded-2xl ring-2 ${colorConfig.ring} opacity-0 group-hover:opacity-20 transition-opacity pointer-events-none`} />
     </motion.div>
   );
 }
