@@ -1,5 +1,5 @@
-// src/pages/Boards/index.REFATORADO.tsx
-// 📋 PÁGINA BOARDS REFATORADA - LISTAGEM DE BOARDS
+// src/pages/Boards/index.tsx
+// 📋 PÁGINA BOARDS REFATORADA - LISTAGEM DE BOARDS FUNCIONANDO
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,19 +9,25 @@ import {
   Plus, 
   Star,
   Archive,
-  TrendingUp,
   Grid3x3,
   List as ListIcon,
-  CheckCircle2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-// Componentes Reutilizáveis
-import { StatCard, PageFilters } from '../../components/common';
+// ============================================
+// COMPONENTES COMUNS (REUTILIZÁVEIS)
+// ============================================
+import { 
+  StatCard, 
+  PageFilters,
+  ConfirmDialog,
+} from '../../components/common';
 
-// Modals
+// ============================================
+// COMPONENTES LOCAIS
+// ============================================
 import CreateBoardModal from './components/Modals/CreateBoardModal';
-import BoardCard from './components/Board/BoardCard'
+import BoardCard from './components/Board/BoardCard';
 
 // Types & Constants
 import type { Board, BoardColor } from '../../types/boards';
@@ -40,6 +46,15 @@ interface CreateBoardData {
   description?: string;
   color: BoardColor;
 }
+
+// ============================================
+// VIEW MODES CONFIG
+// ============================================
+
+const VIEW_MODES = [
+  { value: 'grid', icon: <Grid3x3 size={18} />, label: 'Grade' },
+  { value: 'list', icon: <ListIcon size={18} />, label: 'Lista' },
+];
 
 // ============================================
 // MAIN COMPONENT
@@ -89,23 +104,19 @@ export default function BoardsPage() {
     );
 
     if (searchTerm) {
-      filtered = filtered.filter(board =>
-        board.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        board.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(b =>
+        b.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    return filtered.sort((a, b) => {
-      // Starred boards first
-      const aStarred = starredBoards.has(a.id);
-      const bStarred = starredBoards.has(b.id);
-      if (aStarred && !bStarred) return -1;
-      if (!aStarred && bStarred) return 1;
-      
-      // Then by updated_at
-      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-    });
-  }, [boards, searchTerm, showArchived, starredBoards]);
+    return filtered;
+  }, [boards, searchTerm, showArchived]);
+
+  // Verificar se há filtros ativos
+  const hasActiveFilters = useMemo(() => {
+    return searchTerm !== '' || showArchived;
+  }, [searchTerm, showArchived]);
 
   // ============================================
   // HANDLERS
@@ -116,15 +127,17 @@ export default function BoardsPage() {
   };
 
   const handleToggleStar = (board: Board) => {
-    const newStarred = new Set(starredBoards);
-    if (newStarred.has(board.id)) {
-      newStarred.delete(board.id);
-      toast.success('⭐ Removido dos favoritos');
-    } else {
-      newStarred.add(board.id);
-      toast.success('⭐ Adicionado aos favoritos!');
-    }
-    setStarredBoards(newStarred);
+    setStarredBoards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(board.id)) {
+        newSet.delete(board.id);
+        toast.success('⭐ Removido dos favoritos');
+      } else {
+        newSet.add(board.id);
+        toast.success('⭐ Adicionado aos favoritos!');
+      }
+      return newSet;
+    });
   };
 
   const handleEdit = (board: Board) => {
@@ -135,6 +148,7 @@ export default function BoardsPage() {
   const handleCreateBoard = (data: CreateBoardData) => {
     const newBoard: Board = {
       id: Math.max(...boards.map(b => b.id), 0) + 1,
+      school: 1, // TODO: pegar da sessão
       title: data.title,
       description: data.description,
       color: data.color,
@@ -148,9 +162,11 @@ export default function BoardsPage() {
     toast.success('✅ Board criado com sucesso!');
   };
 
-  const handleUpdateBoard = (id: number, updates: Partial<Board>) => {
-    setBoards(prev => prev.map(b => 
-      b.id === id 
+  const handleUpdateBoard = (updates: Partial<Board>) => {
+    if (!editingBoard) return;
+    
+    setBoards(prev => prev.map(b =>
+      b.id === editingBoard.id
         ? { ...b, ...updates, updated_at: new Date().toISOString() }
         : b
     ));
@@ -171,6 +187,11 @@ export default function BoardsPage() {
     toast.success('🔄 Boards atualizados!');
   };
 
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setShowArchived(false);
+  };
+
   // ============================================
   // RENDER
   // ============================================
@@ -187,21 +208,17 @@ export default function BoardsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <div className="flex items-center justify-between flex-wrap gap-4 mb-2">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-              <Layout className="text-blue-600" size={40} />
-              Meus Boards
-            </h1>
-            <p className="text-gray-600">
-              Organize suas tarefas e projetos com quadros Kanban
-            </p>
-          </div>
-        </div>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+          <Layout className="text-blue-600" size={40} />
+          Meus Boards
+        </h1>
+        <p className="text-gray-600">
+          Organize suas tarefas e projetos com quadros Kanban
+        </p>
       </motion.div>
 
       {/* ========================================== */}
-      {/* STATS */}
+      {/* STATS (USANDO STATCARD COMUM) */}
       {/* ========================================== */}
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -231,7 +248,7 @@ export default function BoardsPage() {
       </div>
 
       {/* ========================================== */}
-      {/* FILTERS */}
+      {/* FILTERS (USANDO PAGEFILTERS COMUM) */}
       {/* ========================================== */}
       
       <PageFilters
@@ -240,10 +257,7 @@ export default function BoardsPage() {
         searchPlaceholder="Buscar boards..."
         
         viewMode={viewMode}
-        viewModes={[
-          { value: 'grid', icon: <Grid3x3 size={18} />, label: 'Grade' },
-          { value: 'list', icon: <ListIcon size={18} />, label: 'Lista' },
-        ]}
+        viewModes={VIEW_MODES}
         onViewModeChange={(mode) => setViewMode(mode as ViewMode)}
         
         onNew={() => setShowCreateModal(true)}
@@ -252,23 +266,20 @@ export default function BoardsPage() {
         
         advancedFilters={
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 cursor-pointer">
               <input
                 type="checkbox"
                 checked={showArchived}
                 onChange={(e) => setShowArchived(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
               />
               Mostrar arquivados
             </label>
           </div>
         }
         
-        hasActiveFilters={searchTerm !== '' || showArchived}
-        onClearFilters={() => {
-          setSearchTerm('');
-          setShowArchived(false);
-        }}
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={handleClearFilters}
       />
 
       {/* ========================================== */}
@@ -277,10 +288,11 @@ export default function BoardsPage() {
       
       <div className="mb-6">
         {filteredBoards.length === 0 ? (
+          // Empty State
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center justify-center py-16 text-center"
+            className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-gray-200"
           >
             <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <Layout className="text-gray-400" size={40} />
@@ -288,12 +300,14 @@ export default function BoardsPage() {
             <h3 className="text-xl font-bold text-gray-900 mb-2">
               Nenhum board encontrado
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 mb-6 max-w-md">
               {searchTerm
-                ? 'Tente ajustar sua busca'
+                ? 'Tente ajustar sua busca ou limpar os filtros'
+                : showArchived
+                ? 'Nenhum board arquivado no momento'
                 : 'Crie seu primeiro board para começar a organizar suas tarefas'}
             </p>
-            {!searchTerm && (
+            {!searchTerm && !showArchived && (
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition font-semibold shadow-lg shadow-blue-500/30"
@@ -304,9 +318,11 @@ export default function BoardsPage() {
             )}
           </motion.div>
         ) : (
-          <div className={viewMode === 'grid' 
-            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' 
-            : 'space-y-4'
+          // Boards Grid/List
+          <div className={
+            viewMode === 'grid' 
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' 
+              : 'space-y-4'
           }>
             <AnimatePresence mode="popLayout">
               {filteredBoards.map((board, index) => (
@@ -333,7 +349,10 @@ export default function BoardsPage() {
         )}
       </div>
 
-      {/* Results info */}
+      {/* ========================================== */}
+      {/* RESULTS INFO */}
+      {/* ========================================== */}
+      
       {filteredBoards.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -342,7 +361,10 @@ export default function BoardsPage() {
         >
           <p className="text-gray-700 font-semibold">
             Mostrando <span className="text-blue-600 font-bold">{filteredBoards.length}</span> de{' '}
-            <span className="text-blue-600 font-bold">{boards.length}</span> boards
+            <span className="text-blue-600 font-bold">{showArchived ? stats.archived : stats.total}</span> boards
+            {hasActiveFilters && (
+              <span className="text-gray-600 text-sm ml-2">(filtrado)</span>
+            )}
           </p>
         </motion.div>
       )}
@@ -363,37 +385,18 @@ export default function BoardsPage() {
         onUpdate={handleUpdateBoard}
       />
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation (USANDO CONFIRMDIALOG COMUM) */}
       {boardToDelete && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
-          >
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Confirmar Exclusão
-            </h3>
-            <p className="text-gray-700 mb-6">
-              Tem certeza que deseja deletar o board "<strong>{boardToDelete.title}</strong>"? 
-              Todas as listas e cards serão removidos permanentemente.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setBoardToDelete(null)}
-                className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleDelete}
-                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition shadow-lg shadow-red-500/30"
-              >
-                Deletar
-              </button>
-            </div>
-          </motion.div>
-        </div>
+        <ConfirmDialog
+          isOpen={!!boardToDelete}
+          title="Confirmar Exclusão"
+          message={`Tem certeza que deseja deletar o board "${boardToDelete.title}"? Todas as listas e cards serão removidos permanentemente.`}
+          confirmLabel="Deletar Board"
+          cancelLabel="Cancelar"
+          onConfirm={handleDelete}
+          onCancel={() => setBoardToDelete(null)}
+          variant="danger"
+        />
       )}
     </div>
   );

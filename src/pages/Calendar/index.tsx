@@ -1,27 +1,33 @@
 // src/pages/Calendar/index.tsx
-// 📅 PÁGINA DE EVENTOS - PROFISSIONAL E MODERNA
+// 📅 PÁGINA DE EVENTOS - REFATORADA COM COMPONENTES COMUNS
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, RefreshCw } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // Layout
 import PageModel from '../../components/layout/PageModel';
 
-// Componentes Comuns
+// ============================================
+// COMPONENTES COMUNS (REUTILIZÁVEIS)
+// ============================================
 import { 
+  StatCard,
+  PageFilters,
   FormModal, 
   ConfirmDialog,
   LoadingState,
+  ResultsInformation,
 } from '../../components/common';
 
-// Componentes Locais
-import EventStats from './components/EventStats';
-import EventFilters, { type EventFiltersData } from './components/EventFilters';
+// ============================================
+// COMPONENTES LOCAIS (ESPECÍFICOS DE EVENTOS)
+// ============================================
 import EventGridView from './components/EventGridView';
 import EventListView from './components/EventListView';
 import CalendarView from './components/CalendarView';
+import EventForm from './components/EventForm';
 
 // Hooks e Services
 import { useCurrentSchool } from '../../hooks/useCurrentSchool';
@@ -40,6 +46,25 @@ import {
 // ============================================
 
 type ViewMode = 'grid' | 'list' | 'calendar';
+
+interface EventFiltersData {
+  search: string;
+  eventType: string;
+  startDate: string;
+  endDate: string;
+}
+
+// ============================================
+// VIEW MODES CONFIG
+// ============================================
+
+import { Grid3x3, List as ListIcon, Calendar as CalendarIcon } from 'lucide-react';
+
+const VIEW_MODES = [
+  { value: 'grid', icon: <Grid3x3 size={18} />, label: 'Grade' },
+  { value: 'list', icon: <ListIcon size={18} />, label: 'Lista' },
+  { value: 'calendar', icon: <CalendarIcon size={18} />, label: 'Calendário' },
+];
 
 // ============================================
 // MAIN COMPONENT
@@ -61,6 +86,7 @@ export default function EventsPage() {
   // ============================================
   
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [searchTerm, setSearchTerm] = useState('');
   
   const [filters, setFilters] = useState<EventFiltersData>({
     search: '',
@@ -91,96 +117,96 @@ export default function EventsPage() {
     isLoading: eventsLoading, 
     refetch 
   } = useGetEventsQuery({
-    event_type: filters.eventType !== 'all' ? filters.eventType as any : undefined,
-    start_date: filters.startDate || undefined,
-    end_date: filters.endDate || undefined,
-    search: filters.search || undefined,
+    event_type: filters.eventType !== 'all' ? filters.eventType : undefined,
   });
 
-  const [createEvent, { isLoading: isCreating }] = useCreateEventMutation();
-  const [updateEvent, { isLoading: isUpdating }] = useUpdateEventMutation();
-  const [deleteEvent, { isLoading: isDeleting }] = useDeleteEventMutation();
+  const [createEvent, { isLoading: creating }] = useCreateEventMutation();
+  const [updateEvent, { isLoading: updating }] = useUpdateEventMutation();
+  const [deleteEvent, { isLoading: deleting }] = useDeleteEventMutation();
 
   // ============================================
-  // DERIVED STATE
+  // COMPUTED DATA
   // ============================================
 
-  const events = eventsData?.results || [];
-  const isLoading = eventsLoading || schoolsLoading;
-  
-  // Filtrar eventos da escola atual
+  const events = useMemo(() => {
+    return Array.isArray(eventsData) ? eventsData : [];
+  }, [eventsData]);
+
+  // Filtros aplicados
   const filteredEvents = useMemo(() => {
-    return events.filter(e => e.school.toString() === currentSchoolId);
-  }, [events, currentSchoolId]);
+    return events.filter(event => {
+      // Busca por texto
+      const matchesSearch = searchTerm === '' || 
+        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.description?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Filtro por tipo
+      const matchesType = filters.eventType === 'all' || 
+        event.event_type === filters.eventType;
+
+      // Filtro por data inicial
+      const matchesStartDate = !filters.startDate || 
+        new Date(event.start_date) >= new Date(filters.startDate);
+
+      // Filtro por data final
+      const matchesEndDate = !filters.endDate || 
+        new Date(event.end_date) <= new Date(filters.endDate);
+
+      return matchesSearch && matchesType && matchesStartDate && matchesEndDate;
+    });
+  }, [events, searchTerm, filters]);
 
   // Estatísticas
   const stats = useMemo(() => {
     const now = new Date();
-    const thisMonth = now.getMonth();
-    const thisYear = now.getFullYear();
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
     
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
     return {
-      total: filteredEvents.length,
-      holiday: filteredEvents.filter(e => e.event_type === 'holiday').length,
-      exam: filteredEvents.filter(e => e.event_type === 'exam').length,
-      graduation: filteredEvents.filter(e => e.event_type === 'graduation').length,
-      cultural: filteredEvents.filter(e => e.event_type === 'cultural').length,
-      upcoming: filteredEvents.filter(e => {
+      total: events.length,
+      upcoming: events.filter(e => new Date(e.start_date) > now && new Date(e.start_date) <= nextMonth).length,
+      thisMonth: events.filter(e => {
         const eventDate = new Date(e.start_date);
-        return eventDate >= now;
+        return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear;
       }).length,
-      thisMonth: filteredEvents.filter(e => {
-        const eventDate = new Date(e.start_date);
-        return eventDate.getMonth() === thisMonth && eventDate.getFullYear() === thisYear;
-      }).length,
+      holiday: events.filter(e => e.event_type === 'holiday').length,
+      exam: events.filter(e => e.event_type === 'exam').length,
+      graduation: events.filter(e => e.event_type === 'graduation').length,
+      cultural: events.filter(e => e.event_type === 'cultural').length,
     };
-  }, [filteredEvents]);
+  }, [events]);
 
-  // ============================================
-  // EFFECTS
-  // ============================================
+  // Verificar se há filtros ativos
+  const hasActiveFilters = useMemo(() => {
+    return filters.eventType !== 'all' || 
+           filters.startDate !== '' || 
+           filters.endDate !== '';
+  }, [filters]);
 
-  useEffect(() => {
-    if (currentSchoolId && !editingEvent) {
-      setFormData(prev => ({ ...prev, school: parseInt(currentSchoolId) }));
-    }
-  }, [currentSchoolId, editingEvent]);
+  const isLoading = schoolsLoading || eventsLoading;
+  const isSaving = creating || updating;
 
   // ============================================
   // HANDLERS
   // ============================================
 
-  const resetForm = () => {
+  const handleEdit = (event: Event) => {
+    setEditingEvent(event);
     setFormData({
-      school: parseInt(currentSchoolId),
-      start_date: '',
-      end_date: '',
-      title: '',
-      description: '',
-      event_type: 'holiday',
+      school: event.school,
+      start_date: event.start_date,
+      end_date: event.end_date,
+      title: event.title,
+      description: event.description || '',
+      event_type: event.event_type,
     });
-    setEditingEvent(null);
-    setShowForm(false);
-  };
-
-  const validate = (): string | null => {
-    if (!formData.start_date) return 'Data inicial é obrigatória';
-    if (!formData.end_date) return 'Data final é obrigatória';
-    if (!formData.title.trim()) return 'Título é obrigatório';
-    if (formData.title.trim().length < 3) return 'Título deve ter no mínimo 3 caracteres';
-    if (new Date(formData.end_date) < new Date(formData.start_date)) {
-      return 'Data final não pode ser anterior à data inicial';
-    }
-    return null;
+    setShowForm(true);
   };
 
   const handleSubmit = async () => {
-    const error = validate();
-    if (error) {
-      toast.error(error);
-      return;
-    }
-
     try {
       if (editingEvent) {
         await updateEvent({ id: editingEvent.id, data: formData }).unwrap();
@@ -196,25 +222,12 @@ export default function EventsPage() {
     }
   };
 
-  const handleEdit = (event: Event) => {
-    setFormData({
-      school: parseInt(currentSchoolId),
-      start_date: event.start_date,
-      end_date: event.end_date,
-      title: event.title,
-      description: event.description,
-      event_type: event.event_type,
-    });
-    setEditingEvent(event);
-    setShowForm(true);
-  };
-
   const handleDelete = async () => {
     if (!deleteConfirm) return;
-
+    
     try {
       await deleteEvent(deleteConfirm.id).unwrap();
-      toast.success('✅ Evento deletado com sucesso!');
+      toast.success('🗑️ Evento deletado com sucesso!');
       setDeleteConfirm(null);
       refetch();
     } catch (err: any) {
@@ -222,7 +235,21 @@ export default function EventsPage() {
     }
   };
 
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingEvent(null);
+    setFormData({
+      school: parseInt(currentSchoolId),
+      start_date: '',
+      end_date: '',
+      title: '',
+      description: '',
+      event_type: 'holiday',
+    });
+  };
+
   const handleClearFilters = () => {
+    setSearchTerm('');
     setFilters({
       search: '',
       eventType: 'all',
@@ -232,13 +259,13 @@ export default function EventsPage() {
   };
 
   const handleExport = () => {
-    toast.success('Exportação iniciada!');
-    // Implementar lógica de exportação
+    toast.success('📥 Exportação iniciada!');
+    // TODO: Implementar lógica de exportação
   };
 
   const handleRefresh = () => {
     refetch();
-    toast.success('Dados atualizados!');
+    toast.success('🔄 Dados atualizados!');
   };
 
   const handleDayClick = (date: string) => {
@@ -270,49 +297,142 @@ export default function EventsPage() {
   return (
     <PageModel>
       
-      {/* Header */}
+      {/* ========================================== */}
+      {/* HEADER */}
+      {/* ========================================== */}
+      
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              Calendário de Eventos
-            </h1>
-            <p className="text-gray-600 flex items-center gap-2">
-              <Calendar size={16} />
-              Gerencie os eventos e datas importantes da sua escola
-            </p>
-          </div>
-          
-          <button
-            onClick={handleRefresh}
-            className="flex items-center gap-2 px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl font-semibold shadow-sm hover:shadow transition-all"
-          >
-            <RefreshCw size={18} />
-            <span className="hidden sm:inline">Atualizar</span>
-          </button>
-        </div>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          📅 Calendário de Eventos
+        </h1>
+        <p className="text-gray-600">
+          Gerencie os eventos e datas importantes da sua escola
+        </p>
       </motion.div>
 
-      {/* Stats */}
-      <EventStats stats={stats} loading={eventsLoading} />
+      {/* ========================================== */}
+      {/* STATS (USANDO STATCARD COMUM) */}
+      {/* ========================================== */}
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <StatCard
+          label="Total de Eventos"
+          value={stats.total}
+          icon={<Calendar className="text-blue-600" size={24} />}
+          color="blue"
+          subtitle="Cadastrados no sistema"
+        />
 
-      {/* Filtros */}
-      <EventFilters
-        filters={filters}
-        onFiltersChange={setFilters}
-        onClear={handleClearFilters}
+        <StatCard
+          label="Próximos Eventos"
+          value={stats.upcoming}
+          change={12}
+          icon={<Calendar className="text-green-600" size={24} />}
+          color="green"
+          subtitle="Nos próximos 30 dias"
+        />
+
+        <StatCard
+          label="Este Mês"
+          value={stats.thisMonth}
+          icon={<Calendar className="text-purple-600" size={24} />}
+          color="purple"
+          subtitle="Eventos agendados"
+        />
+
+        <StatCard
+          label="Tipos Diferentes"
+          value={4}
+          icon={<Calendar className="text-orange-600" size={24} />}
+          color="orange"
+          subtitle="Categorias ativas"
+        />
+      </div>
+
+      {/* ========================================== */}
+      {/* FILTROS (USANDO PAGEFILTERS COMUM) */}
+      {/* ========================================== */}
+      
+      <PageFilters
+        // Busca
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Buscar eventos por título..."
+        
+        // View Mode
         viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        onNewEvent={() => setShowForm(true)}
+        viewModes={VIEW_MODES}
+        onViewModeChange={(mode) => setViewMode(mode as ViewMode)}
+        
+        // Ações
+        onNew={() => setShowForm(true)}
+        newLabel="Novo Evento"
         onExport={handleExport}
+        onRefresh={handleRefresh}
+        
+        // Filtros avançados
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={handleClearFilters}
         loading={eventsLoading}
+        
+        // Slot de filtros customizados
+        advancedFilters={
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Tipo de evento */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Tipo de Evento
+              </label>
+              <select
+                value={filters.eventType}
+                onChange={(e) => setFilters(prev => ({ ...prev, eventType: e.target.value }))}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              >
+                <option value="all">Todos os tipos</option>
+                <option value="holiday">📌 Feriado</option>
+                <option value="exam">📝 Prova</option>
+                <option value="graduation">🎓 Formatura</option>
+                <option value="cultural">🎭 Cultural</option>
+              </select>
+            </div>
+
+            {/* Data inicial */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Data Inicial
+              </label>
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              />
+            </div>
+
+            {/* Data final */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Data Final
+              </label>
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              />
+            </div>
+          </div>
+        }
       />
 
-      {/* Conteúdo por visualização */}
+      {/* ========================================== */}
+      {/* CONTEÚDO POR VISUALIZAÇÃO */}
+      {/* ========================================== */}
+      
       <AnimatePresence mode="wait">
         {viewMode === 'grid' && (
           <motion.div
@@ -356,18 +476,30 @@ export default function EventsPage() {
             <CalendarView
               events={filteredEvents}
               onDayClick={handleDayClick}
-              eventColors={{
-                holiday: 'bg-red-500',
-                exam: 'bg-blue-500',
-                graduation: 'bg-purple-500',
-                cultural: 'bg-orange-500',
-              }}
+              onEventClick={handleEdit}
+              loading={eventsLoading}
             />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Form Modal */}
+      {/* ========================================== */}
+      {/* RESULTS INFO (USANDO COMPONENTE COMUM) */}
+      {/* ========================================== */}
+      
+      {filteredEvents.length > 0 && (
+        <ResultsInformation
+          showing={filteredEvents.length}
+          total={stats.total}
+          filtered={hasActiveFilters}
+        />
+      )}
+
+      {/* ========================================== */}
+      {/* MODALS */}
+      {/* ========================================== */}
+      
+      {/* Form Modal (USANDO FORMMODAL COMUM) */}
       {showForm && (
         <FormModal
           isOpen={showForm}
@@ -376,160 +508,31 @@ export default function EventsPage() {
           onClose={resetForm}
           size="lg"
         >
-          <EventFormContent
+          <EventForm
             formData={formData}
-            setFormData={setFormData}
+            onChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
             onSubmit={handleSubmit}
             onCancel={resetForm}
-            isLoading={isCreating || isUpdating}
+            isLoading={isSaving}
             isEditing={!!editingEvent}
           />
         </FormModal>
       )}
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation (USANDO CONFIRMDIALOG COMUM) */}
       {deleteConfirm && (
         <ConfirmDialog
           isOpen={!!deleteConfirm}
           title="Confirmar Exclusão"
           message={`Tem certeza que deseja deletar o evento "${deleteConfirm.title}"? Esta ação não pode ser desfeita.`}
-          onConfirm={handleDelete}
-          onCancel={() => setDeleteConfirm(null)}
-          isLoading={isDeleting}
-          variant="danger"
           confirmLabel="Deletar"
           cancelLabel="Cancelar"
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteConfirm(null)}
+          isLoading={deleting}
+          variant="danger"
         />
       )}
     </PageModel>
-  );
-}
-
-// ============================================
-// EVENT FORM COMPONENT
-// ============================================
-
-interface EventFormContentProps {
-  formData: EventFormData;
-  setFormData: React.Dispatch<React.SetStateAction<EventFormData>>;
-  onSubmit: () => void;
-  onCancel: () => void;
-  isLoading: boolean;
-  isEditing: boolean;
-}
-
-function EventFormContent({
-  formData,
-  setFormData,
-  onSubmit,
-  onCancel,
-  isLoading,
-  isEditing,
-}: EventFormContentProps) {
-  return (
-    <div className="space-y-6">
-      
-      {/* Datas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Data Inicial *
-          </label>
-          <input
-            type="date"
-            value={formData.start_date}
-            onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Data Final *
-          </label>
-          <input
-            type="date"
-            value={formData.end_date}
-            onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-
-      {/* Título */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Título do Evento *
-        </label>
-        <input
-          type="text"
-          placeholder="Ex: Provas Finais do 1º Semestre"
-          value={formData.title}
-          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
-
-      {/* Descrição */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Descrição
-        </label>
-        <textarea
-          placeholder="Detalhes sobre o evento..."
-          value={formData.description || ''}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          rows={4}
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-        />
-      </div>
-
-      {/* Tipo */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          Tipo de Evento *
-        </label>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { value: 'holiday' as const, label: 'Feriado', emoji: '📌', color: 'red' },
-            { value: 'exam' as const, label: 'Prova', emoji: '📝', color: 'blue' },
-            { value: 'graduation' as const, label: 'Formatura', emoji: '🎓', color: 'purple' },
-            { value: 'cultural' as const, label: 'Cultural', emoji: '🎭', color: 'orange' },
-          ].map((type) => (
-            <button
-              key={type.value}
-              type="button"
-              onClick={() => setFormData({ ...formData, event_type: type.value })}
-              className={`p-4 rounded-xl border-2 transition-all ${
-                formData.event_type === type.value
-                  ? `border-${type.color}-500 bg-${type.color}-50`
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="text-2xl mb-2">{type.emoji}</div>
-              <div className="text-sm font-semibold text-gray-900">{type.label}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="flex gap-3 pt-4 border-t border-gray-200">
-        <button
-          onClick={onSubmit}
-          disabled={isLoading}
-          className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all disabled:opacity-50"
-        >
-          {isLoading ? 'Salvando...' : isEditing ? 'Atualizar Evento' : 'Criar Evento'}
-        </button>
-        <button
-          onClick={onCancel}
-          disabled={isLoading}
-          className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all"
-        >
-          Cancelar
-        </button>
-      </div>
-    </div>
   );
 }
