@@ -87,6 +87,11 @@ export const PRIORITY_CONFIG: Record<CardPriority, {
     color: 'bg-red-100 text-red-700',
     icon: '⬆️',
   },
+  urgent: {
+    label: 'Urgente',
+    color: 'bg-red-500 text-white',
+    icon: '🔴',
+  },
 };
 
 // ============================================
