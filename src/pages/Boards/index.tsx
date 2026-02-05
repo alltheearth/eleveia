@@ -199,7 +199,7 @@ export default function BoardsPage() {
   // ============================================
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50">
       <PageModel>
       {/* Header */}
         <ListPageHeader
@@ -217,7 +217,7 @@ export default function BoardsPage() {
       {/* STATS (USANDO STATCARD COMUM) */}
       {/* ========================================== */}
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <StatCard
           label="Total de Boards"
           value={stats.total}
@@ -241,6 +241,7 @@ export default function BoardsPage() {
           color="green"
           subtitle="Boards inativos"
         />
+
       </div>
 
       {/* ========================================== */}

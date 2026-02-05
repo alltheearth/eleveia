@@ -45,156 +45,11 @@ import { BOARD_COLORS } from '../../constants/boards';
 
 // Mock Data
 import { MOCK_BOARDS, MOCK_LISTS, MOCK_CARDS } from '../../mock/boards.mock';
+import PageModel from '../../components/layout/PageModel';
+import BoardFilters, { type FilterOptions } from './components/Board/BoardFilters';
+import BoardHeader from './components/Board/BoardHeader';
+import BoardStats from './components/Board/BoardStats';
 
-// ============================================
-// BOARD HEADER COMPONENT
-// ============================================
-
-interface BoardHeaderProps {
-  board: Board;
-  onBack: () => void;
-  onToggleStar: () => void;
-  onArchive: () => void;
-  onSettings: () => void;
-}
-
-function BoardHeader({ board, onBack, onToggleStar, onArchive, onSettings }: BoardHeaderProps) {
-  const [showMenu, setShowMenu] = useState(false);
-  const colorConfig = BOARD_COLORS[board.color || 'blue'];
-
-  return (
-    <div className={`bg-gradient-to-r ${colorConfig.gradient} px-6 py-5 shadow-lg`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="text-white" size={24} />
-          </button>
-
-          <div>
-            <h1 className="text-2xl font-bold text-white mb-1">
-              {board.title}
-            </h1>
-            {board.description && (
-              <p className="text-sm text-white/80 line-clamp-1">
-                {board.description}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onToggleStar}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            title="Favoritar"
-          >
-            <Star className="text-white" size={20} />
-          </button>
-
-          <button className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors font-semibold backdrop-blur-sm">
-            <Users size={18} />
-            <span className="hidden sm:inline">Compartilhar</span>
-          </button>
-
-          <div className="relative">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            >
-              <MoreVertical className="text-white" size={20} />
-            </button>
-
-            {showMenu && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50 min-w-[200px]"
-              >
-                <button
-                  onClick={() => {
-                    onSettings();
-                    setShowMenu(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
-                >
-                  <Settings size={16} className="text-gray-600" />
-                  <span className="text-sm font-semibold text-gray-700">Configurações</span>
-                </button>
-                <button
-                  onClick={() => {
-                    onArchive();
-                    setShowMenu(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
-                >
-                  <Archive size={16} className="text-gray-600" />
-                  <span className="text-sm font-semibold text-gray-700">Arquivar Board</span>
-                </button>
-              </motion.div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================
-// BOARD TOOLBAR COMPONENT
-// ============================================
-
-interface BoardToolbarProps {
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
-  showFilters: boolean;
-  onToggleFilters: () => void;
-}
-
-function BoardToolbar({ searchTerm, onSearchChange, showFilters, onToggleFilters }: BoardToolbarProps) {
-  return (
-    <div className="bg-white border-b border-gray-200 px-6 py-4">
-      <div className="flex items-center gap-4">
-        <div className="flex-1 max-w-md relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input
-            type="text"
-            placeholder="Buscar cards..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200 text-sm"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => onSearchChange('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
-
-        <button
-          onClick={onToggleFilters}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all font-semibold text-sm ${
-            showFilters
-              ? 'bg-blue-50 border-blue-600 text-blue-700'
-              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-          }`}
-        >
-          <Filter size={16} />
-          <span className="hidden sm:inline">Filtros</span>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ============================================
-// MAIN COMPONENT
-// ============================================
 
 export default function BoardViewDnD() {
   const { id } = useParams<{ id: string }>();
@@ -461,6 +316,15 @@ export default function BoardViewDnD() {
   }
 
   return (
+    <div className="h-screen bg-gray-50">
+        <BoardHeader
+          board={board}
+          onBack={handleBack}
+          onToggleStar={handleToggleStar}
+          onArchive={handleArchive}
+          onSettings={handleSettings}
+        />
+      <PageModel>
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
@@ -469,26 +333,28 @@ export default function BoardViewDnD() {
       onDragEnd={handleDragEnd}
     >
       <div className="flex flex-col h-screen bg-gray-50">
+
         {/* Header */}
-        <BoardHeader
-          board={board}
-          onBack={handleBack}
-          onToggleStar={handleToggleStar}
-          onArchive={handleArchive}
-          onSettings={handleSettings}
-        />
+        <BoardStats cards={[]} />
 
         {/* Toolbar */}
-        <BoardToolbar
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          showFilters={showFilters}
-          onToggleFilters={() => setShowFilters(!showFilters)}
-        />
+        <BoardFilters filters={{
+              "search": "string",
+              "labels": ['teste'],
+              "priorities": ['low'],
+              "dueDateFilter": "all",
+              "members": [],
+              "showCompleted": false
+            }} onFiltersChange={function (filters: FilterOptions): void {
+              throw new Error('Function not implemented.');
+            } } onClearFilters={function (): void {
+              throw new Error('Function not implemented.');
+            } } totalCards={0} filteredCount={0} />
+        
 
         {/* Board Content */}
         <div className="flex-1 overflow-x-auto overflow-y-hidden">
-          <div className="flex gap-6 p-6 h-full min-w-max">
+          <div className="flex gap-6 h-full min-w-max">
             <SortableContext
               items={lists.map(l => `list-${l.id}`)}
               strategy={horizontalListSortingStrategy}
@@ -557,7 +423,10 @@ export default function BoardViewDnD() {
             }}
           />
         )}
+        
       </div>
     </DndContext>
+    </PageModel>
+    </div>
   );
 }
