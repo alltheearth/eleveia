@@ -19,6 +19,8 @@ import FAQFilters from './components/FAQFilters';
 import FAQGridView from './components/FAQGridView';
 import FAQListView from './components/FAQListView';
 import FAQAccordionView from './components/FAQAccordionView';
+import { ListPageHeader } from '../../components/layout/PageHeader';
+import PageModel from '../../components/layout/PageModel';
 
 // ============================================
 // CONSTANTS
@@ -281,45 +283,19 @@ export default function FAQsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
-        >
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
-              <HelpCircle className="text-blue-600" size={40} />
-              FAQs
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Gerencie perguntas frequentes da sua escola
-            </p>
-          </div>
 
-          <button
-            onClick={handleRefresh}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <RefreshCw size={18} className="text-gray-600" />
-            <span className="text-sm font-semibold text-gray-700">Atualizar</span>
-          </button>
-        </motion.div>
 
-        {/* Error Alert */}
-        {fetchError && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg"
-          >
-            <p className="text-red-700 font-semibold">
-              ❌ Erro: {extractErrorMessage(fetchError)}
-            </p>
-          </motion.div>
-        )}
+    <PageModel>
 
+      <ListPageHeader
+        title="Gestão de FAQs"
+        subtitle="Gerencie perguntas frequentes da sua escola"
+        icon={<HelpCircle size={16} />}
+        // onExport={handleExport}
+        // onRefresh={handleRefresh}
+        // isExporting={isExporting}
+        // isRefreshing={isLoading}
+      />
         {/* Stats */}
         <FAQStats stats={stats} loading={faqsLoading} />
 
@@ -383,7 +359,6 @@ export default function FAQsPage() {
             </p>
           </motion.div>
         )}
-      </div>
 
       {/* Form Modal */}
       {showForm && (
@@ -525,6 +500,7 @@ export default function FAQsPage() {
           </motion.div>
         </div>
       )}
+      </PageModel>
     </div>
   );
 }

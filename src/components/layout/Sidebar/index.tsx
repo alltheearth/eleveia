@@ -15,6 +15,8 @@ import {
   ChevronRight,
   Building2,
   Sparkles,
+  Layout,
+  Megaphone,
 } from 'lucide-react';
 import { useCurrentSchool } from '../../../hooks/useCurrentSchool';
 
@@ -73,13 +75,13 @@ const MENU_ITEMS: MenuItem[] = [
   },
   {
     label: 'Boards',
-    icon: BookOpen,
+    icon: Layout,
     path: '/boards',
     gradient: 'from-amber-500 to-yellow-600',
   },
   {
     label: "Campanhas",
-    icon: Sparkles,
+    icon: Megaphone,
     path: '/campanhas',
     gradient: 'from-pink-500 to-rose-600',
   }

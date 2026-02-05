@@ -1,5 +1,5 @@
 // src/pages/Boards/BoardView.tsx
-// 📋 VISUALIZAÇÃO INDIVIDUAL DO BOARD - KANBAN PROFISSIONAL
+// 📋 VISUALIZAÇÃO DO BOARD - VERSÃO SIMPLES E FUNCIONAL (SEM DND)
 
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -25,7 +25,6 @@ import toast from 'react-hot-toast';
 import BoardList from './components/List/BoardList';
 import AddListButton from './components/List/AddListButton';
 import CardModal from './components/Card/CardModal';
-import BoardSettingsModal from './components/Modals/BoardSettingsModal';
 
 // Types & Constants
 import type { Board, BoardList as List, BoardCard, ListFormData, CardFormData } from '../../types/boards';
@@ -57,7 +56,6 @@ function BoardHeader({ board, onBack, onToggleStar, onArchive, onSettings, isSta
         
         {/* Left Section */}
         <div className="flex items-center gap-4">
-          {/* Back Button */}
           <button
             onClick={onBack}
             className="p-2 hover:bg-white/20 rounded-lg transition-colors"
@@ -66,7 +64,6 @@ function BoardHeader({ board, onBack, onToggleStar, onArchive, onSettings, isSta
             <ArrowLeft className="text-white" size={24} />
           </button>
 
-          {/* Board Info */}
           <div>
             <h1 className="text-2xl font-bold text-white mb-1">
               {board.title}
@@ -79,10 +76,8 @@ function BoardHeader({ board, onBack, onToggleStar, onArchive, onSettings, isSta
           </div>
         </div>
 
-        {/* Right Section - Actions */}
+        {/* Right Section */}
         <div className="flex items-center gap-3">
-          
-          {/* Star/Favorite Button */}
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
@@ -91,58 +86,58 @@ function BoardHeader({ board, onBack, onToggleStar, onArchive, onSettings, isSta
             title={isStarred ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
           >
             {isStarred ? (
-              <Star className="text-white" size={20} fill="white" />
+              <Star className="text-yellow-300 fill-yellow-300" size={20} />
             ) : (
               <StarOff className="text-white" size={20} />
             )}
           </motion.button>
 
-          {/* Share Button */}
           <button className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors font-semibold backdrop-blur-sm">
             <Users size={18} />
             <span className="hidden sm:inline">Compartilhar</span>
           </button>
 
-          {/* More Options Menu */}
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
               className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              title="Mais opções"
             >
               <MoreVertical className="text-white" size={20} />
             </button>
 
             {showMenu && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50 min-w-[200px]"
-              >
-                <button
-                  onClick={() => {
-                    onSettings();
-                    setShowMenu(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+              <>
+                <div
+                  className="fixed inset-0 z-30"
+                  onClick={() => setShowMenu(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-40 min-w-[200px]"
                 >
-                  <Settings size={16} className="text-gray-600" />
-                  <span className="text-sm font-semibold text-gray-700">Configurações</span>
-                </button>
-                
-                <div className="border-t border-gray-200 my-2" />
-                
-                <button
-                  onClick={() => {
-                    onArchive();
-                    setShowMenu(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 transition-colors text-left"
-                >
-                  <Archive size={16} className="text-orange-600" />
-                  <span className="text-sm font-semibold text-orange-600">Arquivar Board</span>
-                </button>
-              </motion.div>
+                  <button
+                    onClick={() => {
+                      onSettings();
+                      setShowMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <Settings size={16} className="text-gray-600" />
+                    <span className="text-sm font-semibold text-gray-700">Configurações</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      onArchive();
+                      setShowMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <Archive size={16} className="text-gray-600" />
+                    <span className="text-sm font-semibold text-gray-700">Arquivar Board</span>
+                  </button>
+                </motion.div>
+              </>
             )}
           </div>
         </div>
@@ -168,16 +163,11 @@ interface BoardToolbarProps {
 }
 
 function BoardToolbar({ searchTerm, onSearchChange, showFilters, onToggleFilters, stats }: BoardToolbarProps) {
-  const completionRate = stats.totalCards > 0 
-    ? Math.round((stats.completedCards / stats.totalCards) * 100) 
-    : 0;
-
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-4">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        
-        {/* Left: Search */}
-        <div className="flex-1 min-w-[250px] max-w-md relative">
+      <div className="flex items-center justify-between mb-4">
+        {/* Search */}
+        <div className="flex-1 max-w-md relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
             type="text"
@@ -196,44 +186,39 @@ function BoardToolbar({ searchTerm, onSearchChange, showFilters, onToggleFilters
           )}
         </div>
 
-        {/* Right: Stats + Filters */}
-        <div className="flex items-center gap-4">
-          
-          {/* Quick Stats */}
-          <div className="hidden md:flex items-center gap-4">
-            {/* Lists */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
-              <TrendingUp size={16} className="text-blue-600" />
-              <span className="text-sm font-bold text-blue-700">{stats.totalLists} listas</span>
-            </div>
-            
-            {/* Cards */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-lg border border-purple-200">
-              <CheckCircle2 size={16} className="text-purple-600" />
-              <span className="text-sm font-bold text-purple-700">{stats.totalCards} cards</span>
-            </div>
+        {/* Filters Button */}
+        <button
+          onClick={onToggleFilters}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all font-semibold text-sm ml-4 ${
+            showFilters
+              ? 'bg-blue-50 border-blue-600 text-blue-700'
+              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+          }`}
+        >
+          <Filter size={16} />
+          <span className="hidden sm:inline">Filtros</span>
+        </button>
+      </div>
 
-            {/* Completion */}
-            {stats.totalCards > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-200">
-                <Clock size={16} className="text-green-600" />
-                <span className="text-sm font-bold text-green-700">{completionRate}% concluído</span>
-              </div>
-            )}
-          </div>
-
-          {/* Filters Button */}
-          <button
-            onClick={onToggleFilters}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all font-semibold text-sm ${
-              showFilters
-                ? 'bg-blue-50 border-blue-600 text-blue-700'
-                : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-            }`}
-          >
-            <Filter size={16} />
-            <span className="hidden sm:inline">Filtros</span>
-          </button>
+      {/* Stats */}
+      <div className="flex items-center gap-6 text-sm">
+        <div className="flex items-center gap-2">
+          <TrendingUp size={16} className="text-blue-600" />
+          <span className="text-gray-600">
+            <strong className="text-gray-900">{stats.totalLists}</strong> listas
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <CheckCircle2 size={16} className="text-green-600" />
+          <span className="text-gray-600">
+            <strong className="text-gray-900">{stats.totalCards}</strong> cards
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock size={16} className="text-orange-600" />
+          <span className="text-gray-600">
+            <strong className="text-gray-900">{stats.completedCards}</strong> concluídos
+          </span>
         </div>
       </div>
     </div>
@@ -252,7 +237,7 @@ export default function BoardView() {
   // STATE
   // ============================================
 
-  const [board, setBoard] = useState<Board | null>(
+  const [board] = useState<Board | null>(
     MOCK_BOARDS.find(b => b.id === parseInt(id || '0')) || null
   );
 
@@ -268,7 +253,6 @@ export default function BoardView() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCard, setSelectedCard] = useState<BoardCard | null>(null);
   const [showCardModal, setShowCardModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [isStarred, setIsStarred] = useState(false);
 
   // ============================================
@@ -285,10 +269,7 @@ export default function BoardView() {
   const stats = useMemo(() => {
     const activeCards = cards.filter(c => !c.is_archived);
     const activeLists = lists.filter(l => !l.is_archived);
-    
-    // Aqui você pode adicionar lógica para marcar cards como "concluídos"
-    // Por exemplo, cards em uma lista específica ou com um status
-    const completedCards = 0; // TODO: implementar lógica de conclusão
+    const completedCards = 0; // TODO: implementar lógica
 
     return {
       totalCards: activeCards.length,
@@ -318,14 +299,7 @@ export default function BoardView() {
   };
 
   const handleSettings = () => {
-    setShowSettingsModal(true);
-  };
-
-  const handleUpdateBoard = (updates: Partial<Board>) => {
-    if (board) {
-      setBoard({ ...board, ...updates, updated_at: new Date().toISOString() });
-      toast.success('✅ Board atualizado!');
-    }
+    toast.success('⚙️ Configurações do board');
   };
 
   const handleCreateList = (data: ListFormData) => {
@@ -484,21 +458,6 @@ export default function BoardView() {
             handleDeleteCard(selectedCard.id);
             setShowCardModal(false);
             setSelectedCard(null);
-          }}
-        />
-      )}
-
-      {/* Settings Modal */}
-      {showSettingsModal && (
-        <BoardSettingsModal
-          isOpen={showSettingsModal}
-          board={board}
-          onClose={() => setShowSettingsModal(false)}
-          onUpdate={handleUpdateBoard}
-          onArchive={handleArchive}
-          onDelete={() => {
-            toast.success('🗑️ Board deletado!');
-            navigate('/boards');
           }}
         />
       )}

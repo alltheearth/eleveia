@@ -40,6 +40,8 @@ import {
   Clock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import PageModel from '../../components/layout/PageModel';
+import { ListPageHeader } from '../../components/layout/PageHeader';
 
 // ============================================
 // TYPES
@@ -801,22 +803,20 @@ export default function DocumentsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+
+      <div className="min-h-screen bg-gray-50">
+
+        <PageModel>
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
-        >
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
-              <HardDrive className="text-blue-600" size={40} />
-              Meus Documentos
-            </h1>
-            <p className="text-gray-600 mt-2">Gerencie todos os seus arquivos e pastas</p>
-          </div>
-        </motion.div>
+        <ListPageHeader
+        title="Documentos"
+        subtitle="Gerencie todos os documentos da escola"
+        icon={<FileText size={16} />}
+        // onRefresh={handleRefresh}
+        // onNew={() => setShowUpload(true)}
+        // isRefreshing={isLoading}
+        newLabel="Upload"
+        />
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -970,7 +970,8 @@ export default function DocumentsPage() {
             </motion.div>
           )}
         </AnimatePresence>
+        </PageModel>
       </div>
-    </div>
+
   );
 }

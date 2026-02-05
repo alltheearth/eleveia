@@ -1,43 +1,91 @@
 // src/pages/Campaigns/index.tsx
-// 📢 PÁGINA PRINCIPAL DE CAMPANHAS - COMPLETA E FUNCIONAL
+// 📢 PÁGINA PRINCIPAL DE CAMPANHAS - REFATORADA
+// Listagem de todas as campanhas com filtros, stats e múltiplas visualizações
 
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Megaphone, RefreshCw, Download } from 'lucide-react';
+import { 
+  Megaphone, 
+  TrendingUp,
+  Send,
+  Clock,
+  CheckCircle2,
+  Grid3x3,
+  List as ListIcon,
+  LayoutGrid,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
-// Componentes locais
+// Componentes Reutilizáveis
+import { StatCard, PageFilters } from '../../components/common';
+
+// Componentes Locais
 import CampaignStats from './components/CampaignStats';
 import CampaignFilters, { type CampaignViewMode } from './components/CampaignFilters';
 import CampaignGridView from './components/CampaignGridView';
 import CampaignListView from './components/CampaignListView';
 import CampaignKanbanView from './components/CampaignKanbanView';
+import CreateCampaignModal from './components/CreateCampaignModal';
 
 // Types e dados mockados
-import type { Campaign, CampaignType, CampaignStatus } from './types/campaign.types';
-import { MOCK_CAMPAIGNS, MOCK_STATS } from './utils/campaignConfig';
+import type { Campaign, CampaignType, CampaignStatus } from '../../types/campaigns/campaign.types';
+import { MOCK_CAMPAIGNS } from './utils/campaignConfig';
+import PageModel from '../../components/layout/PageModel';
+import { ListPageHeader } from '../../components/layout/PageHeader';
+
+// ============================================
+// TYPES
+// ============================================
+
+type ViewMode = 'grid' | 'list' | 'kanban';
 
 // ============================================
 // MAIN COMPONENT
 // ============================================
 
 export default function CampaignsPage() {
+  const navigate = useNavigate();
+
   // ============================================
   // STATE
   // ============================================
   
-  const [loading] = useState(false);
   const [campaigns] = useState<Campaign[]>(MOCK_CAMPAIGNS);
-  const [stats] = useState(MOCK_STATS);
-
+  
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
   const [typeFilter, setTypeFilter] = useState<CampaignType | 'all'>('all');
-  const [viewMode, setViewMode] = useState<CampaignViewMode>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  
+  // Modal states
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
-  // Modal states (para funcionalidades futuras)
-  const [showWizard, setShowWizard] = useState(false);
+  // ============================================
+  // COMPUTED STATS
+  // ============================================
+  
+  const stats = useMemo(() => {
+    const total = campaigns.length;
+    const active = campaigns.filter(c => c.status === 'sending' || c.status === 'scheduled').length;
+    const completed = campaigns.filter(c => c.status === 'completed').length;
+    const totalSent = campaigns.reduce((sum, c) => sum + (c.analytics?.messages_sent || 0), 0);
+    
+    // Calcula taxa média de conversão
+    const campaignsWithConversion = campaigns.filter(c => c.analytics?.conversion_rate);
+    const avgConversion = campaignsWithConversion.length > 0
+      ? campaignsWithConversion.reduce((sum, c) => sum + (c.analytics?.conversion_rate || 0), 0) / campaignsWithConversion.length
+      : 0;
+
+    return {
+      total,
+      active,
+      completed,
+      totalSent,
+      avgConversion,
+    };
+  }, [campaigns]);
 
   // ============================================
   // FILTERED DATA
@@ -66,196 +114,222 @@ export default function CampaignsPage() {
   // ============================================
 
   const handleNewCampaign = () => {
-    toast.success('🚀 Funcionalidade de criação em desenvolvimento!');
-    setShowWizard(true);
-    // TODO: Abrir wizard de criação
+    setShowCreateModal(true);
   };
 
-  const handleView = (campaign: Campaign) => {
-    console.log('Ver campanha:', campaign);
-    toast.success(`📊 Ver analytics de "${campaign.name}"`);
-    // TODO: Navegar para página de analytics
+  const handleViewCampaign = (campaign: Campaign) => {
+    navigate(`/campanha/${campaign.id}`);
   };
 
-  const handleEdit = (campaign: Campaign) => {
-    console.log('Editar campanha:', campaign);
-    toast.success(`✏️ Editar "${campaign.name}"`);
-    // TODO: Abrir wizard em modo edição
+  const handleEditCampaign = (campaign: Campaign) => {
+    toast.success(`✏️ Editar campanha: ${campaign.name}`);
+    // TODO: Implementar modal de edição
   };
 
-  const handleDelete = (campaign: Campaign) => {
+  const handleDeleteCampaign = (campaign: Campaign) => {
     if (window.confirm(`Tem certeza que deseja excluir a campanha "${campaign.name}"?`)) {
-      console.log('Excluir campanha:', campaign);
-      toast.success(`🗑️ Campanha "${campaign.name}" excluída!`);
-      // TODO: Implementar exclusão
+      toast.success('✅ Campanha excluída!');
+      // TODO: Implementar delete
     }
   };
 
-  const handlePause = (campaign: Campaign) => {
-    console.log('Pausar campanha:', campaign);
-    toast.success(`⏸️ Campanha "${campaign.name}" pausada!`);
-    // TODO: Implementar pausa
+  const handlePauseCampaign = (campaign: Campaign) => {
+    toast.success(`⏸️ Campanha pausada: ${campaign.name}`);
+    // TODO: Implementar pause
   };
 
-  const handleResume = (campaign: Campaign) => {
-    console.log('Retomar campanha:', campaign);
-    toast.success(`▶️ Campanha "${campaign.name}" retomada!`);
-    // TODO: Implementar retomada
+  const handleResumeCampaign = (campaign: Campaign) => {
+    toast.success(`▶️ Campanha retomada: ${campaign.name}`);
+    // TODO: Implementar resume
   };
 
-  const handleDuplicate = (campaign: Campaign) => {
-    console.log('Duplicar campanha:', campaign);
-    toast.success(`📋 Campanha "${campaign.name}" duplicada!`);
-    // TODO: Implementar duplicação
+  const handleDuplicateCampaign = (campaign: Campaign) => {
+    toast.success(`📋 Campanha duplicada: ${campaign.name}`);
+    // TODO: Implementar duplicate
   };
 
   const handleRefresh = () => {
-    toast.success('🔄 Dados atualizados!');
-    // TODO: Recarregar dados da API
+    toast.success('🔄 Campanhas atualizadas!');
   };
 
   const handleExport = () => {
     toast.success('📥 Exportando campanhas...');
-    // TODO: Implementar exportação para CSV
   };
+
+  const hasActiveFilters = statusFilter !== 'all' || typeFilter !== 'all';
+
+  const handleClearFilters = () => {
+    setStatusFilter('all');
+    setTypeFilter('all');
+    setSearchTerm('');
+  };
+
+  function setShowModal(arg0: boolean): void {
+    throw new Error('Function not implemented.');
+  }
 
   // ============================================
   // RENDER
   // ============================================
-  
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30 p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <Megaphone className="text-white" size={28} />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-                Campanhas de Comunicação
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Gerencie suas campanhas de comunicação com pais e responsáveis
-              </p>
-            </div>
-          </div>
-
-          {/* Header actions */}
-          <div className="flex gap-2">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleRefresh}
-              className="p-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:border-gray-400 transition-all shadow-sm"
-              title="Atualizar"
-            >
-              <RefreshCw size={20} />
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleExport}
-              className="hidden lg:flex items-center gap-2 px-4 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:border-gray-400 transition-all font-semibold shadow-sm"
-            >
-              <Download size={18} />
-              Exportar
-            </motion.button>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <CampaignStats stats={stats} loading={loading} />
-
-      {/* Filtros */}
-      <CampaignFilters
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        statusFilter={statusFilter}
-        onStatusChange={setStatusFilter}
-        typeFilter={typeFilter}
-        onTypeChange={setTypeFilter}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        onNewCampaign={handleNewCampaign}
-        onExport={handleExport}
+    <div className="min-h-screen bg-gray-50 p-6">
+      <PageModel>
+      {/* ========================================== */}
+      {/* HEADER */}
+      {/* ========================================== */}
+      
+      <ListPageHeader
+        title="Campanhas"
+        subtitle="Gerencie suas campanhas de marketing"
+        icon={<Megaphone size={16} />}
         onRefresh={handleRefresh}
-        totalResults={filteredCampaigns.length}
+        onNew={() => setShowModal(true)}
+        isRefreshing={false}
+        // isRefreshing={isLoading}
+        newLabel="Nova Campanha"
       />
 
-      {/* Views */}
+      {/* ========================================== */}
+      {/* STATS CARDS */}
+      {/* ========================================== */}
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <StatCard
+          label="Total de Campanhas"
+          value={stats.total}
+          icon={<Megaphone size={24} className="text-blue-600" />}
+          color="blue"
+          subtitle="Todas as campanhas"
+        />
+
+        <StatCard
+          label="Campanhas Ativas"
+          value={stats.active}
+          icon={<Send size={24} className="text-green-600" />}
+          color="green"
+          subtitle="Em execução"
+        />
+
+        <StatCard
+          label="Concluídas"
+          value={stats.completed}
+          icon={<CheckCircle2 size={24} className="text-purple-600" />}
+          color="purple"
+          subtitle="Finalizadas"
+        />
+
+        <StatCard
+          label="Taxa de Conversão"
+          value={`${stats.avgConversion.toFixed(1)}%`}
+          icon={<TrendingUp size={24} className="text-orange-600" />}
+          color="orange"
+          subtitle="Média geral"
+        />
+      </div>
+
+      {/* ========================================== */}
+      {/* FILTERS */}
+      {/* ========================================== */}
+      
+      <PageFilters
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Buscar campanhas por nome, descrição ou tags..."
+        
+        viewMode={viewMode}
+        viewModes={[
+          { value: 'grid', icon: <Grid3x3 size={18} />, label: 'Grade' },
+          { value: 'list', icon: <ListIcon size={18} />, label: 'Lista' },
+          { value: 'kanban', icon: <LayoutGrid size={18} />, label: 'Kanban' },
+        ]}
+        onViewModeChange={(mode) => setViewMode(mode as ViewMode)}
+        
+        onNew={handleNewCampaign}
+        newLabel="Nova Campanha"
+        
+        onExport={handleExport}
+        onRefresh={handleRefresh}
+        
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={handleClearFilters}
+        
+        advancedFilters={
+          <CampaignFilters
+            statusFilter={statusFilter}
+            typeFilter={typeFilter}
+            onStatusChange={setStatusFilter}
+            onTypeChange={setTypeFilter}
+          />
+        }
+      />
+
+      {/* ========================================== */}
+      {/* RESULTS INFO */}
+      {/* ========================================== */}
+      
+      <div className="mb-4">
+        <p className="text-sm text-gray-600">
+          Mostrando <span className="font-semibold text-gray-900">{filteredCampaigns.length}</span> de{' '}
+          <span className="font-semibold text-gray-900">{campaigns.length}</span> campanhas
+        </p>
+      </div>
+
+      {/* ========================================== */}
+      {/* CONTENT - DIFERENTES VIEWS */}
+      {/* ========================================== */}
+      
       {viewMode === 'grid' && (
         <CampaignGridView
           campaigns={filteredCampaigns}
-          onView={handleView}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onPause={handlePause}
-          onResume={handleResume}
-          onDuplicate={handleDuplicate}
-          loading={loading}
+          onView={handleViewCampaign}
+          onEdit={handleEditCampaign}
+          onDelete={handleDeleteCampaign}
+          onPause={handlePauseCampaign}
+          onResume={handleResumeCampaign}
+          onDuplicate={handleDuplicateCampaign}
         />
       )}
 
       {viewMode === 'list' && (
         <CampaignListView
           campaigns={filteredCampaigns}
-          onView={handleView}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onPause={handlePause}
-          onResume={handleResume}
-          onDuplicate={handleDuplicate}
-          loading={loading}
+          onView={handleViewCampaign}
+          onEdit={handleEditCampaign}
+          onDelete={handleDeleteCampaign}
+          onPause={handlePauseCampaign}
+          onResume={handleResumeCampaign}
+          onDuplicate={handleDuplicateCampaign}
         />
       )}
 
       {viewMode === 'kanban' && (
         <CampaignKanbanView
           campaigns={filteredCampaigns}
-          onView={handleView}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onPause={handlePause}
-          onResume={handleResume}
-          onDuplicate={handleDuplicate}
-          loading={loading}
+          onView={handleViewCampaign}
+          onEdit={handleEditCampaign}
+          onDelete={handleDeleteCampaign}
+          onPause={handlePauseCampaign}
+          onResume={handleResumeCampaign}
+          onDuplicate={handleDuplicateCampaign}
         />
       )}
 
-      {/* Wizard Modal Placeholder */}
-      {showWizard && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-8"
-          >
-            <h2 className="text-2xl font-bold mb-4">Nova Campanha</h2>
-            <p className="text-gray-600 mb-6">
-              O Wizard de criação de campanhas está em desenvolvimento.
-              <br />
-              Em breve você poderá criar campanhas completas em 7 passos simples!
-            </p>
-            <button
-              onClick={() => setShowWizard(false)}
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold"
-            >
-              Fechar
-            </button>
-          </motion.div>
-        </div>
+      {/* ========================================== */}
+      {/* MODALS */}
+      {/* ========================================== */}
+      
+      {showCreateModal && (
+        <CreateCampaignModal
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={(newCampaign) => {
+            setShowCreateModal(false);
+            toast.success('✅ Campanha criada com sucesso!');
+            // TODO: Adicionar campanha à lista
+          }}
+        />
       )}
-
-      {/* Footer info */}
-      <div className="mt-8 text-center">
-        <p className="text-sm text-gray-500">
-          Desenvolvido com 💙 para facilitar a comunicação escolar
-        </p>
-      </div>
+      </PageModel>
     </div>
   );
 }

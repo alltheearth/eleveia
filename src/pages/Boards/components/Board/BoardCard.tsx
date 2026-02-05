@@ -1,206 +1,173 @@
-// src/pages/Boards/components/Card/BoardCard.tsx
-// 🎴 COMPONENTE DE CARD INDIVIDUAL - VERSÃO MELHORADA
+// src/pages/Boards/components/Board/BoardCard.tsx
+// 🎴 CARD DE BOARD - Para listagem de boards (NÃO confundir com cards do Kanban!)
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Calendar, 
+  Star, 
+  MoreVertical, 
   Edit2, 
-  Trash2, 
-  MoreVertical,
-  Clock,
-  AlertCircle,
-  MessageSquare,
-  Paperclip,
-  CheckSquare,
+  Trash2,
+  Calendar,
+  TrendingUp,
+  Archive,
 } from 'lucide-react';
-
-// Types & Constants
-import type { BoardCard } from '../../../../types/boards';
-import { PRIORITY_CONFIG } from '../../../../constants/boards';
+import type { Board } from '../../../../types/boards';
 
 // ============================================
-// LABEL COMPONENT
+// CONFIGURAÇÃO DE CORES DOS BOARDS
 // ============================================
+const BOARD_COLORS: Record<string, { bg: string; gradient: string; text: string; ring: string }> = {
+  blue: {
+    bg: 'bg-blue-500',
+    gradient: 'from-blue-500 to-blue-600',
+    text: 'text-blue-600',
+    ring: 'ring-blue-500',
+  },
+  purple: {
+    bg: 'bg-purple-500',
+    gradient: 'from-purple-500 to-purple-600',
+    text: 'text-purple-600',
+    ring: 'ring-purple-500',
+  },
+  green: {
+    bg: 'bg-green-500',
+    gradient: 'from-green-500 to-green-600',
+    text: 'text-green-600',
+    ring: 'ring-green-500',
+  },
+  orange: {
+    bg: 'bg-orange-500',
+    gradient: 'from-orange-500 to-orange-600',
+    text: 'text-orange-600',
+    ring: 'ring-orange-500',
+  },
+  pink: {
+    bg: 'bg-pink-500',
+    gradient: 'from-pink-500 to-pink-600',
+    text: 'text-pink-600',
+    ring: 'ring-pink-500',
+  },
+  red: {
+    bg: 'bg-red-500',
+    gradient: 'from-red-500 to-red-600',
+    text: 'text-red-600',
+    ring: 'ring-red-500',
+  },
+  gray: {
+    bg: 'bg-gray-500',
+    gradient: 'from-gray-500 to-gray-600',
+    text: 'text-gray-600',
+    ring: 'ring-gray-500',
+  },
+};
 
-interface LabelProps {
-  name: string;
-}
-
-function Label({ name }: LabelProps) {
-  const colors: Record<string, string> = {
-    'Urgente': 'bg-red-500',
-    'Bug': 'bg-orange-500',
-    'Feature': 'bg-blue-500',
-    'Importante': 'bg-purple-500',
-    'Aprovado': 'bg-green-500',
-    'Em Revisão': 'bg-yellow-500',
-    'Bloqueado': 'bg-gray-500',
-    'Design': 'bg-pink-500',
-  };
-
-  const color = colors[name] || 'bg-gray-500';
-
-  return (
-    <span className={`${color} text-white text-xs px-2 py-1 rounded-md font-semibold shadow-sm`}>
-      {name}
-    </span>
-  );
+// ============================================
+// TYPES
+// ============================================
+interface BoardCardProps {
+  board: Board;
+  onClick: (board: Board) => void;
+  onEdit: (board: Board) => void;
+  onDelete: (board: Board) => void;
+  onToggleStar: (board: Board) => void;
+  isStarred: boolean;
 }
 
 // ============================================
 // MAIN COMPONENT
 // ============================================
-
-interface BoardCardProps {
-  card: BoardCard;
-  onClick: () => void;
-  onUpdate: (data: Partial<BoardCard>) => void;
-  onDelete: () => void;
-}
-
-export default function BoardCardComponent({ 
-  card, 
-  onClick, 
-  onUpdate, 
-  onDelete 
+export default function BoardCard({
+  board,
+  onClick,
+  onEdit,
+  onDelete,
+  onToggleStar,
+  isStarred,
 }: BoardCardProps) {
   const [showMenu, setShowMenu] = useState(false);
 
-  const priorityConfig = card.priority ? PRIORITY_CONFIG[card.priority] : null;
+  // Pega a configuração de cor do board
+  const colorConfig = BOARD_COLORS[board.color || 'blue'];
 
+  // Formata a data de criação
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const cardDate = new Date(dateStr);
-    cardDate.setHours(0, 0, 0, 0);
-
-    const diffTime = cardDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    let color = 'text-gray-600 bg-gray-100';
-    let icon = <Calendar size={12} />;
-
-    if (diffDays < 0) {
-      color = 'text-red-700 bg-red-100';
-      icon = <AlertCircle size={12} />;
-    } else if (diffDays === 0) {
-      color = 'text-orange-700 bg-orange-100';
-      icon = <Clock size={12} />;
-    } else if (diffDays <= 3) {
-      color = 'text-yellow-700 bg-yellow-100';
-      icon = <Calendar size={12} />;
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('pt-BR', { 
+        day: '2-digit', 
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch {
+      return '';
     }
-
-    return {
-      text: date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
-      color,
-      icon,
-      isOverdue: diffDays < 0,
-      isToday: diffDays === 0,
-      isSoon: diffDays > 0 && diffDays <= 3,
-    };
   };
-
-  const dueDate = card.due_date ? formatDate(card.due_date) : null;
-
-  // Mock data para features futuras
-  const hasComments = false; // TODO: implementar comentários
-  const hasAttachments = false; // TODO: implementar anexos
-  const hasChecklist = false; // TODO: implementar checklist
-  const checklistProgress = 0; // TODO: implementar progresso
 
   return (
     <motion.div
-      whileHover={{ scale: 1.02, y: -2 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-200 group relative"
+      whileHover={{ y: -4, boxShadow: '0 12px 24px -8px rgba(0,0,0,0.15)' }}
+      onClick={() => onClick(board)}
+      className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden cursor-pointer group relative"
     >
-      {/* Priority Badge (top-right corner) */}
-      {priorityConfig && (
-        <div className={`absolute -top-1 -right-1 px-2 py-0.5 rounded-full text-xs font-bold ${priorityConfig.color} shadow-md`}>
-          {priorityConfig.icon}
-        </div>
-      )}
-
-      {/* Title */}
-      <h4 className="font-semibold text-gray-900 text-sm mb-2 pr-6 line-clamp-3 leading-tight">
-        {card.title}
-      </h4>
-
-      {/* Description Preview (se tiver) */}
-      {card.description && (
-        <p className="text-xs text-gray-600 mb-3 line-clamp-2 leading-relaxed">
-          {card.description}
-        </p>
-      )}
-
-      {/* Labels */}
-      {card.labels && card.labels.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {card.labels.slice(0, 3).map((label, index) => (
-            <Label key={index} name={label} />
-          ))}
-          {card.labels.length > 3 && (
-            <span className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded-md font-semibold">
-              +{card.labels.length - 3}
-            </span>
+      {/* Header colorido */}
+      <div className={`h-32 bg-gradient-to-br ${colorConfig.gradient} relative`}>
+        {/* Star Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleStar(board);
+          }}
+          className="absolute top-3 right-3 p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-lg transition-all"
+        >
+          {isStarred ? (
+            <Star size={18} className="text-white fill-white" />
+          ) : (
+            <Star size={18} className="text-white" />
           )}
-        </div>
-      )}
+        </button>
 
-      {/* Footer */}
-      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-        
-        {/* Left: Date & Indicators */}
-        <div className="flex items-center gap-2">
-          {/* Due Date */}
-          {dueDate && (
-            <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded ${dueDate.color}`}>
-              {dueDate.icon}
-              <span>{dueDate.text}</span>
-            </div>
-          )}
+        {/* Archive Badge */}
+        {board.is_archived && (
+          <div className="absolute top-3 left-3 px-3 py-1 bg-orange-500 text-white rounded-full text-xs font-bold flex items-center gap-1">
+            <Archive size={12} />
+            Arquivado
+          </div>
+        )}
+      </div>
 
-          {/* Checklist Progress */}
-          {hasChecklist && (
-            <div className="flex items-center gap-1 text-xs font-semibold text-gray-600">
-              <CheckSquare size={12} />
-              <span>{checklistProgress}%</span>
-            </div>
-          )}
-        </div>
+      {/* Content */}
+      <div className="p-5">
+        {/* Title */}
+        <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 leading-tight">
+          {board.title}
+        </h3>
 
-        {/* Right: Comments & Attachments */}
-        <div className="flex items-center gap-2">
-          {/* Comments */}
-          {hasComments && (
-            <div className="flex items-center gap-1 text-xs text-gray-500">
-              <MessageSquare size={12} />
-              <span>3</span>
-            </div>
-          )}
+        {/* Description */}
+        {board.description && (
+          <p className="text-sm text-gray-600 mb-4 line-clamp-2 leading-relaxed">
+            {board.description}
+          </p>
+        )}
 
-          {/* Attachments */}
-          {hasAttachments && (
-            <div className="flex items-center gap-1 text-xs text-gray-500">
-              <Paperclip size={12} />
-              <span>2</span>
-            </div>
-          )}
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+          {/* Created Date */}
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Calendar size={14} />
+            <span>{formatDate(board.created_at)}</span>
+          </div>
 
           {/* Actions Menu */}
-          <div className="relative ml-1">
+          <div className="relative">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setShowMenu(!showMenu);
               }}
-              className="p-1 hover:bg-gray-100 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
             >
-              <MoreVertical size={14} className="text-gray-600" />
+              <MoreVertical size={16} className="text-gray-600" />
             </button>
 
             {showMenu && (
@@ -208,35 +175,53 @@ export default function BoardCardComponent({
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 onClick={(e) => e.stopPropagation()}
-                className="absolute right-0 bottom-full mb-1 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-50 min-w-[140px]"
+                className="absolute right-0 bottom-full mb-2 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50 min-w-[160px]"
               >
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onClick();
+                    onClick(board);
                     setShowMenu(false);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 transition-colors text-left text-xs"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors text-left"
                 >
-                  <Edit2 size={12} className="text-blue-600" />
-                  <span className="font-semibold text-gray-700">Abrir</span>
+                  <TrendingUp size={14} className="text-blue-600" />
+                  <span className="text-sm font-semibold text-gray-700">Abrir</span>
                 </button>
+
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDelete();
+                    onEdit(board);
                     setShowMenu(false);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 hover:bg-red-50 transition-colors text-left text-xs"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
                 >
-                  <Trash2 size={12} className="text-red-600" />
-                  <span className="font-semibold text-red-600">Deletar</span>
+                  <Edit2 size={14} className="text-gray-600" />
+                  <span className="text-sm font-semibold text-gray-700">Editar</span>
+                </button>
+
+                <div className="border-t border-gray-200 my-2" />
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(board);
+                    setShowMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 transition-colors text-left"
+                >
+                  <Trash2 size={14} className="text-red-600" />
+                  <span className="text-sm font-semibold text-red-600">Deletar</span>
                 </button>
               </motion.div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Hover Ring Effect */}
+      <div className={`absolute inset-0 rounded-2xl ring-2 ${colorConfig.ring} opacity-0 group-hover:opacity-20 transition-opacity pointer-events-none`} />
     </motion.div>
   );
 }

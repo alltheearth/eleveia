@@ -11,7 +11,8 @@ export type BoardColor =
   | 'indigo' 
   | 'teal';
 
-export type CardPriority = 'low' | 'medium' | 'high';
+// ✅ CORRIGIDO: Adicionado 'urgent' ao tipo
+export type CardPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 export interface Board {
   id: number;
