@@ -34,6 +34,8 @@ import type { Board, BoardColor } from '../../types/boards';
 
 // Mock Data
 import { MOCK_BOARDS } from '../../mock/boards.mock';
+import PageModel from '../../components/layout/PageModel';
+import { ListPageHeader } from '../../components/layout/PageHeader';
 
 // ============================================
 // TYPES
@@ -198,24 +200,18 @@ export default function BoardsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      
-      {/* ========================================== */}
-      {/* HEADER */}
-      {/* ========================================== */}
-      
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-          <Layout className="text-blue-600" size={40} />
-          Meus Boards
-        </h1>
-        <p className="text-gray-600">
-          Organize suas tarefas e projetos com quadros Kanban
-        </p>
-      </motion.div>
+      <PageModel>
+      {/* Header */}
+        <ListPageHeader
+        title="Meus Boards"
+        icon={<Layout size={16} />}
+        subtitle="Organize seus projetos e tarefas com boards personalizados"
+        onRefresh={handleRefresh}
+        onNew={() => setShowCreateModal(true)}
+        isRefreshing={false}
+        // isRefreshing={isLoading}
+        newLabel="Novo Board"
+      />
 
       {/* ========================================== */}
       {/* STATS (USANDO STATCARD COMUM) */}
@@ -398,6 +394,7 @@ export default function BoardsPage() {
           variant="danger"
         />
       )}
+      </PageModel>
     </div>
   );
 }

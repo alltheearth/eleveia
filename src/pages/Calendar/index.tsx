@@ -59,6 +59,7 @@ interface EventFiltersData {
 // ============================================
 
 import { Grid3x3, List as ListIcon, Calendar as CalendarIcon } from 'lucide-react';
+import { ListPageHeader } from '../../components/layout/PageHeader';
 
 const VIEW_MODES = [
   { value: 'grid', icon: <Grid3x3 size={18} />, label: 'Grade' },
@@ -295,24 +296,22 @@ export default function EventsPage() {
   // ============================================
 
   return (
+     <div className="min-h-screen bg-gray-50">
     <PageModel>
       
       {/* ========================================== */}
       {/* HEADER */}
       {/* ========================================== */}
       
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">
-          📅 Calendário de Eventos
-        </h1>
-        <p className="text-gray-600">
-          Gerencie os eventos e datas importantes da sua escola
-        </p>
-      </motion.div>
+      <ListPageHeader
+        title="Calendário"
+        subtitle="Gerencie eventos e compromissos"
+        icon={<Calendar size={16} />}
+        onRefresh={handleRefresh}
+        // onNew={() => setShowEventModal(true)}
+        isRefreshing={isLoading}
+        newLabel="Novo Evento"
+      />
 
       {/* ========================================== */}
       {/* STATS (USANDO STATCARD COMUM) */}
@@ -534,5 +533,6 @@ export default function EventsPage() {
         />
       )}
     </PageModel>
+    </div>  
   );
 }

@@ -31,6 +31,8 @@ import CreateCampaignModal from './components/CreateCampaignModal';
 // Types e dados mockados
 import type { Campaign, CampaignType, CampaignStatus } from '../../types/campaigns/campaign.types';
 import { MOCK_CAMPAIGNS } from './utils/campaignConfig';
+import PageModel from '../../components/layout/PageModel';
+import { ListPageHeader } from '../../components/layout/PageHeader';
 
 // ============================================
 // TYPES
@@ -116,7 +118,7 @@ export default function CampaignsPage() {
   };
 
   const handleViewCampaign = (campaign: Campaign) => {
-    navigate(`/campaigns/${campaign.id}`);
+    navigate(`/campanha/${campaign.id}`);
   };
 
   const handleEditCampaign = (campaign: Campaign) => {
@@ -162,34 +164,31 @@ export default function CampaignsPage() {
     setSearchTerm('');
   };
 
+  function setShowModal(arg0: boolean): void {
+    throw new Error('Function not implemented.');
+  }
+
   // ============================================
   // RENDER
   // ============================================
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      
+      <PageModel>
       {/* ========================================== */}
       {/* HEADER */}
       {/* ========================================== */}
       
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-              <Megaphone className="text-blue-600" size={40} />
-              Campanhas de Comunicação
-            </h1>
-            <p className="text-gray-600">
-              Gerencie suas campanhas de email, WhatsApp, SMS e notificações push
-            </p>
-          </div>
-        </div>
-      </motion.div>
+      <ListPageHeader
+        title="Campanhas"
+        subtitle="Gerencie suas campanhas de marketing"
+        icon={<Megaphone size={16} />}
+        onRefresh={handleRefresh}
+        onNew={() => setShowModal(true)}
+        isRefreshing={false}
+        // isRefreshing={isLoading}
+        newLabel="Nova Campanha"
+      />
 
       {/* ========================================== */}
       {/* STATS CARDS */}
@@ -330,6 +329,7 @@ export default function CampaignsPage() {
           }}
         />
       )}
+      </PageModel>
     </div>
   );
 }

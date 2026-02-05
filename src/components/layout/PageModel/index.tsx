@@ -1,3 +1,5 @@
+// src\components\layout\PageModel\index.tsx
+
 const PageModel = ({ children }: { children: React.ReactNode }) => {
 
     return (

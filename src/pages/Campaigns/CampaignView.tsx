@@ -40,6 +40,7 @@ import CampaignSettings from './components/CampaignSettings';
 import type { Campaign } from '../../types/campaigns/campaign.types'
 import { MOCK_CAMPAIGNS } from './utils/campaignConfig';
 import { CAMPAIGN_TYPE_CONFIG, CAMPAIGN_STATUS_CONFIG, CHANNEL_CONFIG } from './utils/campaignConfig';
+import PageModel from '../../components/layout/PageModel';
 
 // ============================================
 // TYPES
@@ -189,6 +190,7 @@ export default function CampaignView() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-6">
+      <PageModel>
       
       {/* ========================================== */}
       {/* HEADER */}
@@ -530,6 +532,7 @@ export default function CampaignView() {
           <CampaignSettings campaign={campaign} onUpdate={setCampaign} />
         )}
       </div>
+      </PageModel>
     </div>
   );
 }
