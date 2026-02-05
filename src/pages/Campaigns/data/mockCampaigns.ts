@@ -1,6 +1,6 @@
 // src/pages/Campaigns/data/mockCampaigns.ts
 
-import type { Campaign, CampaignStats } from '../types/campaign.types';
+import type { Campaign, CampaignStats } from '../../../types/campaigns/campaign.types';
 
 export const mockCampaigns: Campaign[] = [
   {
